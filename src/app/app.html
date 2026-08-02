@@ -1,0 +1,214 @@
+<!-- Flash / Splash Screen Intro Animation -->
+@if (showSplash()) {
+  <div 
+    class="fixed inset-0 z-[100] bg-[#1d1d1f] text-white flex flex-col items-center justify-center transition-opacity duration-700 ease-out"
+    [class.opacity-0]="splashFading()"
+    [class.pointer-events-none]="splashFading()">
+    
+    <div class="flex flex-col items-center gap-6 animate-fade-in-up px-4 text-center">
+      <!-- Icon with glowing backdrop -->
+      <div class="relative flex items-center justify-center">
+        <div class="absolute -inset-4 bg-blue-600/40 rounded-3xl blur-xl animate-pulse"></div>
+        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white text-[#1d1d1f] flex items-center justify-center shadow-2xl relative z-10">
+          <mat-icon style="font-size: 40px; width: 40px; height: 40px;">article</mat-icon>
+        </div>
+      </div>
+      
+      <!-- Brand Title -->
+      <div>
+        <h1 class="text-4xl sm:text-5xl font-black tracking-tighter text-white">
+          MyFeed<span class="text-blue-500">.lk</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-white/50 tracking-widest uppercase font-mono mt-2">
+          Curated Journal &bull; Sri Lanka
+        </p>
+      </div>
+
+      <!-- Progress Line -->
+      <div class="w-48 h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+        <div class="h-full bg-blue-500 rounded-full animate-[splashProgress_1.5s_ease-in-out_forwards]"></div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Navigation -->
+<nav class="sticky top-0 z-50 w-full backdrop-blur-2xl bg-[#fcfcfd]/80 dark:bg-[#121212]/80 border-b border-black/[0.04] dark:border-white/10 transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 md:h-24 flex items-center justify-between gap-2 sm:gap-4">
+    <a routerLink="/" class="flex items-center gap-2 sm:gap-3 cursor-pointer group shrink-0">
+      <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] flex items-center justify-center group-hover:scale-105 group-hover:-rotate-6 transition-all duration-500 shadow-lg sm:shadow-xl shadow-black/20">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">article</mat-icon>
+      </div>
+      <span class="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter text-[#1d1d1f] dark:text-white">MyFeed<span class="text-blue-600">.lk</span></span>
+    </a>
+    
+    <div class="flex items-center gap-2 sm:gap-4">
+      <div class="relative hidden sm:block group">
+        <mat-icon class="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-[#1d1d1f]/40 dark:text-white/40 group-focus-within:text-blue-600 transition-colors" style="font-size: 16px; width: 16px; height: 16px;">search</mat-icon>
+        <input 
+          type="text" 
+          placeholder="Search..." 
+          [value]="searchService.searchTerm()"
+          (input)="onSearch($event)"
+          class="w-32 xs:w-44 sm:w-64 lg:w-72 pl-8 sm:pl-11 pr-3 sm:pr-4 py-1.5 sm:py-2.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] border border-transparent text-xs sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-[#1a1a1a] focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600/30 transition-all placeholder:text-[#1d1d1f]/40 dark:placeholder:text-white/40 text-[#1d1d1f] dark:text-white font-medium"
+        />
+      </div>
+
+      <!-- Reading List / Bookmarks Button -->
+      <button 
+        (click)="toggleReadingList()"
+        class="relative p-2.5 sm:px-4 sm:py-2.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-[#1d1d1f] dark:text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer border border-black/5 dark:border-white/10">
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-600">bookmark</mat-icon>
+        <span class="hidden md:inline">Reading List</span>
+        @if (bookmarkManager.bookmarkedIds().length > 0) {
+          <span class="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
+            {{ bookmarkManager.bookmarkedIds().length }}
+          </span>
+        }
+      </button>
+
+      <!-- Theme Toggle Button -->
+      <button 
+        (click)="themeManager.toggle()"
+        class="p-2.5 sm:p-3 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-[#1d1d1f] dark:text-white transition-all cursor-pointer border border-black/5 dark:border-white/10"
+        [attr.aria-label]="themeManager.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">
+          {{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}
+        </mat-icon>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Reading List Drawer / Slide-Over -->
+@if (showReadingList()) {
+  <div class="fixed inset-0 z-[100] flex justify-end animate-fade-in">
+    <!-- Backdrop -->
+    <button type="button" aria-label="Close reading list" (click)="toggleReadingList()" (keydown.enter)="toggleReadingList()" class="absolute inset-0 bg-black/40 backdrop-blur-sm w-full h-full border-none cursor-pointer"></button>
+    
+    <!-- Drawer Panel -->
+    <div class="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] text-[#1d1d1f] dark:text-white h-full shadow-2xl flex flex-col z-10 p-6 sm:p-8 overflow-y-auto border-l border-black/10 dark:border-white/10">
+      <div class="flex items-center justify-between pb-6 border-b border-black/10 dark:border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center">
+            <mat-icon>bookmark</mat-icon>
+          </div>
+          <div>
+            <h2 class="text-xl font-black tracking-tight">Reading List</h2>
+            <p class="text-xs text-[#1d1d1f]/50 dark:text-white/50 font-medium">Saved on this device</p>
+          </div>
+        </div>
+        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="py-6 flex-grow">
+        @if (bookmarkedArticles().length === 0) {
+          <div class="text-center py-24 text-[#1d1d1f]/40 dark:text-white/40">
+            <mat-icon class="opacity-30 mb-4" style="font-size: 48px; width: 48px; height: 48px;">bookmark_border</mat-icon>
+            <h3 class="text-lg font-bold mb-1">Your reading list is empty</h3>
+            <p class="text-xs">Click the bookmark icon on any article to save it for later.</p>
+          </div>
+        } @else {
+          <div class="space-y-4">
+            @for (article of bookmarkedArticles(); track article.id) {
+              <div class="group p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/5 dark:border-white/10 hover:border-blue-600/50 transition-all flex gap-4 items-center relative">
+                <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" class="w-20 h-20 rounded-xl object-cover shrink-0 bg-gray-100" />
+                <div class="flex-grow min-w-0">
+                  <div class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">{{ article.category }}</div>
+                  <a [routerLink]="['/article', article.id]" (click)="toggleReadingList()" class="block text-sm font-bold tracking-tight text-[#1d1d1f] dark:text-white hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer line-clamp-2 mb-1">
+                    {{ article.title }}
+                  </a>
+                  <div class="text-[11px] text-[#1d1d1f]/50 dark:text-white/50 flex items-center gap-2">
+                    <span>{{ article.readTime }} read</span>
+                  </div>
+                </div>
+                <button type="button" aria-label="Remove bookmark" (click)="bookmarkManager.toggleBookmark(article.id)" class="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer" title="Remove bookmark">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_outline</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="pt-6 border-t border-black/10 dark:border-white/10 text-center">
+        <p class="text-xs text-[#1d1d1f]/40 dark:text-white/40 font-medium">Bookmarks are saved securely in your browser's local storage.</p>
+      </div>
+    </div>
+  </div>
+}
+
+<router-outlet />
+
+<!-- Scroll to Top Button -->
+<button 
+  (click)="scrollToTop()"
+  class="fixed bottom-8 right-8 z-50 p-3.5 rounded-full bg-[#1d1d1f] text-white shadow-xl shadow-black/10 hover:bg-black hover:-translate-y-1 transition-all duration-300 active:scale-95 cursor-pointer flex items-center justify-center border border-white/10"
+  [class.opacity-0]="!showScrollButton()"
+  [class.translate-y-4]="!showScrollButton()"
+  [class.pointer-events-none]="!showScrollButton()"
+  aria-label="Scroll to top">
+  <mat-icon style="font-size: 24px; width: 24px; height: 24px;">keyboard_arrow_up</mat-icon>
+</button>
+
+<!-- Footer -->
+<footer class="bg-white py-20 md:py-32 mt-auto relative overflow-hidden border-t border-black/[0.04]">
+  <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-blue-50/80 via-transparent to-transparent pointer-events-none"></div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-[#1d1d1f]">
+    <div class="flex flex-col lg:flex-row justify-between items-start gap-16 mb-24">
+      <div class="flex flex-col gap-8 max-w-sm">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-3xl bg-[#1d1d1f] text-white flex items-center justify-center shadow-xl shadow-black/10">
+            <mat-icon style="font-size: 28px; width: 28px; height: 28px;">article</mat-icon>
+          </div>
+          <span class="text-4xl font-black tracking-tighter text-[#1d1d1f]">MyFeed<span class="text-blue-600">.lk</span></span>
+        </div>
+        <p class="text-[17px] text-[#1d1d1f]/60 font-serif italic leading-relaxed">
+          The finest stories and updates, curated for those who appreciate premium editorial experiences.
+        </p>
+      </div>
+
+      <!-- Newsletter Signup -->
+      <div class="w-full lg:w-[450px] shrink-0">
+        <h3 class="text-xs font-bold text-[#1d1d1f] uppercase tracking-widest mb-3">Stay Updated</h3>
+        <p class="text-[#1d1d1f]/60 font-medium mb-6 text-[17px]">Get the latest news and updates delivered to your inbox.</p>
+        
+        @if (subscribeSuccess()) {
+          <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 animate-fade-in-up">
+            <mat-icon class="text-emerald-600">check_circle</mat-icon>
+            <span class="font-bold text-sm">Thank you for subscribing! You're now on our mailing list.</span>
+          </div>
+        } @else {
+          <form (ngSubmit)="subscribeNewsletter($event)" class="flex flex-col sm:flex-row gap-3">
+            <input type="email" name="email" id="subscriberEmail" placeholder="Email address" required [disabled]="subscribing()" class="w-full px-6 py-4 rounded-full border border-black/10 bg-black/5 text-[#1d1d1f] focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600/30 focus:bg-white transition-all font-medium placeholder:text-[#1d1d1f]/40 disabled:opacity-50" />
+            <button type="submit" [disabled]="subscribing()" class="shrink-0 px-8 py-4 rounded-full bg-[#1d1d1f] text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all hover:scale-105 hover:shadow-xl hover:shadow-black/20 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+              @if (subscribing()) {
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              } @else {
+                <span>Subscribe</span>
+              }
+            </button>
+          </form>
+          @if (subscribeError(); as err) {
+            <p class="text-red-500 text-xs font-bold mt-2 pl-4 flex items-center gap-1">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">error</mat-icon> {{ err }}
+            </p>
+          }
+        }
+      </div>
+    </div>
+    
+    <div class="pt-10 border-t border-black/10 flex flex-col md:flex-row justify-between items-center gap-6 text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 uppercase">
+      <p>&copy; 2026 MyFeed.lk. All rights reserved.</p>
+      <div class="flex flex-wrap justify-center gap-8">
+        <a routerLink="/privacy" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">Privacy</a>
+        <a routerLink="/terms" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">Terms</a>
+        <a routerLink="/about" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">About</a>
+        <a routerLink="/developer" class="hover:text-blue-600 transition-colors cursor-pointer text-[#1d1d1f]/60">Developer</a>
+        <a routerLink="/admin" class="hover:text-blue-600 transition-colors cursor-pointer">Admin</a>
+      </div>
+    </div>
+  </div>
+</footer>
