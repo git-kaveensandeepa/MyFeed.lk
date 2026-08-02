@@ -9,8 +9,3 @@
   NPM_CONFIG_PROGRESS = "false"
   NPM_CONFIG_AUDIT = "false"
   NPM_CONFIG_FUND = "false"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
