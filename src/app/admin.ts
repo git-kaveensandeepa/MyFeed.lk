@@ -2,9 +2,11 @@ import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core'
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
+import {HttpClient} from '@angular/common/http';
 import {ArticleService, Article} from './article.service';
 import {SubscriberService} from './subscriber.service';
-import {auth} from './firebase';
+import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc} from 'firebase/firestore';
+import {db, auth} from './firebase';
 import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} from 'firebase/auth';
 
 @Component({
@@ -68,6 +70,26 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             [class.text-gray-400]="activeTab() !== 'subscribers'">
             Subscribers ({{ subscriberService.subscribers().length }})
             @if (activeTab() === 'subscribers') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+            }
+          </button>
+          <button 
+            (click)="activeTab.set('notify')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            [class.text-blue-600]="activeTab() === 'notify'"
+            [class.text-gray-400]="activeTab() !== 'notify'">
+            Notify
+            @if (activeTab() === 'notify') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+            }
+          </button>
+          <button 
+            (click)="activeTab.set('deploy')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            [class.text-blue-600]="activeTab() === 'deploy'"
+            [class.text-gray-400]="activeTab() !== 'deploy'">
+            Deploy
+            @if (activeTab() === 'deploy') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
@@ -137,6 +159,11 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 <label for="formContent" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Content</label>
                 <textarea id="formContent" [(ngModel)]="formContent" name="content" required rows="10" class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-serif text-lg" placeholder="Full article content (paragraphs separated by blank lines)"></textarea>
               </div>
+
+              <div class="flex items-center gap-3 py-2">
+                <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                <label for="notifySubscribers" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Notify subscribers about this post</label>
+              </div>
               
               <div class="flex gap-4 mt-4">
                 <button type="submit" class="px-8 py-4 bg-[#1d1d1f] text-white rounded-full font-bold tracking-widest uppercase hover:bg-black transition-all shadow-lg w-full md:w-auto">
@@ -186,7 +213,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             </table>
           </div>
         </div>
-        } @else {
+        } @else if (activeTab() === 'subscribers') {
           <!-- Subscribers Tab -->
           <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
             <div class="p-8 border-b border-gray-100 flex justify-between items-center">
@@ -234,6 +261,101 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               </table>
             </div>
           </div>
+        } @else if (activeTab() === 'notify') {
+          <!-- Notify Tab -->
+          <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12 overflow-hidden">
+              <div class="flex items-center gap-6 mb-10">
+                <div class="w-16 h-16 rounded-[2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20">
+                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">notifications_active</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-black text-[#1d1d1f]">Broadcast Update</h2>
+                  <p class="text-sm text-gray-500">Notify all {{ subscriberService.subscribers().length }} subscribers</p>
+                </div>
+              </div>
+
+              <form (ngSubmit)="sendBroadcast()" class="space-y-6">
+                <div class="space-y-2">
+                  <label for="broadcastSubject" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Subject</label>
+                  <input id="broadcastSubject" [(ngModel)]="broadcastSubject" name="subject" required class="w-full px-6 py-4 rounded-3xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:bg-white transition-all font-black text-lg" placeholder="News Update" />
+                </div>
+
+                <div class="space-y-2">
+                  <label for="broadcastMessage" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Message Content</label>
+                  <textarea id="broadcastMessage" [(ngModel)]="broadcastMessage" name="message" required rows="8" class="w-full px-8 py-6 rounded-[2rem] bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:bg-white transition-all font-medium leading-relaxed" placeholder="Write your message to the audience..."></textarea>
+                </div>
+
+                <button type="submit" [disabled]="isBroadcasting() || !broadcastSubject || !broadcastMessage" class="w-full py-5 rounded-full bg-blue-600 text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                  @if (isBroadcasting()) {
+                    <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Sending Broadcast...
+                  } @else {
+                    <mat-icon>send</mat-icon>
+                    Send to All Subscribers
+                  }
+                </button>
+              </form>
+
+              @if (broadcastSuccess()) {
+                <div class="mt-8 p-6 rounded-[2rem] bg-emerald-50 border border-emerald-100 flex items-center gap-4 text-emerald-800 animate-fade-in-up">
+                  <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                  <div>
+                    <div class="font-black text-sm uppercase tracking-widest">Broadcast Sent</div>
+                    <p class="text-xs opacity-80">Notification recorded successfully.</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        } @else if (activeTab() === 'deploy') {
+          <!-- Deploy Tab -->
+          <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
+              <div class="flex items-center gap-6 mb-10">
+                <div class="w-16 h-16 rounded-[2rem] bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
+                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">rocket_launch</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-black text-[#1d1d1f]">Netlify Deployment</h2>
+                  <p class="text-sm text-gray-500">Trigger a production rebuild</p>
+                </div>
+              </div>
+
+              <!-- Settings -->
+              <div class="mb-12 p-8 rounded-[2rem] bg-black/[0.02] border border-black/5">
+                <label for="netlifyHookUrl" class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 ml-2">Netlify Build Hook URL</label>
+                <div class="flex gap-3">
+                  <input id="netlifyHookUrl" [(ngModel)]="netlifyHookUrl" name="netlifyHookUrl" class="flex-1 px-6 py-4 rounded-2xl bg-white border border-black/10 focus:outline-none focus:ring-4 focus:ring-blue-600/10 transition-all text-sm font-medium" placeholder="https://api.netlify.com/build_hooks/..." />
+                  <button (click)="saveDeploySettings()" [disabled]="isSavingSettings()" class="px-6 py-4 rounded-2xl bg-[#1d1d1f] text-white text-xs font-bold uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50">
+                    {{ isSavingSettings() ? 'Saving...' : 'Save' }}
+                  </button>
+                </div>
+                <p class="mt-3 text-[10px] text-gray-400 ml-2">Obtain this from Netlify Site Settings > Build & Deploy > Build Hooks</p>
+              </div>
+
+              <div class="text-center">
+                <p class="text-[#1d1d1f]/60 mb-8 font-medium">Triggering a build will pull the latest Firestore data and update the live site.</p>
+                
+                <button (click)="triggerNetlifyBuild()" [disabled]="isDeploying() || !netlifyHookUrl" class="w-full py-6 rounded-full bg-emerald-600 text-white font-black uppercase tracking-widest text-sm hover:scale-[1.02] transition-all shadow-xl shadow-emerald-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                  @if (isDeploying()) {
+                    <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Deploying to Production...
+                  } @else {
+                    <mat-icon>cloud_upload</mat-icon>
+                    Trigger Netlify Build
+                  }
+                </button>
+
+                @if (deploySuccess()) {
+                  <div class="mt-8 p-6 rounded-[2rem] bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-4 text-emerald-800 animate-fade-in-up">
+                    <mat-icon class="text-emerald-500">done_all</mat-icon>
+                    <span class="font-black text-sm uppercase tracking-widest">Build Triggered Successfully</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         }
       }
     </main>
@@ -246,10 +368,25 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'subscribers'>('articles');
+  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'deploy'>('articles');
+  
+  private http = inject(HttpClient);
+
+  // Deployment signals
+  netlifyHookUrl = '';
+  readonly isDeploying = signal(false);
+  readonly deploySuccess = signal(false);
+  readonly isSavingSettings = signal(false);
+
+  // Broadcast signals
+  broadcastSubject = '';
+  broadcastMessage = '';
+  readonly isBroadcasting = signal(false);
+  readonly broadcastSuccess = signal(false);
   readonly isAdding = signal(false);
   readonly editingId = signal<string | null>(null);
 
+  notifySubscribers = false;
   formTitle = '';
   formSummary = '';
   formContent = '';
@@ -269,6 +406,7 @@ export class AdminComponent {
       this.loading.set(false);
       if (this.user()) {
         this.subscriberService.loadSubscribers();
+        this.loadDeploySettings();
       }
     });
   }
@@ -378,6 +516,17 @@ export class AdminComponent {
         await this.articleService.updateArticle(this.editingId()!, payload);
       } else {
         await this.articleService.addArticle(payload as Omit<Article, 'id' | 'createdAt'>);
+        
+        // Auto-notify if selected and it's a new post
+        if (this.notifySubscribers) {
+          await addDoc(collection(db, 'notifications'), {
+            subject: `New Article: ${this.formTitle}`,
+            message: `Check out our latest update: "${this.formTitle}" under ${this.formCategory}. Read it now on MyFeed!`,
+            sentAt: serverTimestamp(),
+            recipientCount: this.subscriberService.subscribers().length,
+            status: 'delivered'
+          });
+        }
       }
       
       this.cancelEdit();
@@ -403,11 +552,90 @@ export class AdminComponent {
   }
 
   private resetForm() {
+    this.notifySubscribers = false;
     this.formTitle = '';
     this.formSummary = '';
     this.formContent = '';
     this.formCategory = '';
     this.formImageUrl = '';
     this.formReadTime = '';
+  }
+
+  async sendBroadcast() {
+    if (!this.broadcastSubject || !this.broadcastMessage) return;
+
+    this.isBroadcasting.set(true);
+    this.broadcastSuccess.set(false);
+
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        subject: this.broadcastSubject,
+        message: this.broadcastMessage,
+        sentAt: serverTimestamp(),
+        recipientCount: this.subscriberService.subscribers().length,
+        status: 'delivered'
+      });
+
+      this.broadcastSuccess.set(true);
+      this.broadcastSubject = '';
+      this.broadcastMessage = '';
+      
+      setTimeout(() => this.broadcastSuccess.set(false), 5000);
+    } catch (error) {
+      console.error('Broadcast failed', error);
+      alert('Failed to send broadcast notification.');
+    } finally {
+      this.isBroadcasting.set(false);
+    }
+  }
+
+  async loadDeploySettings() {
+    try {
+      const docRef = doc(db, 'settings', 'deploy');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        this.netlifyHookUrl = docSnap.data()['netlifyHookUrl'] || '';
+      }
+    } catch (error) {
+      console.error('Error loading settings', error);
+    }
+  }
+
+  async saveDeploySettings() {
+    if (!this.netlifyHookUrl) return;
+    this.isSavingSettings.set(true);
+    try {
+      await setDoc(doc(db, 'settings', 'deploy'), {
+        netlifyHookUrl: this.netlifyHookUrl,
+        updatedAt: serverTimestamp()
+      });
+      alert('Settings saved successfully');
+    } catch (error) {
+      console.error('Error saving settings', error);
+      alert('Failed to save settings');
+    } finally {
+      this.isSavingSettings.set(false);
+    }
+  }
+
+  triggerNetlifyBuild() {
+    if (!this.netlifyHookUrl || this.isDeploying()) return;
+    
+    this.isDeploying.set(true);
+    this.deploySuccess.set(false);
+
+    this.http.post(this.netlifyHookUrl, {}).subscribe({
+      next: () => {
+        this.deploySuccess.set(true);
+        this.isDeploying.set(false);
+        setTimeout(() => this.deploySuccess.set(false), 5000);
+      },
+      error: (err) => {
+        console.error('Netlify trigger failed', err);
+        // Netlify build hooks usually return 200/202, but even if it fails we show an alert
+        alert('Failed to trigger Netlify build. Please verify your Hook URL.');
+        this.isDeploying.set(false);
+      }
+    });
   }
 }
