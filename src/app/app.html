@@ -154,38 +154,38 @@
 </button>
 
 <!-- Footer -->
-<footer class="bg-white py-20 md:py-32 mt-auto relative overflow-hidden border-t border-black/[0.04]">
-  <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-blue-50/80 via-transparent to-transparent pointer-events-none"></div>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-[#1d1d1f]">
+<footer class="bg-white dark:bg-[#121212] py-20 md:py-32 mt-auto relative overflow-hidden border-t border-black/[0.04] dark:border-white/10">
+  <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-blue-50/80 dark:from-blue-900/20 via-transparent to-transparent pointer-events-none"></div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-[#1d1d1f] dark:text-white">
     <div class="flex flex-col lg:flex-row justify-between items-start gap-16 mb-24">
       <div class="flex flex-col gap-8 max-w-sm">
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-3xl bg-[#1d1d1f] text-white flex items-center justify-center shadow-xl shadow-black/10">
+          <div class="w-14 h-14 rounded-3xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] flex items-center justify-center shadow-xl shadow-black/10">
             <mat-icon style="font-size: 28px; width: 28px; height: 28px;">article</mat-icon>
           </div>
           <span class="text-4xl font-black tracking-tighter text-[#1d1d1f]">MyFeed<span class="text-blue-600">.lk</span></span>
         </div>
-        <p class="text-[17px] text-[#1d1d1f]/60 font-serif italic leading-relaxed">
+        <p class="text-[17px] text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed">
           The finest stories and updates, curated for those who appreciate premium editorial experiences.
         </p>
       </div>
 
       <!-- Newsletter Signup -->
       <div class="w-full lg:w-[450px] shrink-0">
-        <h3 class="text-xs font-bold text-[#1d1d1f] uppercase tracking-widest mb-3">Stay Updated</h3>
-        <p class="text-[#1d1d1f]/60 font-medium mb-6 text-[17px]">Get the latest news and updates delivered to your inbox.</p>
+        <h3 class="text-xs font-bold text-[#1d1d1f] dark:text-white uppercase tracking-widest mb-3">Stay Updated</h3>
+        <p class="text-[#1d1d1f]/60 dark:text-white/60 font-medium mb-6 text-[17px]">Get the latest news and updates delivered to your inbox.</p>
         
         @if (subscribeSuccess()) {
-          <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 animate-fade-in-up">
+          <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-400 flex items-center gap-3 animate-fade-in-up">
             <mat-icon class="text-emerald-600">check_circle</mat-icon>
             <span class="font-bold text-sm">Thank you for subscribing! You're now on our mailing list.</span>
           </div>
         } @else {
           <form (ngSubmit)="subscribeNewsletter($event)" class="flex flex-col sm:flex-row gap-3">
-            <input type="email" name="email" id="subscriberEmail" placeholder="Email address" required [disabled]="subscribing()" class="w-full px-6 py-4 rounded-full border border-black/10 bg-black/5 text-[#1d1d1f] focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600/30 focus:bg-white transition-all font-medium placeholder:text-[#1d1d1f]/40 disabled:opacity-50" />
-            <button type="submit" [disabled]="subscribing()" class="shrink-0 px-8 py-4 rounded-full bg-[#1d1d1f] text-white font-black uppercase tracking-widest text-xs hover:bg-black transition-all hover:scale-105 hover:shadow-xl hover:shadow-black/20 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+            <input type="email" name="email" id="subscriberEmail" placeholder="Email address" required [disabled]="subscribing()" class="w-full px-6 py-4 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-[#1d1d1f] dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600/30 dark:focus:border-blue-600/50 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium placeholder:text-[#1d1d1f]/40 dark:placeholder:text-white/40 disabled:opacity-50" />
+            <button type="submit" [disabled]="subscribing()" class="shrink-0 px-8 py-4 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] font-black uppercase tracking-widest text-xs hover:bg-black dark:hover:bg-gray-200 transition-all hover:scale-105 hover:shadow-xl hover:shadow-black/20 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
               @if (subscribing()) {
-                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white dark:border-[#121212]/30 dark:border-t-[#121212] rounded-full animate-spin"></div>
               } @else {
                 <span>Subscribe</span>
               }
@@ -200,13 +200,13 @@
       </div>
     </div>
     
-    <div class="pt-10 border-t border-black/10 flex flex-col md:flex-row justify-between items-center gap-6 text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 uppercase">
+    <div class="pt-10 border-t border-black/10 dark:border-white/10 flex flex-col md:flex-row justify-between items-center gap-6 text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
       <p>&copy; 2026 MyFeed.lk. All rights reserved.</p>
       <div class="flex flex-wrap justify-center gap-8">
-        <a routerLink="/privacy" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">Privacy</a>
-        <a routerLink="/terms" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">Terms</a>
-        <a routerLink="/about" class="hover:text-[#1d1d1f] transition-colors cursor-pointer">About</a>
-        <a routerLink="/developer" class="hover:text-blue-600 transition-colors cursor-pointer text-[#1d1d1f]/60">Developer</a>
+        <a routerLink="/privacy" class="hover:text-[#1d1d1f] dark:hover:text-white transition-colors cursor-pointer">Privacy</a>
+        <a routerLink="/terms" class="hover:text-[#1d1d1f] dark:hover:text-white transition-colors cursor-pointer">Terms</a>
+        <a routerLink="/about" class="hover:text-[#1d1d1f] dark:hover:text-white transition-colors cursor-pointer">About</a>
+        <a routerLink="/developer" class="hover:text-blue-600 transition-colors cursor-pointer text-[#1d1d1f]/60 dark:text-white/60">Developer</a>
         <a routerLink="/admin" class="hover:text-blue-600 transition-colors cursor-pointer">Admin</a>
       </div>
     </div>

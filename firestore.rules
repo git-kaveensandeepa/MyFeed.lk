@@ -1,21 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isAdmin() {
+      return request.auth != null 
+        && request.auth.token.email == 'mail.kaveensandeepa@gmail.com' 
+        && request.auth.token.email_verified == true;
+    }
+
     // Anyone can read articles
     match /articles/{document} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
-    match /users/{document} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == document;
-    }
+    
     match /subscribers/{document} {
       // Anyone can create a subscription with a valid email
       allow create: if request.resource.data.email is string 
                     && request.resource.data.email.size() <= 200 
                     && request.resource.data.email.size() >= 3;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /users/{document} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == document;
     }
   }
 }
