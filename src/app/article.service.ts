@@ -4,6 +4,7 @@ import { db } from './firebase';
 
 export interface Article {
   id: string;
+  slug?: string;
   title: string;
   summary: string;
   content: string;

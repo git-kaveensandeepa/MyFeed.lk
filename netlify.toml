@@ -4,7 +4,11 @@
 
 [build.environment]
   NPM_FLAGS = "--legacy-peer-deps"
-  NODE_VERSION = "22"
+  NODE_VERSION = "20"
+  NPM_CONFIG_RETRIES = "5"
+  NPM_CONFIG_PROGRESS = "false"
+  NPM_CONFIG_AUDIT = "false"
+  NPM_CONFIG_FUND = "false"
 
 [[redirects]]
   from = "/*"

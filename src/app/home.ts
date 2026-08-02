@@ -54,7 +54,7 @@ import {BookmarkManager} from './bookmark';
         
         <!-- Featured Article (First item) -->
         @if (featuredArticle(); as featured) {
-          <article [routerLink]="['/article', featured.id]" class="group relative bg-white dark:bg-[#1a1a1a] rounded-[2rem] sm:rounded-[3.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:shadow-[0_30px_80px_rgba(0,0,0,0.12)] hover:-translate-y-2 transition-all duration-700 mb-16 sm:mb-24 cursor-pointer flex flex-col lg:flex-row min-h-0 lg:min-h-[550px] animate-fade-in-up border border-black/[0.03] dark:border-white/10" style="animation-delay: 0.2s;">
+          <article [routerLink]="['/article', featured.slug || featured.id]" class="group relative bg-white dark:bg-[#1a1a1a] rounded-[2rem] sm:rounded-[3.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.06)] hover:shadow-[0_30px_80px_rgba(0,0,0,0.12)] hover:-translate-y-2 transition-all duration-700 mb-16 sm:mb-24 cursor-pointer flex flex-col lg:flex-row min-h-0 lg:min-h-[550px] animate-fade-in-up border border-black/[0.03] dark:border-white/10" style="animation-delay: 0.2s;">
             <div class="w-full lg:w-[55%] overflow-hidden bg-gray-100 dark:bg-white/5 relative min-h-[240px] sm:min-h-[350px] lg:min-h-full">
               <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer"
                    class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]" />
@@ -95,7 +95,7 @@ import {BookmarkManager} from './bookmark';
         <!-- Grid of older articles -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
           @for (article of gridArticles(); track article.id; let i = $index) {
-            <article [routerLink]="['/article', article.id]" class="animate-fade-in-up group bg-transparent hover:bg-white dark:hover:bg-[#1a1a1a] p-4 sm:p-6 rounded-[2rem] sm:rounded-[3rem] hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-all duration-500 cursor-pointer flex flex-col h-full border border-transparent hover:border-black/[0.04] dark:hover:border-white/10" [style.animation-delay]="(0.3 + (i * 0.1)) + 's'">
+            <article [routerLink]="['/article', article.slug || article.id]" class="animate-fade-in-up group bg-transparent hover:bg-white dark:hover:bg-[#1a1a1a] p-4 sm:p-6 rounded-[2rem] sm:rounded-[3rem] hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-all duration-500 cursor-pointer flex flex-col h-full border border-transparent hover:border-black/[0.04] dark:hover:border-white/10" [style.animation-delay]="(0.3 + (i * 0.1)) + 's'">
               <div class="aspect-[4/3] w-full rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-6 sm:mb-8 shadow-inner">
                 <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer"
                      class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]" />

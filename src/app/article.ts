@@ -29,14 +29,23 @@ import {BookmarkManager} from './bookmark';
               Back to Journal
             </a>
 
-            <button 
-              (click)="bookmarkManager.toggleBookmark(article.id)"
-              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10">
-              <mat-icon style="font-size: 18px; width: 18px; height: 18px;" [class.text-blue-600]="bookmarkManager.isBookmarked(article.id)">
-                {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
-              </mat-icon>
-              <span>{{ bookmarkManager.isBookmarked(article.id) ? 'Saved in Reading List' : 'Bookmark Article' }}</span>
-            </button>
+            <div class="flex items-center gap-3">
+              <button 
+                (click)="copyLink()"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 group">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="group-hover:rotate-12 transition-transform">share</mat-icon>
+                <span>{{ copySuccess() ? 'Link Copied!' : 'Share Story' }}</span>
+              </button>
+
+              <button 
+                (click)="bookmarkManager.toggleBookmark(article.id)"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;" [class.text-blue-600]="bookmarkManager.isBookmarked(article.id)">
+                  {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
+                </mat-icon>
+                <span>{{ bookmarkManager.isBookmarked(article.id) ? 'Saved' : 'Save' }}</span>
+              </button>
+            </div>
           </div>
 
           <header class="mb-10 sm:mb-20 text-center">
@@ -97,17 +106,26 @@ export class ArticleComponent {
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
 
-  private articleId = toSignal(
-    this.route.paramMap.pipe(map(params => params.get('id')))
+  private articleSlug = toSignal(
+    this.route.paramMap.pipe(map(params => params.get('slug')))
   );
 
   readonly article = computed(() => {
-    const id = this.articleId();
-    if (!id) return null;
-    return this.articleService.articles().find(a => a.id === id) || null;
+    const slug = this.articleSlug();
+    if (!slug) return null;
+    return this.articleService.articles().find(a => a.slug === slug || a.id === slug) || null;
   });
 
   readonly scrollProgress = signal(0);
+  readonly copySuccess = signal(false);
+
+  copyLink() {
+    if (typeof window === 'undefined') return;
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      this.copySuccess.set(true);
+      setTimeout(() => this.copySuccess.set(false), 3000);
+    });
+  }
 
   @HostListener('window:scroll')
   onWindowScroll() {

@@ -199,6 +199,9 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                     <td class="p-6 text-sm text-gray-500">{{ article.date }}</td>
                     <td class="p-6 text-right">
                       <div class="flex items-center justify-end gap-2">
+                        <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon>
+                        </a>
                         <button (click)="editArticle(article)" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors">
                           <mat-icon style="font-size: 20px; width: 20px; height: 20px;">edit</mat-icon>
                         </button>
@@ -502,14 +505,15 @@ export class AdminComponent {
     try {
       const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       
-      const payload = {
+      const payload: Partial<Article> = {
         title: this.formTitle,
         summary: this.formSummary,
         content: this.formContent,
         category: this.formCategory,
         imageUrl: this.formImageUrl,
         readTime: this.formReadTime,
-        date: dateStr
+        date: dateStr,
+        slug: this.formTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
       };
 
       if (this.editingId()) {
