@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, signal, inject, HostListener, OnInit, computed} from '@angular/core';
+import {ChangeDetectionStrategy, Component, signal, inject, OnInit, computed} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterOutlet, RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
@@ -14,7 +14,12 @@ import {ArticleService} from './article.service';
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
-    '(window:scroll)': 'onWindowScroll()'
+    '(window:scroll)': 'onWindowScroll()',
+    '(window:contextmenu)': 'onContextMenu($event)',
+    '(window:copy)': 'onCopyCut($event)',
+    '(window:cut)': 'onCopyCut($event)',
+    '(window:keydown)': 'onKeyDown($event)',
+    '(window:keyup)': 'onKeyUp($event)'
   }
 })
 export class App implements OnInit {
@@ -54,18 +59,20 @@ export class App implements OnInit {
     this.showReadingList.update(v => !v);
   }
 
-  @HostListener('window:contextmenu', ['$event'])
+  onWindowScroll() {
+    if (typeof window !== 'undefined') {
+      this.showScrollButton.set(window.scrollY > 400);
+    }
+  }
+
   onContextMenu(event: Event) {
     event.preventDefault();
   }
 
-  @HostListener('window:copy', ['$event'])
-  @HostListener('window:cut', ['$event'])
   onCopyCut(event: Event) {
     event.preventDefault();
   }
 
-  @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
     if (event.key === 'PrintScreen') {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -82,18 +89,11 @@ export class App implements OnInit {
     }
   }
   
-  @HostListener('window:keyup', ['$event'])
   onKeyUp(event: KeyboardEvent) {
     if (event.key === 'PrintScreen') {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         navigator.clipboard.writeText('');
       }
-    }
-  }
-
-  onWindowScroll() {
-    if (typeof window !== 'undefined') {
-      this.showScrollButton.set(window.scrollY > 400);
     }
   }
 

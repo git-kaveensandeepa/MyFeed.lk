@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal, HostListener} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
@@ -99,7 +99,10 @@ import {BookmarkManager} from './bookmark';
         </a>
       </div>
     }
-  `
+  `,
+  host: {
+    '(window:scroll)': 'onWindowScroll()'
+  }
 })
 export class ArticleComponent {
   private route = inject(ActivatedRoute);
@@ -127,13 +130,12 @@ export class ArticleComponent {
     });
   }
 
-  @HostListener('window:scroll')
   onWindowScroll() {
     if (typeof window === 'undefined') return;
     const docElement = document.documentElement;
     const scrollTotal = docElement.scrollHeight - docElement.clientHeight;
     if (scrollTotal > 0) {
-      const progress = (docElement.scrollTop / scrollTotal) * 100;
+      const progress = (window.scrollY / scrollTotal) * 100;
       this.scrollProgress.set(progress);
     }
   }
