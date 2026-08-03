@@ -10,7 +10,7 @@ import {AdminComponent} from './admin';
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'admin', component: AdminComponent },
-  { path: 'article/:slug', component: ArticleComponent },
+  { path: 'article/:id', component: ArticleComponent },
   { path: 'about', component: AboutComponent },
   { path: 'developer', component: DeveloperComponent },
   { path: 'privacy', component: PrivacyComponent },
