@@ -109,14 +109,14 @@ export class ArticleComponent {
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
 
-  private articleSlug = toSignal(
-    this.route.paramMap.pipe(map(params => params.get('slug')))
+  private articleId = toSignal(
+    this.route.paramMap.pipe(map(params => params.get('id')))
   );
 
   readonly article = computed(() => {
-    const slug = this.articleSlug();
-    if (!slug) return null;
-    return this.articleService.articles().find(a => a.slug === slug || a.id === slug) || null;
+    const id = this.articleId();
+    if (!id) return null;
+    return this.articleService.articles().find(a => a.slug === id || a.id === id) || null;
   });
 
   readonly scrollProgress = signal(0);
