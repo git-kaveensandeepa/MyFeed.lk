@@ -11,7 +11,7 @@ export class ThemeManager {
       const saved = localStorage.getItem('myfeed_theme');
       if (saved) {
         this.isDark.set(saved === 'dark');
-      } else {
+      } else if (typeof window.matchMedia === 'function') {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         this.isDark.set(prefersDark);
       }
