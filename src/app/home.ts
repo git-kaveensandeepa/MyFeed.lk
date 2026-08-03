@@ -9,8 +9,33 @@ import {BookmarkManager} from './bookmark';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-home',
   imports: [MatIconModule, RouterLink],
+  host: {
+    '(touchstart)': 'onTouchStart($event)',
+    '(touchmove)': 'onTouchMove($event)',
+    '(touchend)': 'onTouchEnd()'
+  },
   template: `
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 md:py-24 min-h-[calc(100vh-200px)]">
+    <!-- Pull to Refresh Indicator -->
+    @if (pullDistance() > 0 || isRefreshing()) {
+      <div 
+        class="fixed top-0 left-0 right-0 z-[60] flex justify-center pt-4 transition-transform duration-200 pointer-events-none"
+        [style.transform]="'translateY(' + (isRefreshing() ? 40 : Math.min(pullDistance() * 0.5, 80)) + 'px)'">
+        <div class="bg-white dark:bg-[#1a1a1a] shadow-xl rounded-full p-2 border border-black/5 dark:border-white/10 flex items-center justify-center">
+          <div 
+            class="w-8 h-8 rounded-full border-2 border-blue-600/20 border-t-blue-600 animate-spin"
+            [class.animate-none]="!isRefreshing()"
+            [style.transform]="'rotate(' + (pullDistance() * 2) + 'deg)'">
+            @if (!isRefreshing()) {
+              <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-600 flex items-center justify-center">arrow_downward</mat-icon>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <main 
+      class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 md:py-24 min-h-[calc(100vh-200px)] transition-transform duration-200"
+      [style.transform]="'translateY(' + (isRefreshing() ? 0 : Math.min(pullDistance() * 0.3, 40)) + 'px)'">
       
       <!-- Page Header -->
       <header class="mb-12 sm:mb-20 pt-4 sm:pt-8 text-center animate-fade-in-up">
@@ -133,12 +158,56 @@ import {BookmarkManager} from './bookmark';
   `
 })
 export class HomeComponent {
+  readonly Math = Math;
   readonly searchService = inject(SearchService);
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
+  
+  pullDistance = signal(0);
+  isRefreshing = signal(false);
+  private startY = 0;
+
   readonly categories = ['All', 'AI', 'Tech', 'Local'] as const;
   readonly currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   readonly activeCategory = signal<typeof this.categories[number]>('All');
+
+  onTouchStart(event: TouchEvent) {
+    if (typeof window !== 'undefined' && window.scrollY === 0) {
+      this.startY = event.touches[0].pageY;
+    }
+  }
+
+  onTouchMove(event: TouchEvent) {
+    if (typeof window !== 'undefined' && window.scrollY === 0 && !this.isRefreshing()) {
+      const currentY = event.touches[0].pageY;
+      const distance = currentY - this.startY;
+      if (distance > 0) {
+        this.pullDistance.set(distance);
+        if (distance > 10) {
+          // Prevent scroll if we are pulling
+          if (event.cancelable) event.preventDefault();
+        }
+      }
+    }
+  }
+
+  async onTouchEnd() {
+    if (this.pullDistance() > 120 && !this.isRefreshing()) {
+      await this.refresh();
+    }
+    this.pullDistance.set(0);
+  }
+
+  async refresh() {
+    this.isRefreshing.set(true);
+    try {
+      await this.articleService.loadArticles();
+      // Artificial delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } finally {
+      this.isRefreshing.set(false);
+    }
+  }
 
   readonly filteredArticles = computed(() => {
     const category = this.activeCategory();

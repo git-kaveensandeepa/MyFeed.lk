@@ -14,12 +14,7 @@ import {ArticleService} from './article.service';
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
-    '(window:scroll)': 'onWindowScroll()',
-    '(window:contextmenu)': 'onContextMenu($event)',
-    '(window:copy)': 'onCopyCut($event)',
-    '(window:cut)': 'onCopyCut($event)',
-    '(window:keydown)': 'onKeyDown($event)',
-    '(window:keyup)': 'onKeyUp($event)'
+    '(window:scroll)': 'onWindowScroll()'
   }
 })
 export class App implements OnInit {
@@ -62,38 +57,6 @@ export class App implements OnInit {
   onWindowScroll() {
     if (typeof window !== 'undefined') {
       this.showScrollButton.set(window.scrollY > 400);
-    }
-  }
-
-  onContextMenu(event: Event) {
-    event.preventDefault();
-  }
-
-  onCopyCut(event: Event) {
-    event.preventDefault();
-  }
-
-  onKeyDown(event: KeyboardEvent) {
-    if (event.key === 'PrintScreen') {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        navigator.clipboard.writeText('');
-      }
-      event.preventDefault();
-    }
-    if (event.ctrlKey || event.metaKey) {
-      const key = event.key.toLowerCase();
-      // Block common shortcuts for copy, print, save, inspect
-      if (key === 'c' || key === 'p' || key === 's' || key === 'u' || key === 'x') {
-        event.preventDefault();
-      }
-    }
-  }
-  
-  onKeyUp(event: KeyboardEvent) {
-    if (event.key === 'PrintScreen') {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        navigator.clipboard.writeText('');
-      }
     }
   }
 
