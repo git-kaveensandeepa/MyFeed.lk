@@ -1,5 +1,16 @@
 import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 import { getAllowedHosts, getContext, getTrustProxyHeaders } from '@netlify/angular-runtime/app-engine.js';
+import { Buffer } from 'buffer';
+
+// Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
+if (typeof globalThis.Buffer === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).Buffer = Buffer;
+}
+if (typeof globalThis.process === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).process = { env: {} };
+}
 
 const angularAppEngine = new AngularAppEngine({
   allowedHosts: getAllowedHosts(),
