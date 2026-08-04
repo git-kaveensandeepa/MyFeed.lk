@@ -1,9 +1,11 @@
-import {ChangeDetectionStrategy, Component, computed, signal, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, signal, inject, OnInit} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
 import {ArticleService} from './article.service';
 import {BookmarkManager} from './bookmark';
+import {auth} from './firebase';
+import {onAuthStateChanged, User} from 'firebase/auth';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -83,14 +85,24 @@ import {BookmarkManager} from './bookmark';
             <div class="w-full lg:w-[55%] overflow-hidden bg-gray-100 dark:bg-white/5 relative min-h-[240px] sm:min-h-[350px] lg:min-h-full">
               <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer"
                    class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]" />
-              <button 
-                (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(featured.id)"
-                class="absolute top-6 right-6 z-20 p-3 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-xl text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
-                [title]="bookmarkManager.isBookmarked(featured.id) ? 'Remove bookmark' : 'Bookmark article'">
-                <mat-icon style="font-size: 20px; width: 20px; height: 20px;" [class.text-blue-600]="bookmarkManager.isBookmarked(featured.id)">
-                  {{ bookmarkManager.isBookmarked(featured.id) ? 'bookmark' : 'bookmark_border' }}
-                </mat-icon>
-              </button>
+              <div class="absolute top-6 right-6 z-20 flex flex-col gap-3">
+                <button 
+                  (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(featured.id)"
+                  class="p-3 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-xl text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
+                  [title]="bookmarkManager.isBookmarked(featured.id) ? 'Remove bookmark' : 'Bookmark article'">
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px;" [class.text-blue-600]="bookmarkManager.isBookmarked(featured.id)">
+                    {{ bookmarkManager.isBookmarked(featured.id) ? 'bookmark' : 'bookmark_border' }}
+                  </mat-icon>
+                </button>
+                @if (isAdmin()) {
+                  <button 
+                    (click)="$event.stopPropagation(); deleteArticle(featured.id)"
+                    class="p-3 rounded-full bg-red-600/90 text-white backdrop-blur-md shadow-xl hover:scale-110 transition-transform cursor-pointer border border-red-500/20"
+                    title="Delete Post">
+                    <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
+                  </button>
+                }
+              </div>
             </div>
             
             <div class="w-full lg:w-[45%] p-6 sm:p-10 md:p-14 lg:p-20 flex flex-col justify-center relative bg-white dark:bg-[#1a1a1a] overflow-hidden z-10">
@@ -109,9 +121,21 @@ import {BookmarkManager} from './bookmark';
               <p class="text-base sm:text-xl md:text-2xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic mb-6 sm:mb-12 leading-relaxed relative z-10">
                 {{ featured.summary }}
               </p>
+
+              @if (featured.tags?.length) {
+                <div class="flex flex-wrap gap-2 mb-8 relative z-10">
+                  @for (tag of featured.tags?.slice(0, 3); track tag) {
+                    <span class="px-2.5 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-[10px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase border border-black/[0.05] dark:border-white/10">
+                      #{{ tag }}
+                    </span>
+                  }
+                </div>
+              }
               
-              <div class="mt-auto flex items-center gap-2 sm:gap-3 text-[#1d1d1f] dark:text-white group-hover:text-blue-600 font-black tracking-widest uppercase text-xs group-hover:translate-x-3 transition-all duration-500 relative z-10">
-                Read Story <mat-icon class="transform group-hover:scale-110 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">trending_flat</mat-icon>
+              <div class="mt-auto flex items-center justify-between relative z-10">
+                <div class="flex items-center gap-2 sm:gap-3 text-[#1d1d1f] dark:text-white group-hover:text-blue-600 font-black tracking-widest uppercase text-xs group-hover:translate-x-3 transition-all duration-500">
+                  Read Story <mat-icon class="transform group-hover:scale-110 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">trending_flat</mat-icon>
+                </div>
               </div>
             </div>
           </article>
@@ -124,14 +148,24 @@ import {BookmarkManager} from './bookmark';
               <div class="aspect-[4/3] w-full rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-6 sm:mb-8 shadow-inner">
                 <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer"
                      class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]" />
-                <button 
-                  (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(article.id)"
-                  class="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-lg text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
-                  [title]="bookmarkManager.isBookmarked(article.id) ? 'Remove bookmark' : 'Bookmark article'">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [class.text-blue-600]="bookmarkManager.isBookmarked(article.id)">
-                    {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
-                  </mat-icon>
-                </button>
+                <div class="absolute top-4 right-4 z-20 flex flex-col gap-2">
+                  <button 
+                    (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(article.id)"
+                    class="p-2.5 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-lg text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
+                    [title]="bookmarkManager.isBookmarked(article.id) ? 'Remove bookmark' : 'Bookmark article'">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [class.text-blue-600]="bookmarkManager.isBookmarked(article.id)">
+                      {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
+                    </mat-icon>
+                  </button>
+                  @if (isAdmin()) {
+                    <button 
+                      (click)="$event.stopPropagation(); deleteArticle(article.id)"
+                      class="p-2.5 rounded-full bg-red-600/90 text-white backdrop-blur-md shadow-lg hover:scale-110 transition-transform cursor-pointer border border-red-500/20"
+                      title="Delete Post">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete</mat-icon>
+                    </button>
+                  }
+                </div>
               </div>
               <div class="flex flex-col flex-grow px-1 sm:px-2">
                 <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
@@ -145,10 +179,16 @@ import {BookmarkManager} from './bookmark';
                 <p class="text-sm sm:text-lg text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed mb-6 sm:mb-10 flex-grow">
                   {{ article.summary }}
                 </p>
-                <div class="text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/30 dark:text-white/30 flex items-center gap-2 mt-auto uppercase">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">schedule</mat-icon>
-                  {{ article.readTime }} read
-                </div>
+
+                @if (article.tags?.length) {
+                  <div class="flex flex-wrap gap-2 mb-4">
+                    @for (tag of article.tags?.slice(0, 2); track tag) {
+                      <span class="px-2 py-0.5 rounded-full bg-black/[0.02] dark:bg-white/[0.04] text-[9px] font-bold tracking-widest text-[#1d1d1f]/30 dark:text-white/30 uppercase border border-black/[0.03] dark:border-white/05">
+                        #{{ tag }}
+                      </span>
+                    }
+                  </div>
+                }
               </div>
             </article>
           }
@@ -157,7 +197,7 @@ import {BookmarkManager} from './bookmark';
     </main>
   `
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit {
   readonly Math = Math;
   readonly searchService = inject(SearchService);
   readonly articleService = inject(ArticleService);
@@ -170,6 +210,29 @@ export class HomeComponent {
   readonly categories = ['All', 'AI', 'Tech', 'Local'] as const;
   readonly currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   readonly activeCategory = signal<typeof this.categories[number]>('All');
+
+  readonly user = signal<User | null>(null);
+  readonly isAdmin = computed(() => {
+    const u = this.user();
+    return u?.email === 'mail.kaveensandeepa@gmail.com';
+  });
+
+  ngOnInit() {
+    onAuthStateChanged(auth, (user) => {
+      this.user.set(user);
+    });
+  }
+
+  async deleteArticle(id: string) {
+    if (confirm('Are you sure you want to delete this article?')) {
+      try {
+        await this.articleService.deleteArticle(id);
+      } catch (e) {
+        console.error('Delete failed', e);
+        alert('Failed to delete article. Check permissions.');
+      }
+    }
+  }
 
   onTouchStart(event: TouchEvent) {
     if (typeof window !== 'undefined' && window.scrollY === 0) {

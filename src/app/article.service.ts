@@ -14,6 +14,7 @@ export interface Article {
   readTime: string;
   featured?: boolean;
   createdAt?: unknown;
+  tags?: string[];
 }
 
 @Injectable({

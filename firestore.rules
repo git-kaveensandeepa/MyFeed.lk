@@ -4,14 +4,14 @@ service cloud.firestore {
     
     function isAdmin() {
       return request.auth != null 
-        && request.auth.token.email == 'mail.kaveensandeepa@gmail.com' 
-        && request.auth.token.email_verified == true;
+        && request.auth.token.email == 'mail.kaveensandeepa@gmail.com';
     }
 
-    // Anyone can read articles
+    // Anyone can read articles, only admins can full write, users can update reactions
     match /articles/{document} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) || isAdmin();
+      allow create, delete: if isAdmin();
     }
     
     match /subscribers/{document} {

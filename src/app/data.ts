@@ -7,6 +7,7 @@ export interface Article {
   imageUrl: string;
   date: string;
   readTime: string;
+  tags?: string[];
 }
 
 export const ARTICLES: Article[] = [
@@ -29,7 +30,8 @@ export const ARTICLES: Article[] = [
     category: 'AI',
     imageUrl: 'https://picsum.photos/seed/openai/1200/800',
     date: 'August 1, 2026',
-    readTime: '4 min read'
+    readTime: '4 min read',
+    tags: ['AI', 'OpenAI', 'Safety']
   },
   {
     id: '2',
@@ -47,7 +49,8 @@ export const ARTICLES: Article[] = [
     category: 'Tech',
     imageUrl: 'https://picsum.photos/seed/apple-ai/800/600',
     date: 'July 30, 2026',
-    readTime: '3 min read'
+    readTime: '3 min read',
+    tags: ['AI', 'Apple', 'Tech']
   },
   {
     id: '3',
@@ -57,7 +60,8 @@ export const ARTICLES: Article[] = [
     category: 'Local',
     imageUrl: 'https://picsum.photos/seed/sl-tech/800/600',
     date: 'July 29, 2026',
-    readTime: '5 min read'
+    readTime: '5 min read',
+    tags: ['Sri Lanka', 'Digital ID', 'Local']
   },
   {
     id: '4',
@@ -67,7 +71,8 @@ export const ARTICLES: Article[] = [
     category: 'Local',
     imageUrl: 'https://picsum.photos/seed/colombo/800/600',
     date: 'July 28, 2026',
-    readTime: '5 min read'
+    readTime: '5 min read',
+    tags: ['Sri Lanka', 'Summit', 'Local']
   },
   {
     id: '5',
@@ -77,7 +82,8 @@ export const ARTICLES: Article[] = [
     category: 'Tech',
     imageUrl: 'https://picsum.photos/seed/quantum/800/600',
     date: 'July 25, 2026',
-    readTime: '7 min read'
+    readTime: '7 min read',
+    tags: ['Quantum', 'Future', 'Tech']
   },
   {
     id: '6',
@@ -87,6 +93,7 @@ export const ARTICLES: Article[] = [
     category: 'Tech',
     imageUrl: 'https://picsum.photos/seed/chip/800/600',
     date: 'July 22, 2026',
-    readTime: '4 min read'
+    readTime: '4 min read',
+    tags: ['Apple', 'Hardware', 'Tech']
   }
 ];

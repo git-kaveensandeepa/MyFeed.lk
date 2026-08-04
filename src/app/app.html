@@ -76,6 +76,29 @@
           {{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}
         </mat-icon>
       </button>
+
+      <!-- Auth Button -->
+      @if (authService.user(); as user) {
+        <div class="flex items-center gap-2">
+          <div class="hidden md:flex flex-col items-end mr-1">
+            <span class="text-[10px] font-black text-[#1d1d1f] dark:text-white truncate max-w-[100px]">{{ user.email }}</span>
+            <span class="text-[8px] font-bold uppercase tracking-widest text-blue-600">{{ authService.isAdmin() ? 'Administrator' : 'Subscriber' }}</span>
+          </div>
+          <button 
+            (click)="authService.logout()"
+            class="p-2.5 sm:p-3 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all cursor-pointer border border-red-100 dark:border-red-500/10"
+            title="Logout">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">logout</mat-icon>
+          </button>
+        </div>
+      } @else {
+        <a 
+          routerLink="/auth"
+          class="p-2.5 sm:px-4 sm:py-2.5 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-lg shadow-black/10">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">person</mat-icon>
+          <span class="hidden sm:inline">Sign In</span>
+        </a>
+      }
     </div>
   </div>
 </nav>
@@ -98,9 +121,19 @@
             <p class="text-xs text-[#1d1d1f]/50 dark:text-white/50 font-medium">Saved on this device</p>
           </div>
         </div>
-        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
-          <mat-icon>close</mat-icon>
-        </button>
+        <div class="flex items-center gap-2">
+          @if (bookmarkedArticles().length > 0) {
+            <button 
+              (click)="bookmarkManager.clearAll()"
+              class="p-2 rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+              title="Clear all bookmarks">
+              <mat-icon>delete_sweep</mat-icon>
+            </button>
+          }
+          <button type="button" aria-label="Close" (click)="toggleReadingList()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
       </div>
 
       <div class="py-6 flex-grow">
