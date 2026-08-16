@@ -13,8 +13,7 @@
         { "name": "readTime", "type": "string", "description": "Read time estimation." },
         { "name": "createdAt", "type": "timestamp", "description": "Creation timestamp." },
         { "name": "authorId", "type": "string", "description": "ID of the author who created the article." },
-        { "name": "featured", "type": "boolean", "description": "Whether this is the featured article." },
-        { "name": "reactions", "type": "map", "description": "Emoji reaction counts." }
+        { "name": "featured", "type": "boolean", "description": "Whether this is the featured article." }
       ]
     },
     {

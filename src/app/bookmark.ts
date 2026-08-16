@@ -37,13 +37,4 @@ export class BookmarkManager {
       return next;
     });
   }
-
-  clearAll() {
-    if (confirm('Are you sure you want to clear your reading list?')) {
-      this.bookmarkedIds.set([]);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('myfeed_bookmarks');
-      }
-    }
-  }
 }
