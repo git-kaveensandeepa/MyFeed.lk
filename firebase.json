@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "myfeedlk",
+    "site": "gen-lang-client-0797933634",
     "public": "dist/app/browser",
     "ignore": [
       "firebase.json",

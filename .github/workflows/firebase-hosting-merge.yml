@@ -15,4 +15,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MYFEEDLK }}'
           channelId: live
-          projectId: myfeedlk
+          projectId: gen-lang-client-0797933634
