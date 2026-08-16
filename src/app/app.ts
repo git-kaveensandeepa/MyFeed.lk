@@ -6,6 +6,7 @@ import {SubscriberService} from './subscriber.service';
 import {ThemeManager} from './theme';
 import {BookmarkManager} from './bookmark';
 import {ArticleService} from './article.service';
+import {TickerService} from './ticker.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +24,7 @@ export class App implements OnInit {
   readonly themeManager = inject(ThemeManager);
   readonly bookmarkManager = inject(BookmarkManager);
   readonly articleService = inject(ArticleService);
+  readonly tickerService = inject(TickerService);
   
   showSplash = signal(true);
   splashFading = signal(false);

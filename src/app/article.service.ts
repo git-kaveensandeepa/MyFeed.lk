@@ -27,7 +27,14 @@ export interface Article {
   date: string;
   readTime: string;
   featured?: boolean;
-  createdAt?: any;
+  sourceUrl?: string;
+  originalTitle?: string;
+  authorType?: 'ai' | 'human' | 'editorial';
+  authorName?: string;
+  authorRole?: string;
+  authorAvatar?: string;
+  isAiGenerated?: boolean;
+  createdAt?: unknown;
   uploadTimeStr?: string;
 }
 
@@ -45,6 +52,45 @@ export class ArticleService implements OnDestroy {
 
   constructor() {
     this.initRealtimeArticles();
+  }
+
+  private processAndDeduplicate(rawList: Article[]): Article[] {
+    const uniqueList: Article[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const art of rawList) {
+      const title = (art.title || '').trim();
+      if (!title) continue;
+
+      // Filter out untranslated English test fallback articles
+      const isEnglishOnly = /^[A-Za-z0-9\s:,'’.?|/&-]+$/.test(title);
+      if (isEnglishOnly) {
+        continue;
+      }
+
+      // Generate a deduplication key
+      let dedupKey = '';
+      if (art.sourceUrl) {
+        dedupKey = 'url:' + art.sourceUrl.trim().toLowerCase();
+      } else if (art.imageUrl && !art.imageUrl.startsWith('data:image')) {
+        dedupKey = 'img:' + art.imageUrl.split('?')[0].trim().toLowerCase();
+      } else if (title.includes('Pixel 11')) {
+        dedupKey = 'topic:pixel11';
+      } else if (title.includes('ෆීබී ගේට්ස්') || title.includes('බිල් ගේට්ස්')) {
+        dedupKey = 'topic:phoebe_gates';
+      } else if (title.includes('Dynamic Color') || title.includes('Android 17')) {
+        dedupKey = 'topic:android17_dynamic_color';
+      } else {
+        dedupKey = 'title:' + title.slice(0, 35).toLowerCase();
+      }
+
+      if (!seenKeys.has(dedupKey)) {
+        seenKeys.add(dedupKey);
+        uniqueList.push(art);
+      }
+    }
+
+    return uniqueList;
   }
 
   /**
@@ -80,7 +126,7 @@ export class ArticleService implements OnDestroy {
               } as Article);
             });
 
-            this._articles.set(list);
+            this._articles.set(this.processAndDeduplicate(list));
             this._loading.set(false);
           },
           (error) => {
@@ -116,7 +162,7 @@ export class ArticleService implements OnDestroy {
           uploadTimeStr
         } as Article);
       });
-      this._articles.set(list);
+      this._articles.set(this.processAndDeduplicate(list));
     } catch (e) {
       console.error('Error fetching articles via getDocs:', e);
     } finally {

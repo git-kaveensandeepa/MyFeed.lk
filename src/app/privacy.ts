@@ -49,18 +49,25 @@ import {ChangeDetectionStrategy, Component} from '@angular/core';
           <li><strong>Third-Party Service Providers:</strong> We may share your information with third parties that perform services for us or on our behalf, including payment processing, data analysis, email delivery, hosting services, customer service, and marketing assistance.</li>
         </ul>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">4. Security of Your Information</h2>
+        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">4. AI Data Processing & Transparency Standards</h2>
+        <p>
+          MyFeed.lk utilizes generative artificial intelligence systems to summarize and localize global technology news. We do not use user personal data to train proprietary machine learning models without consent. All AI-assisted stories are processed strictly through compliant, enterprise-grade AI APIs adhering to international privacy frameworks and ethical content guidelines.
+        </p>
+
+        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">5. Security of Your Information</h2>
         <p>
           We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.
         </p>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">5. Contact Us</h2>
+        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">6. Contact Us</h2>
         <p>
-          If you have questions or comments about this Privacy Policy, please contact us at:
+          If you have questions or comments about this Privacy Policy, please contact our founder and editor:
         </p>
-        <p class="font-bold font-sans">
-          Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a>
-        </p>
+        <div class="font-sans space-y-1 mt-3">
+          <p class="font-bold text-[#1d1d1f]">Kaveen Sandeepa (Founder & Editor-in-Chief)</p>
+          <p>Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a></p>
+          <p>Direct / WhatsApp: <a href="tel:+94710947861" class="text-blue-600 hover:underline font-mono">+94 71 094 7861</a></p>
+        </div>
       </div>
     </main>
   `

@@ -84,6 +84,17 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             }
           </button>
           <button 
+            (click)="activeTab.set('whatsapp')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5"
+            [class.text-emerald-600]="activeTab() === 'whatsapp'"
+            [class.text-gray-400]="activeTab() !== 'whatsapp'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-500">chat</mat-icon>
+            WhatsApp
+            @if (activeTab() === 'whatsapp') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full"></div>
+            }
+          </button>
+          <button 
             (click)="activeTab.set('deploy')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
             [class.text-blue-600]="activeTab() === 'deploy'"
@@ -138,7 +149,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 <textarea id="formSummary" [(ngModel)]="formSummary" name="summary" required rows="2" class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-serif text-lg" placeholder="Short summary"></textarea>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label for="formCategory" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Category</label>
                   <select id="formCategory" [(ngModel)]="formCategory" name="category" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans appearance-none bg-white">
@@ -150,6 +161,13 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                     <option value="Business">Business</option>
                     <option value="Entertainment">Entertainment</option>
                     <option value="Sports">Sports</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="formAuthorType" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Attribution (Author)</label>
+                  <select id="formAuthorType" [(ngModel)]="formAuthorType" name="authorType" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans appearance-none bg-white">
+                    <option value="ai">MyFeed AI Desk (AI-Assisted Story)</option>
+                    <option value="human">Written by Kaveen Sandeepa (Editor-in-Chief)</option>
                   </select>
                 </div>
                 <div>
@@ -186,9 +204,18 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 <textarea id="formContent" [(ngModel)]="formContent" name="content" required rows="10" class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-serif text-lg" placeholder="Full article content (paragraphs separated by blank lines)"></textarea>
               </div>
 
-              <div class="flex items-center gap-3 py-2">
-                <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
-                <label for="notifySubscribers" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Notify subscribers about this post</label>
+              <div class="flex flex-col sm:flex-row gap-4 py-2">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                  <label for="notifySubscribers" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Notify subscribers (Email)</label>
+                </div>
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="autoPostWhatsApp" [(ngModel)]="autoPostWhatsApp" name="autoPostWhatsApp" class="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600">
+                  <label for="autoPostWhatsApp" class="text-sm font-bold text-emerald-700 uppercase tracking-widest cursor-pointer flex items-center gap-1.5">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
+                    Auto-Post to WhatsApp Channel
+                  </label>
+                </div>
               </div>
               
               <div class="flex gap-4 mt-4">
@@ -225,10 +252,13 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                     <td class="p-6 text-sm text-gray-500">{{ article.date }}</td>
                     <td class="p-6 text-right">
                       <div class="flex items-center justify-end gap-2">
-                        <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                        <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="View live">
                           <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon>
                         </a>
-                        <button (click)="editArticle(article)" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors">
+                        <button (click)="openWhatsAppModal(article)" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="Post to WhatsApp Channel">
+                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chat</mat-icon>
+                        </button>
+                        <button (click)="editArticle(article)" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors" title="Edit">
                           <mat-icon style="font-size: 20px; width: 20px; height: 20px;">edit</mat-icon>
                         </button>
                         <button (click)="deleteArticle(article.id)" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors">
@@ -337,6 +367,70 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               }
             </div>
           </div>
+        } @else if (activeTab() === 'whatsapp') {
+          <!-- WhatsApp Channel Tab -->
+          <div class="max-w-3xl mx-auto space-y-8">
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
+              <div class="flex items-center gap-6 mb-8">
+                <div class="w-16 h-16 rounded-[2rem] bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
+                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">chat</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-black text-[#1d1d1f]">WhatsApp Channel Automation</h2>
+                  <p class="text-sm text-gray-500">Auto-post breaking tech stories directly to your subscribers</p>
+                </div>
+              </div>
+
+              <!-- Integration Settings -->
+              <div class="p-6 rounded-[2rem] bg-black/[0.02] border border-black/5 mb-8 space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-600">WhatsApp Webhook / Channel Settings</h3>
+                <p class="text-xs text-gray-500">Enter your WhatsApp Webhook URL (Zapier, Make, Evolution API, or Baileys service) to enable seamless 1-click & auto publishing:</p>
+                
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <input [(ngModel)]="waWebhookUrl" placeholder="https://hook.eu2.make.com/... or Evolution API" class="flex-1 px-5 py-3.5 rounded-2xl bg-white border border-black/10 focus:ring-2 focus:ring-emerald-600 outline-none text-sm font-mono" />
+                  <button (click)="saveWaSettings()" [disabled]="isSavingWaSettings()" class="px-6 py-3.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shrink-0">
+                    {{ isSavingWaSettings() ? 'Saving...' : 'Save Webhook' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Direct Post Composer -->
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xs font-bold uppercase tracking-widest text-gray-600">Compose or Broadcast WhatsApp Post</h3>
+                  <button (click)="loadLatestArticleForWa()" class="text-xs text-emerald-600 font-bold hover:underline flex items-center gap-1">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">autorenew</mat-icon> Fill from latest story
+                  </button>
+                </div>
+
+                <textarea [(ngModel)]="waCustomMessage" rows="8" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/10 focus:ring-2 focus:ring-emerald-600 outline-none text-sm font-sans leading-relaxed" placeholder="*🚀 NEW ON MYFEED.LK*&#10;&#10;*Article Title Here*&#10;&#10;Summary of story...&#10;&#10;🔗 Read: https://myfeed.lk/article/..."></textarea>
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                  <button (click)="dispatchWhatsAppPost()" [disabled]="isDispatchingWa() || !waCustomMessage.trim()" class="flex-1 py-4 rounded-full bg-emerald-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                    @if (isDispatchingWa()) {
+                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      <span>Dispatching to Channel...</span>
+                    } @else {
+                      <mat-icon>send</mat-icon>
+                      <span>Auto-Post to Channel</span>
+                    }
+                  </button>
+
+                  <button (click)="openDirectWhatsAppShare()" [disabled]="!waCustomMessage.trim()" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
+                    <mat-icon>share</mat-icon>
+                    <span>Open in WhatsApp Web</span>
+                  </button>
+                </div>
+
+                @if (waPostSuccess()) {
+                  <div class="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
+                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                    <span class="font-bold text-sm">{{ waSuccessMessage() }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         } @else if (activeTab() === 'deploy') {
           <!-- Deploy Tab -->
           <div class="max-w-2xl mx-auto">
@@ -397,7 +491,7 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'deploy'>('articles');
+  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy'>('articles');
   
   private http = inject(HttpClient);
 
@@ -406,6 +500,15 @@ export class AdminComponent {
   readonly isDeploying = signal(false);
   readonly deploySuccess = signal(false);
   readonly isSavingSettings = signal(false);
+
+  // WhatsApp Automation signals & state
+  waWebhookUrl = '';
+  waCustomMessage = '';
+  readonly isSavingWaSettings = signal(false);
+  readonly isDispatchingWa = signal(false);
+  readonly waPostSuccess = signal(false);
+  readonly waSuccessMessage = signal('Post sent to WhatsApp Channel successfully!');
+  autoPostWhatsApp = true;
 
   // Broadcast signals
   broadcastSubject = '';
@@ -422,6 +525,7 @@ export class AdminComponent {
   formCategory = '';
   formImageUrl = '';
   formReadTime = '';
+  formAuthorType: 'ai' | 'human' = 'ai';
   
   aiTopicPrompt = '';
   readonly isGeneratingAi = signal(false);
@@ -439,6 +543,7 @@ export class AdminComponent {
       if (this.user()) {
         this.subscriberService.loadSubscribers();
         this.loadDeploySettings();
+        this.loadWaSettings();
       }
     });
   }
@@ -474,6 +579,7 @@ export class AdminComponent {
     this.formCategory = article.category;
     this.formImageUrl = article.imageUrl;
     this.formReadTime = article.readTime || '5 min';
+    this.formAuthorType = article.authorType === 'human' ? 'human' : 'ai';
     this.isAdding.set(true);
   }
 
@@ -558,8 +664,9 @@ export class AdminComponent {
       if (!this.formImageUrl) {
         this.formImageUrl = `https://picsum.photos/seed/${encodeURIComponent(this.aiTopicPrompt.slice(0, 10))}/800/600`;
       }
-    } catch (e: any) {
-      alert('AI Generation Error: ' + (e.message || e));
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('AI Generation Error: ' + (err.message || String(e)));
     } finally {
       this.isGeneratingAi.set(false);
     }
@@ -578,6 +685,8 @@ export class AdminComponent {
         imageUrl: this.formImageUrl,
         readTime: this.formReadTime,
         date: dateStr,
+        authorType: this.formAuthorType,
+        isAiGenerated: this.formAuthorType === 'ai',
         slug: this.formTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
       };
 
@@ -594,6 +703,18 @@ export class AdminComponent {
             sentAt: serverTimestamp(),
             recipientCount: this.subscriberService.subscribers().length,
             status: 'delivered'
+          });
+        }
+
+        // Auto-post to WhatsApp Channel if enabled
+        if (this.autoPostWhatsApp) {
+          const articleUrl = `https://myfeed.lk/article/${payload.slug || ''}`;
+          this.triggerWhatsAppChannelPost({
+            title: this.formTitle,
+            summary: this.formSummary,
+            category: this.formCategory,
+            readTime: this.formReadTime,
+            articleUrl
           });
         }
       }
@@ -628,6 +749,7 @@ export class AdminComponent {
     this.formCategory = '';
     this.formImageUrl = '';
     this.formReadTime = '';
+    this.formAuthorType = 'ai';
   }
 
   async sendBroadcast() {
@@ -685,6 +807,106 @@ export class AdminComponent {
     } finally {
       this.isSavingSettings.set(false);
     }
+  }
+
+  async loadWaSettings() {
+    try {
+      const docRef = doc(db, 'settings', 'whatsapp');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        this.waWebhookUrl = docSnap.data()['webhookUrl'] || '';
+      }
+    } catch (error) {
+      console.error('Error loading WhatsApp settings', error);
+    }
+  }
+
+  async saveWaSettings() {
+    this.isSavingWaSettings.set(true);
+    try {
+      await setDoc(doc(db, 'settings', 'whatsapp'), {
+        webhookUrl: this.waWebhookUrl,
+        updatedAt: serverTimestamp()
+      });
+      alert('WhatsApp webhook settings saved successfully');
+    } catch (error) {
+      console.error('Error saving WhatsApp settings', error);
+      alert('Failed to save WhatsApp settings');
+    } finally {
+      this.isSavingWaSettings.set(false);
+    }
+  }
+
+  openWhatsAppModal(article: Article) {
+    const articleUrl = `https://myfeed.lk/article/${article.slug || article.id}`;
+    this.waCustomMessage = `*🚀 NEW ON MYFEED.LK (${article.category})*
+
+*${article.title}*
+
+${article.summary}
+
+⏱️ ${article.readTime || '3 min read'}
+🔗 *Read full story:* ${articleUrl}
+
+_Curated with precision by MyFeed.lk Sri Lanka_`;
+    this.activeTab.set('whatsapp');
+  }
+
+  loadLatestArticleForWa() {
+    const articles = this.articleService.articles();
+    if (articles.length > 0) {
+      this.openWhatsAppModal(articles[0]);
+    }
+  }
+
+  async triggerWhatsAppChannelPost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string }) {
+    try {
+      await fetch('/api/whatsapp/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (err) {
+      console.warn('Auto WhatsApp dispatch background error:', err);
+    }
+  }
+
+  async dispatchWhatsAppPost() {
+    if (!this.waCustomMessage.trim()) return;
+
+    this.isDispatchingWa.set(true);
+    this.waPostSuccess.set(false);
+
+    try {
+      const res = await fetch('/api/whatsapp/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customMessage: this.waCustomMessage })
+      });
+
+      const data = await res.json();
+      if (data.mode === 'webhook') {
+        this.waSuccessMessage.set('Dispatched successfully to WhatsApp Webhook endpoint!');
+      } else if (data.mode === 'formatted_payload') {
+        this.waSuccessMessage.set('Post prepared! You can also click "Open in WhatsApp Web" for instant channel broadcast.');
+      } else {
+        this.waSuccessMessage.set('Post published to WhatsApp Channel successfully!');
+      }
+
+      this.waPostSuccess.set(true);
+      setTimeout(() => this.waPostSuccess.set(false), 6000);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('WhatsApp dispatch failed: ' + (err.message || String(e)));
+    } finally {
+      this.isDispatchingWa.set(false);
+    }
+  }
+
+  openDirectWhatsAppShare() {
+    if (!this.waCustomMessage.trim()) return;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(this.waCustomMessage)}`;
+    window.open(url, '_blank');
   }
 
   triggerNetlifyBuild() {

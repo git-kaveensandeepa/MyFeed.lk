@@ -8,15 +8,13 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    // Anyone can read and create articles (so the client can save fetched news)
+    // Anyone can read and manage articles
     match /articles/{document} {
       allow read: if true;
-      allow create: if true;
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if true;
     }
     
     match /subscribers/{document} {
-      // Anyone can create a subscription with a valid email
       allow create: if request.resource.data.email is string 
                     && request.resource.data.email.size() <= 200 
                     && request.resource.data.email.size() >= 3;

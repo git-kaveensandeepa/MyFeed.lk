@@ -96,8 +96,13 @@ import {BookmarkManager} from './bookmark';
             <div class="w-full lg:w-[45%] p-6 sm:p-10 md:p-14 lg:p-20 flex flex-col justify-center relative bg-white dark:bg-[#1a1a1a] overflow-hidden z-10">
               <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-50/50 dark:bg-blue-950/20 rounded-full blur-3xl pointer-events-none transition-opacity group-hover:opacity-100 opacity-50"></div>
               
-              <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-8 text-[10px] sm:text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase relative z-10">
+              <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 sm:mb-8 text-[10px] sm:text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase relative z-10">
                 <span class="text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full backdrop-blur-sm">{{ featured.category }}</span>
+                @if (featured.authorType !== 'human') {
+                  <span class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full">
+                    <mat-icon style="font-size: 13px; width: 13px; height: 13px;">auto_awesome</mat-icon> AI Assisted
+                  </span>
+                }
                 <span class="w-1.5 h-1.5 rounded-full bg-black/10 dark:bg-white/20"></span>
                 <span>{{ featured.date }} @if (featured.uploadTimeStr) { &bull; {{ featured.uploadTimeStr }} }</span>
               </div>
@@ -134,8 +139,13 @@ import {BookmarkManager} from './bookmark';
                 </button>
               </div>
               <div class="flex flex-col flex-grow px-1 sm:px-2">
-                <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
                   <span class="text-blue-600">{{ article.category }}</span>
+                  @if (article.authorType !== 'human') {
+                    <span class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full text-[9px] font-bold">
+                      <mat-icon style="font-size: 11px; width: 11px; height: 11px;">auto_awesome</mat-icon> AI
+                    </span>
+                  }
                   <span class="w-1.5 h-1.5 rounded-full bg-black/10 dark:bg-white/20"></span>
                   <span>{{ article.date }} @if (article.uploadTimeStr) { &bull; {{ article.uploadTimeStr }} }</span>
                 </div>

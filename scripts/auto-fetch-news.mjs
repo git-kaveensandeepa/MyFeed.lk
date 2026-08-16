@@ -14,6 +14,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7");
 
+function getNormalizedKey(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 async function generateFullSinhalaArticle(ai, article) {
   const maxAttempts = 3;
   let attempt = 0;
@@ -112,20 +117,31 @@ async function runAutoNewsUpload() {
   }
 
   try {
-    // 1. Fetch existing article titles from Firestore to prevent duplicates
-    console.log('Fetching existing articles from Firestore...');
-    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(100));
+    // 1. Fetch all existing articles from Firestore to build robust deduplication index
+    console.log('Fetching existing articles from Firestore for duplicate detection...');
+    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(150));
     const querySnapshot = await getDocs(q);
-    const existingTitles = new Set();
+    
+    const existingSourceUrls = new Set();
+    const existingImageUrls = new Set();
+    const existingOriginalTitles = new Set();
+    const existingSinhalaTitles = new Set();
+
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data.title) existingTitles.add(data.title.trim().toLowerCase());
+      if (data.sourceUrl) existingSourceUrls.add(data.sourceUrl.trim().toLowerCase());
+      if (data.imageUrl && !data.imageUrl.startsWith('data:image')) {
+        existingImageUrls.add(data.imageUrl.split('?')[0].trim().toLowerCase());
+      }
+      if (data.originalTitle) existingOriginalTitles.add(getNormalizedKey(data.originalTitle));
+      if (data.title) existingSinhalaTitles.add(data.title.trim().toLowerCase());
     });
-    console.log(`Found ${existingTitles.size} existing articles in database.`);
+
+    console.log(`Indexed existing records: ${existingSourceUrls.size} URLs, ${existingImageUrls.size} Images, ${existingSinhalaTitles.size} Titles.`);
 
     // 2. Fetch fresh top headlines from NewsAPI
-    console.log('Fetching top technology headlines from NewsAPI...');
-    const response = await fetch(`https://newsapi.org/v2/top-headlines?language=en&category=technology&pageSize=6&apiKey=${newsApiKey}`);
+    console.log('Fetching fresh technology headlines from NewsAPI...');
+    const response = await fetch(`https://newsapi.org/v2/top-headlines?language=en&category=technology&pageSize=10&apiKey=${newsApiKey}`);
     if (!response.ok) {
       throw new Error(`NewsAPI error: ${response.status} ${response.statusText}`);
     }
@@ -142,10 +158,21 @@ async function runAutoNewsUpload() {
 
     for (let index = 0; index < articles.length; index++) {
       const article = articles[index];
-      const normalizedTitle = article.title.trim().toLowerCase();
+      const sourceUrl = (article.url || '').trim().toLowerCase();
+      const imageUrl = (article.urlToImage || '').split('?')[0].trim().toLowerCase();
+      const normalizedTitleKey = getNormalizedKey(article.title);
 
-      if (existingTitles.has(normalizedTitle)) {
-        console.log(`Skipping duplicate article: "${article.title}"`);
+      // Strict duplicate check across URL, Image, and Title
+      if (existingSourceUrls.has(sourceUrl)) {
+        console.log(`[Duplicate Skip] Source URL already exists: "${article.title}"`);
+        continue;
+      }
+      if (existingImageUrls.has(imageUrl)) {
+        console.log(`[Duplicate Skip] Image URL already exists: "${article.title}"`);
+        continue;
+      }
+      if (existingOriginalTitles.has(normalizedTitleKey)) {
+        console.log(`[Duplicate Skip] English title key already exists: "${article.title}"`);
         continue;
       }
 
@@ -172,17 +199,24 @@ async function runAutoNewsUpload() {
         imageUrl: article.urlToImage || 'https://picsum.photos/seed/tech/800/600',
         date: new Date(article.publishedAt || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '5 min read',
+        sourceUrl: article.url || '',
+        originalTitle: article.title || '',
+        authorType: 'ai',
+        isAiGenerated: true,
         createdAt: serverTimestamp()
       };
 
       // Upload to Firebase Firestore
       const colRef = collection(db, 'articles');
       const docRef = await addDoc(colRef, articleDoc);
-      console.log(`✓ Successfully uploaded LONG Sinhala Article to Firebase! (Doc ID: ${docRef.id})`);
+      console.log(`✓ Successfully uploaded NEW Long Sinhala Article to Firebase! (Doc ID: ${docRef.id})`);
       console.log(`  Title: ${fullArticle.sinhalaTitle}`);
       uploadedCount++;
-      existingTitles.add(fullArticle.sinhalaTitle.trim().toLowerCase());
-      existingTitles.add(normalizedTitle);
+
+      existingSourceUrls.add(sourceUrl);
+      existingImageUrls.add(imageUrl);
+      existingOriginalTitles.add(normalizedTitleKey);
+      existingSinhalaTitles.add(fullArticle.sinhalaTitle.trim().toLowerCase());
 
       // Upload 1 deep long article per scheduled run to conserve quota and maintain quality
       if (uploadedCount >= 1) {

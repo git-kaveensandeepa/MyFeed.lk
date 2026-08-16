@@ -1,7 +1,7 @@
 import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 import { getAllowedHosts, getContext, getTrustProxyHeaders } from '@netlify/angular-runtime/app-engine.js';
 import { Buffer } from 'buffer';
-import { GoogleGenAI, Type, Schema } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 // Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,7 +147,10 @@ Source URL: ${article.url}`;
         category: 'Tech',
         imageUrl: article.urlToImage || 'https://picsum.photos/seed/tech/800/600',
         date: new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        readTime: '3 min read'
+        readTime: '3 min read',
+        authorType: 'ai',
+        isAiGenerated: true,
+        sourceUrl: article.url || ''
       });
 
       // Add a generous delay to prevent hitting free tier rate limits (15 RPM / concurrency limits)
@@ -273,9 +276,155 @@ REQUIREMENTS:
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (genErr: any) {
+      } catch (genErr: unknown) {
+        const err = genErr as { message?: string };
         console.error('Error generating AI long article:', genErr);
-        return new Response(JSON.stringify({ error: genErr.message || 'Generation failed' }), {
+        return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // High-Quality OpenAI Text-to-Speech (TTS) Proxy Endpoint
+    if (url.pathname === '/api/tts' && request.method === 'POST') {
+      const openAiApiKey = process.env['OPENAI_API_KEY'];
+      if (!openAiApiKey) {
+        return new Response(JSON.stringify({ error: 'OPENAI_API_KEY is not configured on server', hasOpenAI: false }), { 
+          status: 400, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+
+      try {
+        const body = await request.json();
+        const inputText = (body.text || '').slice(0, 4096); // OpenAI TTS character limit
+        const voice = body.voice || 'alloy'; // alloy, echo, fable, onyx, nova, shimmer
+
+        if (!inputText.trim()) {
+          return new Response(JSON.stringify({ error: 'Text is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAiApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'tts-1',
+            input: inputText,
+            voice: voice,
+            response_format: 'mp3'
+          })
+        });
+
+        if (!ttsResponse.ok) {
+          const errData = await ttsResponse.json().catch(() => ({ error: { message: 'TTS Request failed' } }));
+          const errMsg = errData?.error?.message || 'OpenAI TTS returned status ' + ttsResponse.status;
+          console.warn('OpenAI TTS API notice:', errMsg);
+          return new Response(JSON.stringify({ error: errMsg, hasOpenAI: true, status: ttsResponse.status }), { 
+            status: ttsResponse.status, 
+            headers: { 'Content-Type': 'application/json' } 
+          });
+        }
+
+        const audioBuffer = await ttsResponse.arrayBuffer();
+        return new Response(audioBuffer, {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      } catch (ttsErr: unknown) {
+        const err = ttsErr as { message?: string };
+        console.error('TTS proxy error:', ttsErr);
+        return new Response(JSON.stringify({ error: err.message || 'TTS request failed' }), { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+    }
+
+    // Automated WhatsApp Channel Auto-Post API
+    if (url.pathname === '/api/whatsapp/post' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, summary, articleUrl, category, readTime, customMessage } = body;
+        
+        // WhatsApp Business Cloud API or custom Webhook Integration
+        const waAccessToken = process.env['WHATSAPP_ACCESS_TOKEN'] || process.env['WHATSAPP_TOKEN'];
+        const waPhoneNumberId = process.env['WHATSAPP_PHONE_NUMBER_ID'];
+        const waRecipient = process.env['WHATSAPP_RECIPIENT_ID'] || process.env['WHATSAPP_CHANNEL_ID'];
+        const waWebhookUrl = process.env['WHATSAPP_WEBHOOK_URL'];
+
+        const formattedPost = customMessage || `*🚀 NEW ON MYFEED.LK (${category || 'Tech'})*
+
+*${title}*
+
+${summary}
+
+⏱️ ${readTime || '3 min read'}
+🔗 *Read full story:* ${articleUrl || 'https://myfeed.lk'}
+
+_Curated with precision by MyFeed.lk Sri Lanka_`;
+
+        // 1. If custom Webhook is configured (Zapier / Make / Evolution API / Baileys)
+        if (waWebhookUrl) {
+          const webhookRes = await fetch(waWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: formattedPost,
+              title,
+              url: articleUrl,
+              category
+            })
+          });
+          return new Response(JSON.stringify({ success: true, mode: 'webhook', status: webhookRes.status }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 2. If Official Meta WhatsApp Cloud API credentials are provided
+        if (waAccessToken && waPhoneNumberId && waRecipient) {
+          const waApiRes = await fetch(`https://graph.facebook.com/v19.0/${waPhoneNumberId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${waAccessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to: waRecipient,
+              type: 'text',
+              text: { body: formattedPost }
+            })
+          });
+
+          const waResult = await waApiRes.json();
+          return new Response(JSON.stringify({ success: waApiRes.ok, result: waResult }), {
+            status: waApiRes.status,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 3. Fallback response with the ready-to-share formatted WhatsApp payload
+        return new Response(JSON.stringify({
+          success: true,
+          mode: 'formatted_payload',
+          message: 'Post formatted and ready for WhatsApp dispatch',
+          formattedText: formattedPost,
+          directShareUrl: `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedPost)}`
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (waErr: unknown) {
+        const err = waErr as { message?: string };
+        return new Response(JSON.stringify({ error: err.message || 'WhatsApp dispatch error' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
