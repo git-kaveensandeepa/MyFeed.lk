@@ -14,7 +14,8 @@ export interface Article {
   date: string;
   readTime: string;
   featured?: boolean;
-  createdAt?: unknown;
+  createdAt?: any;
+  uploadTimeStr?: string;
 }
 
 @Injectable({
@@ -40,7 +41,14 @@ export class ArticleService {
       const querySnapshot = await getDocs(q);
       let loadedArticles: Article[] = [];
       querySnapshot.forEach((doc) => {
-        loadedArticles.push({ id: doc.id, ...doc.data() } as Article);
+        const data = doc.data();
+        let uploadTimeStr = undefined;
+        if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
+          uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        } else if (data['createdAt']) {
+          uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        loadedArticles.push({ id: doc.id, ...data, uploadTimeStr } as Article);
       });
       
       if (loadedArticles.length === 0) {
@@ -84,7 +92,14 @@ export class ArticleService {
                 const freshSnapshot = await getDocs(freshQ);
                 loadedArticles = [];
                 freshSnapshot.forEach((doc) => {
-                  loadedArticles.push({ id: doc.id, ...doc.data() } as Article);
+                  const data = doc.data();
+                  let uploadTimeStr = undefined;
+                  if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
+                    uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  } else if (data['createdAt']) {
+                    uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  }
+                  loadedArticles.push({ id: doc.id, ...data, uploadTimeStr } as Article);
                 });
               }
             }
@@ -136,7 +151,14 @@ export class ArticleService {
       const docRef = doc(db, 'articles', id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Article;
+        const data = docSnap.data();
+        let uploadTimeStr = undefined;
+        if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
+          uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        } else if (data['createdAt']) {
+          uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+        return { id: docSnap.id, ...data, uploadTimeStr } as Article;
       }
       return null;
     } catch (error) {

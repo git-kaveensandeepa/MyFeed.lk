@@ -52,7 +52,7 @@ import {BookmarkManager} from './bookmark';
             <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-6 sm:mb-10 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
               <span class="text-blue-600">{{ article.category }}</span>
               <span class="w-1.5 h-1.5 rounded-full bg-[#1d1d1f]/20 dark:bg-white/20"></span>
-              <span>{{ article.date }}</span>
+              <span>{{ article.date }} @if (article.uploadTimeStr) { &bull; {{ article.uploadTimeStr }} }</span>
               <span class="w-1.5 h-1.5 rounded-full bg-[#1d1d1f]/20 dark:bg-white/20"></span>
               <span class="flex items-center gap-1.5"><mat-icon style="font-size: 16px; width: 16px; height: 16px;">schedule</mat-icon> {{ article.readTime }}</span>
             </div>

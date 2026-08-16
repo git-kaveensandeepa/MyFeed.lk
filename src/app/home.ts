@@ -99,7 +99,7 @@ import {BookmarkManager} from './bookmark';
               <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-8 text-[10px] sm:text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase relative z-10">
                 <span class="text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full backdrop-blur-sm">{{ featured.category }}</span>
                 <span class="w-1.5 h-1.5 rounded-full bg-black/10 dark:bg-white/20"></span>
-                <span>{{ featured.date }}</span>
+                <span>{{ featured.date }} @if (featured.uploadTimeStr) { &bull; {{ featured.uploadTimeStr }} }</span>
               </div>
               
               <h2 class="text-2xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-black tracking-tight text-[#1d1d1f] dark:text-white mb-4 sm:mb-8 leading-[1.15] sm:leading-[1.05] group-hover:text-blue-600 transition-colors duration-500 relative z-10 break-words">
@@ -137,7 +137,7 @@ import {BookmarkManager} from './bookmark';
                 <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
                   <span class="text-blue-600">{{ article.category }}</span>
                   <span class="w-1.5 h-1.5 rounded-full bg-black/10 dark:bg-white/20"></span>
-                  <span>{{ article.date }}</span>
+                  <span>{{ article.date }} @if (article.uploadTimeStr) { &bull; {{ article.uploadTimeStr }} }</span>
                 </div>
                 <h3 class="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-3 sm:mb-5 leading-[1.2] sm:leading-[1.1] group-hover:text-blue-600 transition-colors duration-300 break-words">
                   {{ article.title }}
