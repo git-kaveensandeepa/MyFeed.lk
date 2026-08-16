@@ -1,6 +1,19 @@
-import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, signal, PLATFORM_ID, inject, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { collection, query, orderBy, getDocs, doc, addDoc, serverTimestamp, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  getDocs, 
+  doc, 
+  addDoc, 
+  serverTimestamp, 
+  updateDoc, 
+  deleteDoc, 
+  getDoc,
+  Unsubscribe 
+} from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface Article {
@@ -21,128 +34,104 @@ export interface Article {
 @Injectable({
   providedIn: 'root'
 })
-export class ArticleService {
+export class ArticleService implements OnDestroy {
   private _articles = signal<Article[]>([]);
   private _loading = signal<boolean>(true);
   private platformId = inject(PLATFORM_ID);
+  private unsubscribeSnapshot: Unsubscribe | null = null;
 
   readonly articles = this._articles.asReadonly();
   readonly loading = this._loading.asReadonly();
 
   constructor() {
-    this.loadArticles();
+    this.initRealtimeArticles();
   }
 
-  async loadArticles() {
+  /**
+   * Initializes real-time listener for Firestore articles.
+   * Loads from Cloud Firestore cache/network in milliseconds.
+   */
+  private initRealtimeArticles() {
     this._loading.set(true);
+
     try {
-      // 1. Load from Firestore
       const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+
+      if (isPlatformBrowser(this.platformId)) {
+        // Use onSnapshot on browser for instant loading + real-time cloud updates
+        this.unsubscribeSnapshot = onSnapshot(
+          q,
+          (querySnapshot) => {
+            const list: Article[] = [];
+            querySnapshot.forEach((docSnap) => {
+              const data = docSnap.data() as Record<string, any>;
+              let uploadTimeStr: string | undefined = undefined;
+              
+              if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
+                uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              } else if (data['createdAt']) {
+                uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              }
+
+              list.push({
+                id: docSnap.id,
+                ...data,
+                uploadTimeStr
+              } as Article);
+            });
+
+            this._articles.set(list);
+            this._loading.set(false);
+          },
+          (error) => {
+            console.error('Firestore real-time subscription error:', error);
+            this.fallbackGetDocs(q);
+          }
+        );
+      } else {
+        // In SSR, execute a fast one-time getDocs
+        this.fallbackGetDocs(q);
+      }
+    } catch (err) {
+      console.error('Error initializing articles query:', err);
+      this._loading.set(false);
+    }
+  }
+
+  private async fallbackGetDocs(q: any) {
+    try {
       const querySnapshot = await getDocs(q);
-      let loadedArticles: Article[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        let uploadTimeStr = undefined;
+      const list: Article[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data() as Record<string, any>;
+        let uploadTimeStr: string | undefined = undefined;
         if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
           uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         } else if (data['createdAt']) {
           uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
-        loadedArticles.push({ id: doc.id, ...data, uploadTimeStr } as Article);
+        list.push({
+          id: docSnap.id,
+          ...data,
+          uploadTimeStr
+        } as Article);
       });
-      
-      if (loadedArticles.length === 0) {
-        await this.seedData();
-        return;
-      }
-
-      // 2. Fetch fresh automatic news from our backend integration (NewsAPI + Gemini)
-      // Only run this on the client side to avoid absolute URL issues in SSR context
-      if (isPlatformBrowser(this.platformId)) {
-        try {
-          const response = await fetch('/api/news');
-          if (response.ok) {
-            const dynamicNews = await response.json();
-            if (Array.isArray(dynamicNews)) {
-              let newlyAdded = false;
-              const existingTitles = new Set(loadedArticles.map(a => a.title));
-              const colRef = collection(db, 'articles');
-
-              for (const dynamicItem of dynamicNews) {
-                // If it's a completely new translated article, save it to Firebase
-                if (!existingTitles.has(dynamicItem.title) && !dynamicItem.content.includes('translation currently unavailable')) {
-                  try {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    const { id, ...dataToSave } = dynamicItem;
-                    await addDoc(colRef, {
-                      ...dataToSave,
-                      createdAt: serverTimestamp()
-                    });
-                    newlyAdded = true;
-                    existingTitles.add(dynamicItem.title);
-                  } catch (e) {
-                    console.error('Error saving dynamic news to Firebase:', e);
-                  }
-                }
-              }
-
-              // If we added new news to Firebase, reload the list from Firestore
-              if (newlyAdded) {
-                const freshQ = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
-                const freshSnapshot = await getDocs(freshQ);
-                loadedArticles = [];
-                freshSnapshot.forEach((doc) => {
-                  const data = doc.data();
-                  let uploadTimeStr = undefined;
-                  if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
-                    uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                  } else if (data['createdAt']) {
-                    uploadTimeStr = new Date(data['createdAt']).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                  }
-                  loadedArticles.push({ id: doc.id, ...data, uploadTimeStr } as Article);
-                });
-              }
-            }
-          }
-        } catch (newsError) {
-          console.warn('Could not fetch dynamic news:', newsError);
-        }
-      }
-
-      this._articles.set(loadedArticles);
-    } catch (error) {
-      console.error('Error loading articles:', error);
-      const { ARTICLES } = await import('./data');
-      this._articles.set(ARTICLES as unknown as Article[]);
+      this._articles.set(list);
+    } catch (e) {
+      console.error('Error fetching articles via getDocs:', e);
     } finally {
       this._loading.set(false);
     }
   }
 
-  private async seedData() {
-    try {
-      const { ARTICLES } = await import('./data');
-      const colRef = collection(db, 'articles');
-      for (const article of ARTICLES) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, ...data } = article;
-        await addDoc(colRef, {
-          ...data,
-          createdAt: serverTimestamp()
-        });
-      }
-      // Reload after seeding
-      await this.loadArticles();
-    } catch (error) {
-      console.error('Error seeding data:', error);
-      const { ARTICLES } = await import('./data');
-      this._articles.set(ARTICLES as unknown as Article[]);
-    }
+  async loadArticles() {
+    // Re-fetch manually if needed
+    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+    await this.fallbackGetDocs(q);
   }
 
   async getArticleById(id: string): Promise<Article | null> {
-    // Check locally first (for dynamic API news that aren't in Firestore)
-    const localArticle = this._articles().find(a => a.id === id);
+    const localArticle = this._articles().find(a => a.id === id || a.slug === id);
     if (localArticle) {
       return localArticle;
     }
@@ -151,7 +140,7 @@ export class ArticleService {
       const docRef = doc(db, 'articles', id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        const data = docSnap.data();
+        const data = docSnap.data() as Record<string, any>;
         let uploadTimeStr = undefined;
         if (data['createdAt'] && typeof data['createdAt'].toDate === 'function') {
           uploadTimeStr = data['createdAt'].toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -162,7 +151,7 @@ export class ArticleService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting article:', error);
+      console.error('Error getting article by id:', error);
       return null;
     }
   }
@@ -174,7 +163,6 @@ export class ArticleService {
         ...article,
         createdAt: serverTimestamp()
       });
-      await this.loadArticles();
     } catch (error) {
       console.error('Error adding article:', error);
       throw error;
@@ -185,7 +173,6 @@ export class ArticleService {
     try {
       const docRef = doc(db, 'articles', id);
       await updateDoc(docRef, { ...article });
-      await this.loadArticles();
     } catch (error) {
       console.error('Error updating article:', error);
       throw error;
@@ -196,10 +183,15 @@ export class ArticleService {
     try {
       const docRef = doc(db, 'articles', id);
       await deleteDoc(docRef);
-      await this.loadArticles();
     } catch (error) {
       console.error('Error deleting article:', error);
       throw error;
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.unsubscribeSnapshot) {
+      this.unsubscribeSnapshot();
     }
   }
 }

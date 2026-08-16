@@ -99,7 +99,33 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
 
         @if (isAdding()) {
           <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
-            <h2 class="text-2xl font-black mb-8">{{ editingId() ? 'Edit' : 'Create' }} Article</h2>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+              <h2 class="text-2xl font-black">{{ editingId() ? 'Edit' : 'Create' }} Article</h2>
+            </div>
+
+            <!-- AI Long Article Generator Box -->
+            @if (!editingId()) {
+              <div class="p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-blue-100 mb-8">
+                <div class="flex items-center gap-2 mb-2">
+                  <mat-icon class="text-blue-600" style="font-size: 20px; width: 20px; height: 20px;">auto_awesome</mat-icon>
+                  <h3 class="font-bold text-xs uppercase tracking-wider text-blue-900">AI Long Article Assistant (සිංහලෙන් දීර්ඝ ලිපි නිර්මාණය)</h3>
+                </div>
+                <p class="text-xs text-blue-700/70 mb-4">ඔබට අවශ්‍ය පුවතේ මාතෘකාව හෝ ඉංග්‍රීසි/සිංහල සිරස්තලය මෙහි ඇතුළත් කර ක්ලික් කරන්න. AI මඟින් පූර්ණ විස්තරාත්මක සිංහල ලිපියක් (Long-form report) ක්ෂණිකව සකසා දෙනු ඇත.</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                  <input type="text" [(ngModel)]="aiTopicPrompt" [ngModelOptions]="{standalone: true}" placeholder="උදා: OpenAI GPT-5 Announcement, Apple Vision Pro 2, Sri Lanka 5G..." class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                  <button type="button" (click)="generateWithAI()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
+                    @if (isGeneratingAi()) {
+                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      <span>Generating Long Article...</span>
+                    } @else {
+                      <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                      <span>Generate with AI</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
             <form (ngSubmit)="saveArticle()" class="flex flex-col gap-6">
               
               <div>
@@ -396,6 +422,9 @@ export class AdminComponent {
   formCategory = '';
   formImageUrl = '';
   formReadTime = '';
+  
+  aiTopicPrompt = '';
+  readonly isGeneratingAi = signal(false);
 
   constructor() {
     onAuthStateChanged(auth, async user => {
@@ -497,7 +526,43 @@ export class AdminComponent {
   cancelEdit() {
     this.isAdding.set(false);
     this.editingId.set(null);
+    this.aiTopicPrompt = '';
     this.resetForm();
+  }
+
+  async generateWithAI() {
+    if (!this.aiTopicPrompt.trim()) {
+      alert('කරුණාකර ඔබට අවශ්‍ය පුවතේ මාතෘකාව ඇතුළත් කරන්න.');
+      return;
+    }
+
+    this.isGeneratingAi.set(true);
+    try {
+      const res = await fetch('/api/generate-ai-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: this.aiTopicPrompt })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate article with AI');
+      }
+
+      const data = await res.json();
+      this.formTitle = data.sinhalaTitle || this.aiTopicPrompt;
+      this.formSummary = data.sinhalaDescription || '';
+      this.formContent = data.sinhalaFullContent || '';
+      if (data.suggestedCategory) this.formCategory = data.suggestedCategory;
+      if (data.readTime) this.formReadTime = data.readTime;
+      if (!this.formImageUrl) {
+        this.formImageUrl = `https://picsum.photos/seed/${encodeURIComponent(this.aiTopicPrompt.slice(0, 10))}/800/600`;
+      }
+    } catch (e: any) {
+      alert('AI Generation Error: ' + (e.message || e));
+    } finally {
+      this.isGeneratingAi.set(false);
+    }
   }
 
   async saveArticle() {

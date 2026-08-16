@@ -1,0 +1,29 @@
+name: Automatic 24/7 News Fetch to Firebase
+
+on:
+  schedule:
+    # Runs every 42 minutes around the clock
+    - cron: '*/42 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub anytime
+
+jobs:
+  fetch_and_upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run automated news fetch & Firebase upload
+        env:
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node scripts/auto-fetch-news.mjs

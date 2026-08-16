@@ -59,7 +59,7 @@ const angularAppEngine = new AngularAppEngine({
 // Cache for news
 let cachedNews: any = null;
 let lastFetchTime: number = 0;
-const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_DURATION_MS = 42 * 60 * 1000; // 42 minutes
 
 async function fetchAndTranslateNews() {
   const newsApiKey = process.env['NEWS_API_KEY'];
@@ -93,14 +93,21 @@ async function fetchAndTranslateNews() {
       
       while (attempt < maxAttempts) {
         try {
-          const prompt = `You are a professional news editor for a Sri Lankan tech news website. 
-          Write a FULL, comprehensive news article in Sinhala based on the following news information.
-          DO NOT just translate the short description. You must expand on the topic to write a complete, detailed news report (at least 3-4 paragraphs) in Sinhala.
-          Format the body of the article using HTML <p> tags for paragraphs. Make it engaging for readers.
-          
-          English Title: ${article.title}
-          English Description: ${article.description}
-          Source URL: ${article.url}`;
+          const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading technology news platform.
+Write a FULL, comprehensive, highly engaging, and in-depth news article in natural, fluent Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් ලිපියක්) based on the provided news story.
+
+CRITICAL INSTRUCTIONS:
+1. DO NOT just translate the short description. You MUST generate a complete, professional, long-form news report (at least 4 to 6 detailed paragraphs in Sinhala).
+2. Structure the 'sinhalaFullContent' using clean HTML formatting:
+   - Use engaging introductory paragraphs (<p>...</p>) explaining the breaking news.
+   - Use descriptive subheadings (<h2>...</h2>) in Sinhala to break down the article into sections (e.g. ප්‍රධාන තාක්ෂණික විශේෂාංග, වෙළඳපොළට සහ පරිශීලකයන්ට ඇති බලපෑම, ඉදිරි අපේක්ෂාවන්).
+   - Use bullet points (<ul><li>...</li></ul>) to highlight key specifications or takeaways.
+   - Conclude with an analytical final paragraph evaluating the impact on the tech ecosystem.
+3. Language & Tone: High-standard, readable, modern Sinhala journalism (නූතන තාක්ෂණික මාධ්‍ය භාෂාව).
+
+English Title: ${article.title}
+English Description: ${article.description}
+Source URL: ${article.url}`;
           
           genResponse = await ai.models.generateContent({
             model: 'gemini-3.7-flash',
@@ -203,6 +210,76 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Direct AI Long Article Generator Endpoint
+    if (url.pathname === '/api/generate-ai-article' && request.method === 'POST') {
+      const geminiApiKey = process.env['GEMINI_API_KEY'];
+      if (!geminiApiKey) {
+        return new Response(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on server' }), { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+
+      try {
+        const body = await request.json();
+        const topic = body.topic || body.title || 'Latest Technology Breakthrough';
+        const contextInfo = body.context || '';
+
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading tech publication.
+Write a comprehensive, in-depth, long-form news article in fluent, professional Sinhala (දීර්ඝ පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) on the following topic:
+
+Topic: ${topic}
+Additional Context: ${contextInfo}
+
+REQUIREMENTS:
+1. Long-form article (at least 600-900 words in Sinhala, 5-7 detailed paragraphs).
+2. Format the body content ('sinhalaFullContent') with clean HTML:
+   - <p class="lead">Opening engaging overview</p>
+   - <h2>ප්‍රධාන විශේෂාංග සහ තාක්ෂණික තොරතුරු</h2>
+   - <p>Detailed breakdown</p>
+   - <ul><li><strong>Key Item:</strong> Explanation</li></ul>
+   - <h2>පරිශීලකයින්ට සහ ක්ෂේත්‍රයට ඇතිවන බලපෑම</h2>
+   - <p>Industry impact and user experience</p>
+   - <h2>වෙළඳපොළ තරඟකාරිත්වය සහ අනාගතය</h2>
+   - <p>Comparison with rivals and roadmap</p>
+   - <h2>අවසාන නිගමනය සහ MyFeed.lk විග්‍රහය</h2>
+   - <p>Final verdict and takeaway</p>
+3. High journalistic standard in modern Sinhala.`;
+
+        const genResponse = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                sinhalaTitle: { type: Type.STRING },
+                sinhalaDescription: { type: Type.STRING },
+                sinhalaFullContent: { type: Type.STRING },
+                suggestedCategory: { type: Type.STRING },
+                readTime: { type: Type.STRING }
+              },
+              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent']
+            }
+          }
+        });
+
+        const result = JSON.parse(genResponse?.text || '{}');
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (genErr: any) {
+        console.error('Error generating AI long article:', genErr);
+        return new Response(JSON.stringify({ error: genErr.message || 'Generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     const context = getContext();
