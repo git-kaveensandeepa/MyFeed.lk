@@ -63,7 +63,7 @@ import {BookmarkManager} from './bookmark';
         }
       </div>
 
-      @if (articleService.loading()) {
+      @if (articleService.loading() && filteredArticles().length === 0) {
         <div class="flex justify-center items-center py-32 animate-pulse">
           <div class="w-12 h-12 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
         </div>

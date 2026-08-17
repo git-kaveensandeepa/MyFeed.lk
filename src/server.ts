@@ -56,9 +56,32 @@ const angularAppEngine = new AngularAppEngine({
   trustProxyHeaders: getTrustProxyHeaders(),
 });
 
+interface ServerArticleItem {
+  title: string;
+  description: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt: string;
+  source: { name: string };
+}
+
+interface TranslatedServerArticle {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  imageUrl: string;
+  date: string;
+  readTime: string;
+  authorType?: string;
+  isAiGenerated?: boolean;
+  sourceUrl?: string;
+}
+
 // Cache for news
-let cachedNews: any = null;
-let lastFetchTime: number = 0;
+let cachedNews: TranslatedServerArticle[] | null = null;
+let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 // 100% Free, Official RSS Feeds for Server Live Cache
@@ -68,8 +91,8 @@ const SERVER_RSS_FEEDS = [
   { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' }
 ];
 
-function parseServerRss(xmlText: string, sourceName: string) {
-  const items: any[] = [];
+function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[] {
+  const items: ServerArticleItem[] = [];
   const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
 
   for (const itemXml of itemMatches.slice(0, 5)) {
@@ -84,6 +107,20 @@ function parseServerRss(xmlText: string, sourceName: string) {
     let description = descMatch ? descMatch[1].replace(/<[^>]+>/g, '').trim() : '';
     description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
+    // Extract exact original article image from media tags or description
+    let imageUrl = '';
+    const mediaMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
+                       itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
+                       itemXml.match(/<media:thumbnail[^>]+url="([^">]+)"/i);
+    if (mediaMatch && mediaMatch[1] && mediaMatch[1].startsWith('http')) {
+      imageUrl = mediaMatch[1];
+    } else {
+      const rawImgMatch = (descMatch ? descMatch[1] : '').match(/<img\s+[^>]*src="([^">]+)"/i);
+      if (rawImgMatch && rawImgMatch[1] && rawImgMatch[1].startsWith('http')) {
+        imageUrl = rawImgMatch[1];
+      }
+    }
+
     const dateMatch = itemXml.match(/<pubDate(?:[^>]*)>([\s\S]*?)<\/pubDate>/i);
     const pubDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString();
 
@@ -92,6 +129,7 @@ function parseServerRss(xmlText: string, sourceName: string) {
         title,
         description: description || title,
         url: link,
+        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         publishedAt: pubDate,
         source: { name: sourceName }
       });
@@ -100,11 +138,11 @@ function parseServerRss(xmlText: string, sourceName: string) {
   return items;
 }
 
-async function fetchAndTranslateNews() {
+async function fetchAndTranslateNews(): Promise<TranslatedServerArticle[]> {
   const geminiApiKey = process.env['GEMINI_API_KEY'];
 
   // Fetch from RSS Feeds
-  let articles: any[] = [];
+  let articles: ServerArticleItem[] = [];
   for (const feed of SERVER_RSS_FEEDS) {
     try {
       const res = await fetch(feed.url, {
@@ -134,7 +172,7 @@ async function fetchAndTranslateNews() {
       summary: a.description,
       content: `<p>${a.description}</p><p><a href="${a.url}" target="_blank">Read more</a></p>`,
       category: 'Tech',
-      imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+      imageUrl: a.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
       date: new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       readTime: '3 min read'
     }));
@@ -142,7 +180,7 @@ async function fetchAndTranslateNews() {
 
   // 2. Translate and enrich with Gemini
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-  const translatedArticles: any[] = [];
+  const translatedArticles: TranslatedServerArticle[] = [];
 
   for (let index = 0; index < articles.length; index++) {
     const article = articles[index];
@@ -169,8 +207,9 @@ English Title: ${article.title}
 English Description: ${article.description}
 Source URL: ${article.url}`;
           
+          const modelName = attempt > 1 ? 'gemini-3.1-flash-lite' : 'gemini-3.7-flash';
           genResponse = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
+            model: modelName,
             contents: prompt,
             config: {
               responseMimeType: 'application/json',
@@ -186,11 +225,16 @@ Source URL: ${article.url}`;
             }
           });
           break; // Success, exit retry loop
-        } catch (err: any) {
+        } catch (err: unknown) {
           attempt++;
-          if ((err?.status === 503 || err?.message?.includes('503')) && attempt < maxAttempts) {
-            console.log(`[Retry ${attempt}/${maxAttempts}] 503 High demand. Waiting before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 3000 * attempt));
+          const errorObj = err as { status?: number | string; message?: string };
+          const isRateLimit = errorObj?.status === 429 || errorObj?.status === 'RESOURCE_EXHAUSTED' || errorObj?.message?.includes('429') || errorObj?.message?.includes('RESOURCE_EXHAUSTED');
+          const isHighDemand = errorObj?.status === 503 || errorObj?.message?.includes('503');
+
+          if ((isRateLimit || isHighDemand) && attempt < maxAttempts) {
+            const delayMs = isRateLimit ? 7000 * attempt : 3000 * attempt;
+            console.log(`[Gemini Retry ${attempt}/${maxAttempts}] Rate/demand notice. Waiting ${delayMs / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           } else {
             throw err;
           }
@@ -205,7 +249,7 @@ Source URL: ${article.url}`;
         summary: translation.sinhalaDescription || article.description,
         content: (translation.sinhalaFullContent || `<p>${translation.sinhalaDescription}</p>`) + `<br><p><a href="${article.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">මුල් පුවත කියවන්න (Read original article)</a></p>`,
         category: 'Tech',
-        imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+        imageUrl: article.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         date: new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '4 min read',
         authorType: 'ai',
@@ -216,15 +260,16 @@ Source URL: ${article.url}`;
       if (index < articles.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
-    } catch (e: any) {
-      console.warn('Translation fallback triggered:', e?.message || e);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      console.warn('Translation fallback triggered:', err?.message || e);
       translatedArticles.push({
         id: `news-${index}-${Date.now()}`,
         title: article.title,
         summary: article.description,
         content: `<p>${article.description}</p><br><p><a href="${article.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Read original article</a></p>`,
         category: 'Tech',
-        imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+        imageUrl: article.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         date: new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '3 min read'
       });
@@ -242,17 +287,18 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
     if (url.pathname === '/api/news') {
       const now = Date.now();
       // If we don't have cached news, or cache expired, OR the cache contains fallback articles (indicating API failure)
-      const hasApiErrors = cachedNews && cachedNews.some((a: any) => a.content.includes('translation currently unavailable'));
+      const hasApiErrors = cachedNews && cachedNews.some((a) => a.content.includes('translation currently unavailable'));
       const shouldFetch = !cachedNews || (now - lastFetchTime > CACHE_DURATION_MS) || (hasApiErrors && now - lastFetchTime > 5 * 60 * 1000); // Retry after 5 mins if there was an error
       
       if (shouldFetch) {
         try {
           cachedNews = await fetchAndTranslateNews();
           lastFetchTime = now;
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const err = e as { message?: string };
           console.error('Error fetching news:', e);
           if (!cachedNews) {
-            return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ error: err?.message || 'Failed to fetch news' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
           }
         }
       }

@@ -68,6 +68,69 @@ function getNormalizedKey(str) {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Fetch and scrape original article HTML to extract the exact real featured image
+async function fetchOriginalArticleImage(articleUrl) {
+  if (!articleUrl || !articleUrl.startsWith('http')) return '';
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(articleUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    clearTimeout(timeout);
+    if (!response.ok) return '';
+
+    const html = await response.text();
+
+    // 1. OpenGraph secure or standard og:image
+    const ogMatch = html.match(/<meta\s+[^>]*property=["']og:image:secure_url["'][^>]*content=["']([^"']+)["']/i) ||
+                    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image:secure_url["']/i) ||
+                    html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+                    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
+                    html.match(/<meta\s+[^>]*name=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+    if (ogMatch && ogMatch[1] && isValidArticlePhoto(ogMatch[1])) return ogMatch[1];
+
+    // 2. Twitter Card Image
+    const twMatch = html.match(/<meta\s+[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i) ||
+                    html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:image["']/i) ||
+                    html.match(/<meta\s+[^>]*name=["']twitter:image:src["'][^>]*content=["']([^"']+)["']/i);
+    if (twMatch && twMatch[1] && isValidArticlePhoto(twMatch[1])) return twMatch[1];
+
+    // 3. Schema.org / JSON-LD
+    const jsonLdMatch = html.match(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+    if (jsonLdMatch && jsonLdMatch[1]) {
+      try {
+        const parsed = JSON.parse(jsonLdMatch[1]);
+        const img = parsed.image?.url || (Array.isArray(parsed.image) ? parsed.image[0] : parsed.image) || parsed.thumbnailUrl;
+        if (typeof img === 'string' && isValidArticlePhoto(img)) return img;
+      } catch (_) {}
+    }
+
+    // 4. Picture or Lead Article Image
+    const leadImgMatch = html.match(/<article[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i) ||
+                         html.match(/<figure[^>]*>[\s\S]*?<img\s+[^>]*src=["']([^"']+)["']/i);
+    if (leadImgMatch && leadImgMatch[1] && isValidArticlePhoto(leadImgMatch[1])) return leadImgMatch[1];
+  } catch (e) {
+    // Graceful silent fallback
+  }
+  return '';
+}
+
+function isValidArticlePhoto(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+  const lower = url.toLowerCase();
+  if (lower.includes('avatar') || lower.includes('logo') || lower.includes('icon') || 
+      lower.includes('1x1') || lower.includes('pixel') || lower.includes('badge') ||
+      lower.includes('emoji') || lower.includes('spinner') || lower.endsWith('.svg')) {
+    return false;
+  }
+  return true;
+}
+
 // Lightweight XML parser for RSS Feeds
 function parseRssXml(xmlText, sourceName, category) {
   const items = [];
@@ -90,11 +153,19 @@ function parseRssXml(xmlText, sourceName, category) {
     let description = descMatch ? descMatch[1].replace(/<[^>]+>/g, '').trim() : '';
     description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-    // Image enclosure / media:content
-    const imgMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
-                     itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
-                     itemXml.match(/<img[^>]+src="([^">]+)"/i);
-    const imageUrl = imgMatch ? imgMatch[1] : getRandomImage();
+    // Extract genuine original image from media tags or description HTML
+    let imageUrl = '';
+    const mediaMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
+                       itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
+                       itemXml.match(/<media:thumbnail[^>]+url="([^">]+)"/i);
+    if (mediaMatch && isValidArticlePhoto(mediaMatch[1])) {
+      imageUrl = mediaMatch[1];
+    } else {
+      const rawImgMatch = (descMatch ? descMatch[1] : '').match(/<img\s+[^>]*src="([^">]+)"/i) || itemXml.match(/<img\s+[^>]*src="([^">]+)"/i);
+      if (rawImgMatch && isValidArticlePhoto(rawImgMatch[1])) {
+        imageUrl = rawImgMatch[1];
+      }
+    }
 
     // Published date
     const dateMatch = itemXml.match(/<pubDate(?:[^>]*)>([\s\S]*?)<\/pubDate>/i) || itemXml.match(/<updated(?:[^>]*)>([\s\S]*?)<\/updated>/i);
@@ -184,8 +255,9 @@ Source: ${article.source?.name || 'Global News'}`;
       attempt++;
       console.log(`Generating Long Sinhala Article with Gemini (Attempt ${attempt}/${maxAttempts})...`);
       
+      const modelName = attempt > 1 ? 'gemini-3.1-flash-lite' : 'gemini-3.7-flash';
       const genResponse = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: modelName,
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -218,7 +290,8 @@ Source: ${article.source?.name || 'Global News'}`;
     } catch (err) {
       console.warn(`Gemini generation attempt ${attempt} failed:`, err.message || err);
       if (attempt < maxAttempts) {
-        const waitMs = attempt * 6000;
+        const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED');
+        const waitMs = isRateLimit ? 10000 * attempt : 6000 * attempt;
         console.log(`Waiting ${waitMs / 1000}s before retrying Gemini...`);
         await new Promise((res) => setTimeout(res, waitMs));
       }
@@ -288,6 +361,19 @@ async function runAutoNewsUpload() {
 
       console.log(`\n[${index + 1}/${articles.length}] Generating Long Sinhala Article for: "${article.title}"`);
       
+      // Attempt to extract the real high-res original article image from the source webpage
+      let finalImageUrl = article.urlToImage;
+      if (!finalImageUrl || !isValidArticlePhoto(finalImageUrl)) {
+        console.log(`Extracting original high-res article image from source page: ${article.url}`);
+        const scrapedImg = await fetchOriginalArticleImage(article.url);
+        if (scrapedImg) {
+          finalImageUrl = scrapedImg;
+          console.log(`✓ Successfully extracted original article image: ${scrapedImg}`);
+        } else {
+          finalImageUrl = getRandomImage();
+        }
+      }
+
       const fullArticle = await generateFullSinhalaArticle(ai, article);
 
       if (!fullArticle) {
@@ -306,7 +392,7 @@ async function runAutoNewsUpload() {
         summary: fullArticle.sinhalaDescription,
         content: formattedContent,
         category: article.category || 'Tech',
-        imageUrl: article.urlToImage || getRandomImage(),
+        imageUrl: finalImageUrl,
         date: new Date(article.publishedAt || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '5 min read',
         sourceUrl: article.url || '',
