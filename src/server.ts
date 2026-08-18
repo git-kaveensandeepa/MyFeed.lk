@@ -84,12 +84,76 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Free, Official RSS Feeds for Server Live Cache
+// 100% Free, Official RSS Feeds for Server Live Cache (High Quality Direct Tech Feeds)
 const SERVER_RSS_FEEDS = [
-  { name: 'Google Tech News', url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en' },
+  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
-  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' }
+  { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
+  { name: 'Wired', url: 'https://www.wired.com/feed/rss' },
+  { name: 'Google Tech News', url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en' }
 ];
+
+function getServerTopicImage(title = ''): string {
+  const t = title.toLowerCase();
+  if (
+    t.includes('apple') || 
+    t.includes('iphone') || 
+    t.includes('macbook') || 
+    t.includes('ipad') || 
+    t.includes('ios') || 
+    t.includes('vision pro') || 
+    t.includes('ඇපල්') || 
+    t.includes('අයිෆෝන්')
+  ) {
+    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1200&q=80';
+  }
+  if (
+    t.includes('samsung') || 
+    t.includes('galaxy') || 
+    t.includes('z fold') || 
+    t.includes('z flip') || 
+    t.includes('s24') || 
+    t.includes('s25') ||
+    t.includes('සැම්සුන්')
+  ) {
+    return 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80';
+  }
+  if (t.includes('pixel') || t.includes('android') || t.includes('google phone') || t.includes('ගූගල්')) {
+    return 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80';
+  }
+  if (t.includes('ai') || t.includes('gpt') || t.includes('openai') || t.includes('claude') || t.includes('gemini') || t.includes('deepseek') || t.includes('කෘත්‍රිම බුද්ධිය')) {
+    return 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80';
+  }
+  if (t.includes('cyber') || t.includes('hack') || t.includes('security') || t.includes('malware') || t.includes('සයිබර්')) {
+    return 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80';
+  }
+  if (t.includes('chip') || t.includes('nvidia') || t.includes('semiconductor') || t.includes('intel') || t.includes('amd') || t.includes('චිප්')) {
+    return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80';
+}
+
+function isValidServerImage(url: string): boolean {
+  if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
+  const lower = url.toLowerCase();
+  if (
+    lower.includes('googleusercontent.com') ||
+    lower.includes('news.google.com') ||
+    lower.includes('gstatic.com') ||
+    lower.includes('google.com/favicon') ||
+    lower.includes('avatar') ||
+    lower.includes('logo') ||
+    lower.includes('icon') ||
+    lower.includes('1x1') ||
+    lower.includes('pixel') ||
+    lower.includes('badge') ||
+    lower.endsWith('.svg') ||
+    lower.endsWith('.gif')
+  ) {
+    return false;
+  }
+  return true;
+}
 
 function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[] {
   const items: ServerArticleItem[] = [];
@@ -112,11 +176,11 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
     const mediaMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
                        itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
                        itemXml.match(/<media:thumbnail[^>]+url="([^">]+)"/i);
-    if (mediaMatch && mediaMatch[1] && mediaMatch[1].startsWith('http')) {
+    if (mediaMatch && mediaMatch[1] && isValidServerImage(mediaMatch[1])) {
       imageUrl = mediaMatch[1];
     } else {
       const rawImgMatch = (descMatch ? descMatch[1] : '').match(/<img\s+[^>]*src="([^">]+)"/i);
-      if (rawImgMatch && rawImgMatch[1] && rawImgMatch[1].startsWith('http')) {
+      if (rawImgMatch && rawImgMatch[1] && isValidServerImage(rawImgMatch[1])) {
         imageUrl = rawImgMatch[1];
       }
     }
@@ -129,7 +193,7 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
         title,
         description: description || title,
         url: link,
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+        imageUrl: imageUrl || getServerTopicImage(title),
         publishedAt: pubDate,
         source: { name: sourceName }
       });
@@ -373,6 +437,69 @@ REQUIREMENTS:
         const err = genErr as { message?: string };
         console.error('Error generating AI long article:', genErr);
         return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Dedicated AI Image Generator from Article Title
+    if (url.pathname === '/api/generate-ai-image' && request.method === 'POST') {
+      const geminiApiKey = process.env['GEMINI_API_KEY'];
+      try {
+        const body = await request.json();
+        const title = (body.title || body.topic || '').trim();
+        const category = body.category || 'Tech';
+
+        if (!title) {
+          return new Response(JSON.stringify({ error: 'Title is required to generate an image' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        let visualPrompt = '';
+
+        if (geminiApiKey) {
+          try {
+            const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+            const promptRes = await ai.models.generateContent({
+              model: 'gemini-3.7-flash',
+              contents: `Translate and convert this news article title into a short, descriptive 20-30 word visual prompt for generating a photorealistic, ultra-high-quality tech editorial image.
+Title: "${title}"
+Category: "${category}"
+
+Rules:
+1. Focus on the core visual subject (e.g. if it is about Apple Foldable iPhone, describe a sleek Apple foldable smartphone with titanium chassis and Apple branding).
+2. Avoid text or words inside the image.
+3. Use cinematic editorial tech photography style, 8k, modern studio lighting.
+4. Output ONLY the English prompt text without quotes or preamble.`,
+            });
+            visualPrompt = promptRes.text?.trim().replace(/^"|"$/g, '') || '';
+          } catch (promptErr) {
+            console.warn('Could not generate Gemini visual prompt, falling back:', promptErr);
+          }
+        }
+
+        if (!visualPrompt) {
+          visualPrompt = `${title} modern high-tech editorial photography studio lighting 8k cinematic`;
+        }
+
+        // Generate AI image URL with high-definition 16:9 ratio
+        const randomSeed = Math.floor(Math.random() * 1000000);
+        const generatedImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1200&height=675&nologo=true&enhance=true&seed=${randomSeed}`;
+
+        return new Response(JSON.stringify({
+          imageUrl: generatedImageUrl,
+          prompt: visualPrompt
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (imgErr: unknown) {
+        const err = imgErr as { message?: string };
+        console.error('Error generating AI image from title:', imgErr);
+        return new Response(JSON.stringify({ error: err.message || 'Image generation failed' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });

@@ -177,20 +177,48 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               </div>
 
               <div>
-                <label for="imageUpload" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Cover Image</label>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <label for="imageUpload" class="block text-sm font-bold text-gray-700 uppercase tracking-widest">Cover Image</label>
+                  <button 
+                    type="button" 
+                    (click)="generateImageFromTitle()"
+                    [disabled]="isGeneratingImage() || !formTitle.trim()"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-full text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <mat-icon [class.animate-spin]="isGeneratingImage()" style="font-size: 16px; width: 16px; height: 16px;">
+                      {{ isGeneratingImage() ? 'autorenew' : 'auto_awesome' }}
+                    </mat-icon>
+                    <span>{{ isGeneratingImage() ? 'AI Image එක සාදමින් පවතී...' : '🎨 Title එකෙන් AI Image සාදන්න' }}</span>
+                  </button>
+                </div>
+
+                @if (generatedImagePrompt()) {
+                  <div class="mb-3 p-3 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-800 flex items-start gap-2">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-purple-600 shrink-0 mt-0.5">info</mat-icon>
+                    <div>
+                      <span class="font-bold">AI Visual Prompt:</span> {{ generatedImagePrompt() }}
+                    </div>
+                  </div>
+                }
+
                 <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
                   @if (formImageUrl) {
-                    <div class="relative w-full h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
+                    <div class="relative w-full h-56 rounded-xl overflow-hidden mb-4 bg-gray-100">
                       <img [src]="formImageUrl" alt="Preview" class="w-full h-full object-cover">
-                      <button type="button" (click)="formImageUrl = ''" class="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all z-10">
-                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
-                      </button>
+                      <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
+                        <button type="button" (click)="generateImageFromTitle()" [disabled]="isGeneratingImage() || !formTitle.trim()" class="px-3 py-1.5 bg-black/70 hover:bg-black text-white text-xs font-bold rounded-full backdrop-blur-md flex items-center gap-1 shadow transition-all">
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">refresh</mat-icon>
+                          Regenerate
+                        </button>
+                        <button type="button" (click)="formImageUrl = ''; generatedImagePrompt.set('')" class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all">
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                        </button>
+                      </div>
                     </div>
                   } @else {
                     <div class="py-8">
                       <mat-icon class="text-gray-400 mb-2" style="font-size: 48px; width: 48px; height: 48px;">add_photo_alternate</mat-icon>
-                      <p class="text-sm font-bold text-gray-500 mb-1">Click to upload image</p>
-                      <p class="text-xs text-gray-400 font-medium">JPEG, PNG, WEBP (Max 2MB)</p>
+                      <p class="text-sm font-bold text-gray-500 mb-1">Click to upload image or use AI Image Generator</p>
+                      <p class="text-xs text-gray-400 font-medium">JPEG, PNG, WEBP (Max 2MB) or generated AI visual</p>
                     </div>
                   }
                   <input type="file" id="imageUpload" accept="image/*" (change)="onImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!formImageUrl">
@@ -529,6 +557,8 @@ export class AdminComponent {
   
   aiTopicPrompt = '';
   readonly isGeneratingAi = signal(false);
+  readonly isGeneratingImage = signal(false);
+  readonly generatedImagePrompt = signal('');
 
   constructor() {
     onAuthStateChanged(auth, async user => {
@@ -633,7 +663,44 @@ export class AdminComponent {
     this.isAdding.set(false);
     this.editingId.set(null);
     this.aiTopicPrompt = '';
+    this.generatedImagePrompt.set('');
     this.resetForm();
+  }
+
+  async generateImageFromTitle() {
+    const topic = (this.formTitle || this.aiTopicPrompt).trim();
+    if (!topic) {
+      alert('කරුණාකර Image එකක් සෑදීමට මාතෘකාවක් (Title) ඇතුළත් කරන්න.');
+      return;
+    }
+
+    this.isGeneratingImage.set(true);
+    try {
+      const res = await fetch('/api/generate-ai-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: topic,
+          category: this.formCategory || 'Tech'
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate AI image');
+      }
+
+      const data = await res.json();
+      if (data.imageUrl) {
+        this.formImageUrl = data.imageUrl;
+        this.generatedImagePrompt.set(data.prompt || '');
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('AI Image Generation Error: ' + (err.message || String(e)));
+    } finally {
+      this.isGeneratingImage.set(false);
+    }
   }
 
   async generateWithAI() {
@@ -661,8 +728,10 @@ export class AdminComponent {
       this.formContent = data.sinhalaFullContent || '';
       if (data.suggestedCategory) this.formCategory = data.suggestedCategory;
       if (data.readTime) this.formReadTime = data.readTime;
+      
+      // Generate matching AI image tailored to the newly generated title
       if (!this.formImageUrl) {
-        this.formImageUrl = `https://picsum.photos/seed/${encodeURIComponent(this.aiTopicPrompt.slice(0, 10))}/800/600`;
+        await this.generateImageFromTitle();
       }
     } catch (e: unknown) {
       const err = e as { message?: string };

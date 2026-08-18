@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from '@google/genai';
 
 const firebaseConfig = {
@@ -14,21 +14,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7");
 
-// 100% Free, Official, Legal RSS Feeds (Commercial-Safe & Unrestricted)
+// 100% Free, Official Direct Tech RSS Feeds with Rich Media
 const RSS_FEEDS = [
-  {
-    name: 'Google News - Technology & AI',
-    url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en',
-    category: 'Tech'
-  },
   {
     name: 'The Verge',
     url: 'https://www.theverge.com/rss/index.xml',
-    category: 'Tech'
-  },
-  {
-    name: 'BBC News - Technology',
-    url: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
     category: 'Tech'
   },
   {
@@ -37,30 +27,244 @@ const RSS_FEEDS = [
     category: 'Tech'
   },
   {
+    name: 'BBC News - Technology',
+    url: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+    category: 'Tech'
+  },
+  {
     name: 'Wired',
     url: 'https://www.wired.com/feed/rss',
     category: 'Tech'
   },
   {
-    name: 'Google News - Sri Lanka Top Stories',
-    url: 'https://news.google.com/rss?hl=en-LK&gl=LK&ceid=LK:en',
-    category: 'General'
+    name: 'Ars Technica',
+    url: 'https://feeds.arstechnica.com/arstechnica/index',
+    category: 'Tech'
+  },
+  {
+    name: '9to5Google',
+    url: 'https://9to5google.com/feed/',
+    category: 'Tech'
+  },
+  {
+    name: '9to5Mac',
+    url: 'https://9to5mac.com/feed/',
+    category: 'Tech'
+  },
+  {
+    name: 'Android Authority',
+    url: 'https://www.androidauthority.com/feed/',
+    category: 'Tech'
+  },
+  {
+    name: 'SamMobile',
+    url: 'https://www.sammobile.com/feed/',
+    category: 'Tech'
+  },
+  {
+    name: 'Ada Derana',
+    url: 'http://www.adaderana.lk/rss.php',
+    category: 'Local'
+  },
+  {
+    name: 'Google News - Technology & AI',
+    url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en',
+    category: 'Tech'
   }
 ];
 
-// Fallback high quality royalty-free imagery curated by topic
-const TOPIC_IMAGES = [
-  'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80'
-];
+// Topic-matching high-resolution photography fallbacks
+function getTopicFallbackImage(title = '', category = '') {
+  const t = (title + ' ' + category).toLowerCase();
+  
+  // 1. Apple & iPhone Ecosystem
+  if (
+    t.includes('apple') || 
+    t.includes('iphone') || 
+    t.includes('macbook') || 
+    t.includes('ipad') || 
+    t.includes('ios') || 
+    t.includes('vision pro') || 
+    t.includes('airpods') ||
+    t.includes('ඇපල්') || 
+    t.includes('අයිෆෝන්') || 
+    t.includes('අයිපෑඩ්') || 
+    t.includes('මැක්බුක්')
+  ) {
+    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1200&q=80';
+  }
 
-function getRandomImage() {
-  return TOPIC_IMAGES[Math.floor(Math.random() * TOPIC_IMAGES.length)];
+  // 2. Samsung Galaxy
+  if (
+    t.includes('samsung') || 
+    t.includes('galaxy') || 
+    t.includes('z fold') || 
+    t.includes('z flip') || 
+    t.includes('s24') || 
+    t.includes('s25') ||
+    t.includes('සැම්සුන්') || 
+    t.includes('ගැලැක්සි')
+  ) {
+    return 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 3. Google Pixel & Android
+  if (
+    t.includes('pixel') || 
+    t.includes('android') || 
+    t.includes('google phone') || 
+    t.includes('ගූගල්') || 
+    t.includes('ඇන්ඩ්‍රොයිඩ්')
+  ) {
+    return 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 4. General Foldable / Smartphones
+  if (t.includes('foldable') || t.includes('flip phone') || t.includes('නැවෙන සුළු') || t.includes('smartphone')) {
+    return 'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 5. Artificial Intelligence & Generative AI
+  if (
+    t.includes('ai') || 
+    t.includes('gpt') || 
+    t.includes('chatgpt') || 
+    t.includes('openai') || 
+    t.includes('claude') || 
+    t.includes('gemini') || 
+    t.includes('deepseek') || 
+    t.includes('intelligence') || 
+    t.includes('llm') || 
+    t.includes('bot') || 
+    t.includes('කෘත්‍රිම බුද්ධිය') || 
+    t.includes('ඒඅයි') || 
+    t.includes('ජෙමිනයි')
+  ) {
+    return 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 6. Robotics & Automation
+  if (
+    t.includes('robot') || 
+    t.includes('humanoid') || 
+    t.includes('automation') || 
+    t.includes('boston dynamics') || 
+    t.includes('රොබෝ')
+  ) {
+    return 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 7. Cybersecurity & Privacy
+  if (
+    t.includes('cyber') || 
+    t.includes('hack') || 
+    t.includes('security') || 
+    t.includes('malware') || 
+    t.includes('privacy') || 
+    t.includes('breach') || 
+    t.includes('සයිබර්') || 
+    t.includes('හැක්')
+  ) {
+    return 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 8. Semiconductor, Chips & Hardware
+  if (
+    t.includes('chip') || 
+    t.includes('nvidia') || 
+    t.includes('semiconductor') || 
+    t.includes('intel') || 
+    t.includes('amd') || 
+    t.includes('qualcomm') || 
+    t.includes('gpu') || 
+    t.includes('processor') || 
+    t.includes('චිප්') || 
+    t.includes('ප්‍රොසෙසර්')
+  ) {
+    return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 9. Gaming & Consoles
+  if (
+    t.includes('game') || 
+    t.includes('gaming') || 
+    t.includes('playstation') || 
+    t.includes('xbox') || 
+    t.includes('nintendo') || 
+    t.includes('gta') || 
+    t.includes('ගේමින්') || 
+    t.includes('ප්ලේස්ටේෂන්')
+  ) {
+    return 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 10. Space, NASA & Astronomy
+  if (
+    t.includes('space') || 
+    t.includes('nasa') || 
+    t.includes('spacex') || 
+    t.includes('mars') || 
+    t.includes('satellite') || 
+    t.includes('orbit') || 
+    t.includes('අභ්‍යවකාශ') || 
+    t.includes('නාසා')
+  ) {
+    return 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 11. Electric Vehicles & Tesla
+  if (
+    t.includes('tesla') || 
+    t.includes('ev') || 
+    t.includes('electric vehicle') || 
+    t.includes('car') || 
+    t.includes('auto') || 
+    t.includes('ටෙස්ලා') || 
+    t.includes('විදුලි වාහන')
+  ) {
+    return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80';
+  }
+
+  // 12. Sri Lanka / Local
+  if (
+    t.includes('sri lanka') || 
+    t.includes('colombo') || 
+    t.includes('lka') || 
+    t.includes('ශ්‍රී ලංකා') || 
+    t.includes('ලංකා') || 
+    category?.toLowerCase() === 'local'
+  ) {
+    return 'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?auto=format&fit=crop&w=1200&q=80';
+  }
+  
+  return 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80';
+}
+
+// Generate dynamic AI image directly matching the article title and subject
+async function generateAiImageUrlFromTitle(ai, title = '', category = 'Tech') {
+  try {
+    let visualPrompt = '';
+    if (ai) {
+      const promptRes = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: `Translate and convert this tech news headline into a concise 20-word visual description for a photorealistic editorial tech photograph.
+Headline: "${title}"
+Category: "${category}"
+Rules: Focus on hardware/device/concept, studio lighting, 8k, cinematic, no text on image. Output ONLY the English prompt.`,
+      });
+      visualPrompt = promptRes.text?.trim().replace(/^"|"$/g, '') || '';
+    }
+    
+    if (!visualPrompt) {
+      visualPrompt = `${title} modern tech gadget studio lighting 8k cinematic`;
+    }
+
+    const randomSeed = Math.floor(Math.random() * 1000000);
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(visualPrompt)}?width=1200&height=675&nologo=true&enhance=true&seed=${randomSeed}`;
+  } catch (err) {
+    console.warn('Could not generate AI image from title, using topic fallback:', err.message || err);
+    return getTopicFallbackImage(title, category);
+  }
 }
 
 function getNormalizedKey(str) {
@@ -68,8 +272,28 @@ function getNormalizedKey(str) {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Decode Google News redirect tokens to get the actual publisher destination URL
+function resolvePublisherUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  if (url.includes('news.google.com/rss/articles/') || url.includes('news.google.com/articles/')) {
+    try {
+      const match = url.match(/articles\/([A-Za-z0-9_-]+)/);
+      if (match && match[1]) {
+        const token = match[1];
+        const raw = Buffer.from(token, 'base64').toString('latin1');
+        const urlMatch = raw.match(/https?:\/\/[^\x00-\x1F\x7F-\x9F"'\s<>]+/);
+        if (urlMatch && urlMatch[0]) {
+          return urlMatch[0];
+        }
+      }
+    } catch (_) {}
+  }
+  return url;
+}
+
 // Fetch and scrape original article HTML to extract the exact real featured image
-async function fetchOriginalArticleImage(articleUrl) {
+async function fetchOriginalArticleImage(rawUrl) {
+  const articleUrl = resolvePublisherUrl(rawUrl);
   if (!articleUrl || !articleUrl.startsWith('http')) return '';
   try {
     const controller = new AbortController();
@@ -77,7 +301,8 @@ async function fetchOriginalArticleImage(articleUrl) {
     const response = await fetch(articleUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
       }
     });
     clearTimeout(timeout);
@@ -104,7 +329,7 @@ async function fetchOriginalArticleImage(articleUrl) {
     if (jsonLdMatch && jsonLdMatch[1]) {
       try {
         const parsed = JSON.parse(jsonLdMatch[1]);
-        const img = parsed.image?.url || (Array.isArray(parsed.image) ? parsed.image[0] : parsed.image) || parsed.thumbnailUrl;
+        const img = parsed.image?.url || (Array.isArray(parsed.image) ? (parsed.image[0]?.url || parsed.image[0]) : parsed.image) || parsed.thumbnailUrl;
         if (typeof img === 'string' && isValidArticlePhoto(img)) return img;
       } catch (_) {}
     }
@@ -123,9 +348,24 @@ function isValidArticlePhoto(url) {
   if (!url || typeof url !== 'string') return false;
   if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
   const lower = url.toLowerCase();
-  if (lower.includes('avatar') || lower.includes('logo') || lower.includes('icon') || 
-      lower.includes('1x1') || lower.includes('pixel') || lower.includes('badge') ||
-      lower.includes('emoji') || lower.includes('spinner') || lower.endsWith('.svg')) {
+  if (
+    lower.includes('googleusercontent.com') ||
+    lower.includes('news.google.com') ||
+    lower.includes('gstatic.com') ||
+    lower.includes('google.com/favicon') ||
+    lower.includes('avatar') || 
+    lower.includes('logo') || 
+    lower.includes('icon') || 
+    lower.includes('1x1') || 
+    lower.includes('pixel') || 
+    lower.includes('badge') ||
+    lower.includes('emoji') || 
+    lower.includes('spinner') || 
+    lower.includes('placeholder') ||
+    lower.includes('blank') ||
+    lower.endsWith('.svg') ||
+    lower.endsWith('.gif')
+  ) {
     return false;
   }
   return true;
@@ -321,7 +561,7 @@ async function runAutoNewsUpload() {
     const existingOriginalTitles = new Set();
     const existingSinhalaTitles = new Set();
 
-    querySnapshot.forEach((docSnap) => {
+    querySnapshot.forEach(async (docSnap) => {
       const data = docSnap.data();
       if (data.sourceUrl) existingSourceUrls.add(data.sourceUrl.trim().toLowerCase());
       if (data.imageUrl && !data.imageUrl.startsWith('data:image')) {
@@ -329,6 +569,15 @@ async function runAutoNewsUpload() {
       }
       if (data.originalTitle) existingOriginalTitles.add(getNormalizedKey(data.originalTitle));
       if (data.title) existingSinhalaTitles.add(data.title.trim().toLowerCase());
+
+      // Auto-cleanup legacy Google News logos in Firestore
+      if (data.imageUrl && !isValidArticlePhoto(data.imageUrl)) {
+        const replacementImg = getTopicFallbackImage(data.title || data.originalTitle, data.category);
+        try {
+          await updateDoc(doc(db, 'articles', docSnap.id), { imageUrl: replacementImg });
+          console.log(`[Auto-Cleaned] Replaced logo with high-res photo for "${data.title || docSnap.id}"`);
+        } catch (_) {}
+      }
     });
 
     console.log(`Indexed existing records: ${existingSourceUrls.size} URLs, ${existingImageUrls.size} Images, ${existingSinhalaTitles.size} Titles.`);
@@ -366,11 +615,12 @@ async function runAutoNewsUpload() {
       if (!finalImageUrl || !isValidArticlePhoto(finalImageUrl)) {
         console.log(`Extracting original high-res article image from source page: ${article.url}`);
         const scrapedImg = await fetchOriginalArticleImage(article.url);
-        if (scrapedImg) {
+        if (scrapedImg && isValidArticlePhoto(scrapedImg)) {
           finalImageUrl = scrapedImg;
           console.log(`✓ Successfully extracted original article image: ${scrapedImg}`);
         } else {
-          finalImageUrl = getRandomImage();
+          finalImageUrl = await generateAiImageUrlFromTitle(ai, article.title, article.category);
+          console.log(`✓ Generated custom AI visual from title: ${finalImageUrl}`);
         }
       }
 
