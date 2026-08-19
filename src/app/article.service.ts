@@ -10,6 +10,7 @@ import {
   updateDoc, 
   deleteDoc, 
   getDoc,
+  increment,
   Unsubscribe 
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -445,6 +446,15 @@ export class ArticleService implements OnDestroy {
     } catch (error) {
       console.error('Error updating article in Firestore:', error);
       throw error;
+    }
+  }
+
+  async incrementViews(id: string) {
+    try {
+      const docRef = doc(db, 'articles', id);
+      await updateDoc(docRef, { views: increment(1) });
+    } catch (error) {
+      console.error('Error incrementing views in Firestore:', error);
     }
   }
 

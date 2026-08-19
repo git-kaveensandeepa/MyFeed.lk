@@ -203,7 +203,9 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
                   @if (formImageUrl) {
                     <div class="relative w-full h-56 rounded-xl overflow-hidden mb-4 bg-gray-100">
-                      <img [src]="formImageUrl" alt="Preview" class="w-full h-full object-cover">
+                      <img [src]="formImageUrl" alt="Preview" loading="lazy"
+                           #previewImg (load)="previewImg.classList.remove('opacity-0', 'blur-sm', 'scale-105'); previewImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                           class="w-full h-full object-cover transition-all duration-700 ease-out opacity-0 blur-sm scale-105">
                       <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
                         <button type="button" (click)="generateImageFromTitle()" [disabled]="isGeneratingImage() || !formTitle.trim()" class="px-3 py-1.5 bg-black/70 hover:bg-black text-white text-xs font-bold rounded-full backdrop-blur-md flex items-center gap-1 shadow transition-all">
                           <mat-icon style="font-size: 14px; width: 14px; height: 14px;">refresh</mat-icon>
@@ -274,6 +276,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                   <th class="p-6 font-bold">Title</th>
                   <th class="p-6 font-bold">Category</th>
                   <th class="p-6 font-bold">Date</th>
+                  <th class="p-6 font-bold text-center">Views</th>
                   <th class="p-6 font-bold text-right">Actions</th>
                 </tr>
               </thead>
@@ -285,6 +288,12 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                       <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold">{{ article.category }}</span>
                     </td>
                     <td class="p-6 text-sm text-gray-500">{{ article.date }}</td>
+                    <td class="p-6 text-center">
+                      <span class="inline-flex items-center gap-1 text-sm font-bold text-[#1d1d1f]/60">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">visibility</mat-icon>
+                        {{ article.views || 0 }}
+                      </span>
+                    </td>
                     <td class="p-6 text-right">
                       <div class="flex items-center justify-end gap-2">
                         <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="View live">

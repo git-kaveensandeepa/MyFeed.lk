@@ -101,7 +101,7 @@ import {BookmarkManager} from './bookmark';
             <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-amber-500">trending_up</mat-icon>
             Trending:
           </span>
-          @for (tag of trendingKeywords; track tag) {
+          @for (tag of trendingKeywords(); track tag) {
             <button 
               (click)="applyTrendingTag(tag)"
               class="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold tracking-wide transition-all duration-200 active:scale-95 cursor-pointer border flex items-center gap-1"
@@ -170,8 +170,9 @@ import {BookmarkManager} from './bookmark';
             <article [routerLink]="['/article', featured.slug || featured.id]" class="group relative bg-white dark:bg-[#1a1a1a] rounded-3xl sm:rounded-[2.5rem] overflow-hidden shadow-lg shadow-black/[0.03] hover:shadow-2xl hover:shadow-blue-950/10 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer flex flex-col lg:flex-row border border-black/[0.06] dark:border-white/10">
               <!-- Feature Image -->
               <div class="w-full lg:w-[54%] overflow-hidden bg-gray-100 dark:bg-white/5 relative min-h-[240px] sm:min-h-[340px] lg:min-h-[420px]">
-                <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer"
-                     class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer" loading="lazy"
+                     #leadImg (load)="leadImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); leadImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                     class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-[1000ms] ease-out opacity-0 blur-xl scale-110" />
                 
                 <!-- Overlay Gradient for contrast -->
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 lg:hidden"></div>
@@ -180,6 +181,9 @@ import {BookmarkManager} from './bookmark';
                 <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
                   <span class="px-3 py-1 rounded-full bg-blue-600 text-white font-extrabold text-[10px] sm:text-xs uppercase tracking-wider shadow-md">
                     {{ featured.category }}
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white font-bold text-[10px] sm:text-xs tracking-wider shadow-md">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon> {{ featured.views || 0 }} Views
                   </span>
                   @if (featured.authorType !== 'human') {
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-600/90 backdrop-blur-md text-white font-bold text-[10px] tracking-wide shadow-md">
@@ -276,13 +280,17 @@ import {BookmarkManager} from './bookmark';
                 
                 <!-- Card Cover Image -->
                 <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 shadow-inner">
-                  <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer"
-                       class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                  <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="lazy"
+                       #gridImg (load)="gridImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); gridImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                       class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ease-out opacity-0 blur-xl scale-110" />
                   
                   <!-- Category Badge Tag -->
                   <div class="absolute top-3 left-3 z-20 flex items-center gap-1.5">
                     <span class="px-2.5 py-0.5 rounded-full bg-blue-600/95 text-white font-extrabold text-[9px] sm:text-[10px] uppercase tracking-wider shadow-sm">
                       {{ article.category }}
+                    </span>
+                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-sm">
+                      <mat-icon style="font-size: 11px; width: 11px; height: 11px;">visibility</mat-icon> {{ article.views || 0 }}
                     </span>
                     @if (article.authorType !== 'human') {
                       <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-indigo-300 font-bold text-[9px]">
@@ -455,7 +463,25 @@ export class HomeComponent implements OnInit, OnDestroy {
   private placeholderTimer: ReturnType<typeof setInterval> | null = null;
   private placeholderIndex = 0;
 
-  readonly trendingKeywords = ['AI', 'Tech', 'Apple', 'Tesla', 'Google', 'Local'];
+  readonly trendingKeywords = computed(() => {
+    const articles = this.articleService.articles();
+    if (!articles || articles.length === 0) return ['AI', 'Tech', 'Apple', 'Tesla', 'Local'];
+
+    // Sort descending by views
+    const sorted = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0));
+    const topKeywords = new Set<string>();
+
+    for (const art of sorted) {
+      if (art.category && !['Local', 'Global', 'Entertainment'].includes(art.category)) {
+        topKeywords.add(art.category);
+      }
+      if (topKeywords.size >= 5) break;
+    }
+
+    ['AI', 'Tech', 'Apple', 'Tesla'].forEach(k => topKeywords.add(k));
+
+    return Array.from(topKeywords).slice(0, 5);
+  });
 
   ngOnInit() {
     // Rotate placeholder text every 3 seconds
@@ -544,15 +570,47 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   readonly featuredArticle = computed(() => {
     const articles = this.filteredArticles();
-    return articles.length > 0 ? articles[0] : null;
+    if (articles.length === 0) return null;
+
+    if (this.searchService.searchTerm().trim()) {
+      return articles[0];
+    }
+
+    const now = Date.now();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+    const recentArticles = articles.filter(a => {
+      const timestamp = a.timestamp || (a.date ? new Date(a.date).getTime() : 0);
+      return (now - timestamp) <= threeDaysMs;
+    });
+
+    if (recentArticles.length > 0) {
+      recentArticles.sort((a, b) => (b.views || 0) - (a.views || 0));
+      return recentArticles[0];
+    }
+
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const weekArticles = articles.filter(a => {
+      const timestamp = a.timestamp || (a.date ? new Date(a.date).getTime() : 0);
+      return (now - timestamp) <= sevenDaysMs;
+    });
+
+    if (weekArticles.length > 0) {
+      weekArticles.sort((a, b) => (b.views || 0) - (a.views || 0));
+      return weekArticles[0];
+    }
+
+    return articles[0];
   });
 
   readonly gridArticles = computed(() => {
     const articles = this.filteredArticles();
-    if (articles.length > 1) {
-      return articles.slice(1);
+    const featured = this.featuredArticle();
+    
+    if (featured) {
+      return articles.filter(a => a.id !== featured.id);
     }
-    return [];
+    return articles;
   });
 
   getArticlesByCategory(catName: string): Article[] {

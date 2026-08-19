@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
@@ -33,10 +33,16 @@ import {BookmarkManager} from './bookmark';
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-12 md:pt-16 pb-6 sm:pb-12">
           <!-- Top Navigation & Action Controls -->
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-12">
-            <a routerLink="/" class="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold tracking-widest uppercase text-[#1d1d1f]/60 dark:text-white/60 hover:text-[#1d1d1f] dark:hover:text-white transition-all cursor-pointer group shrink-0">
-              <mat-icon class="group-hover:-translate-x-1 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">keyboard_backspace</mat-icon>
-              <span>Back to Journal</span>
-            </a>
+            <div class="flex items-center gap-4">
+              <a routerLink="/" class="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold tracking-widest uppercase text-[#1d1d1f]/60 dark:text-white/60 hover:text-[#1d1d1f] dark:hover:text-white transition-all cursor-pointer group shrink-0">
+                <mat-icon class="group-hover:-translate-x-1 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">keyboard_backspace</mat-icon>
+                <span>Back to Journal</span>
+              </a>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-blue-300 text-[10px] sm:text-[11px] font-bold tracking-wider">
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon>
+                {{ article.views || 0 }} Views
+              </span>
+            </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
               <!-- Social Story Card / Poster Generator Button -->
@@ -143,8 +149,9 @@ import {BookmarkManager} from './bookmark';
         <!-- Featured Image Figure -->
         <figure class="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-16 md:mb-24 relative group">
           <div class="w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2.2/1] rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative shadow-xl sm:shadow-2xl shadow-black/10">
-            <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer"
-                 class="absolute inset-0 w-full h-full object-cover" />
+            <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="eager"
+                 #mainImg (load)="mainImg.classList.remove('opacity-0', 'blur-xl', 'scale-105'); mainImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                 class="absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-out opacity-0 blur-xl scale-105" />
           </div>
         </figure>
 
@@ -211,6 +218,17 @@ import {BookmarkManager} from './bookmark';
                   }
                 </button>
 
+                <!-- Facebook Share Button -->
+                <button 
+                  (click)="shareToFacebook(article)"
+                  class="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-lg shadow-[#1877F2]/20 active:scale-95 border border-[#1877F2]"
+                  title="Share article on Facebook">
+                  <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                  </svg>
+                  <span>Share</span>
+                </button>
+
                 <!-- Copy Link -->
                 <button 
                   (click)="copyLink()"
@@ -245,8 +263,9 @@ import {BookmarkManager} from './bookmark';
                 @for (rel of relatedArticles(); track rel.id; let i = $index) {
                   <article [routerLink]="['/article', rel.slug || rel.id]" class="group bg-white dark:bg-[#1a1a1a] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-blue-950/20 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer flex flex-col h-full border border-black/5 dark:border-white/10 relative overflow-hidden" [style.animation-delay]="(0.1 + (i * 0.1)) + 's'">
                     <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 sm:mb-5 shadow-inner">
-                      <img [src]="rel.imageUrl" [alt]="rel.title" referrerpolicy="no-referrer"
-                           class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      <img [src]="rel.imageUrl" [alt]="rel.title" referrerpolicy="no-referrer" loading="lazy"
+                           #relImg (load)="relImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); relImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                           class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ease-out opacity-0 blur-xl scale-110" />
                       <button 
                         (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(rel.id)"
                         class="absolute top-3 right-3 z-20 p-2 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-md text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
@@ -338,7 +357,7 @@ import {BookmarkManager} from './bookmark';
             <canvas #posterCanvas class="hidden"></canvas>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button 
                 (click)="downloadPoster()"
                 [disabled]="isGeneratingPoster() || !posterDataUrl()"
@@ -353,6 +372,14 @@ import {BookmarkManager} from './bookmark';
                   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                 </svg>
                 <span>WhatsApp</span>
+              </button>
+              <button 
+                (click)="shareToFacebook(article)"
+                class="w-full py-3 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold text-xs shadow-md shadow-[#1877F2]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+                <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                </svg>
+                <span>Facebook</span>
               </button>
             </div>
           </div>
@@ -403,8 +430,17 @@ export class ArticleComponent implements OnDestroy {
   constructor() {
     effect(() => {
       // Smoothly scroll to the top whenever viewing a new article
-      if (this.articleId() && typeof window !== 'undefined') {
+      const id = this.articleId();
+      if (id && typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Record view increment dynamically after a short delay
+        setTimeout(() => {
+          const currentArt = untracked(() => this.article());
+          if (currentArt && currentArt.id) {
+            this.articleService.incrementViews(currentArt.id);
+          }
+        }, 1500);
       }
     });
   }
@@ -664,6 +700,33 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedPost)}`;
     window.open(waUrl, '_blank');
     this.showToast('Opening WhatsApp... 🚀');
+  }
+
+  shareToFacebook(article: { slug?: string; id: string; title: string }) {
+    if (typeof window === 'undefined') return;
+    const domain = window.location.origin.includes('localhost') || window.location.origin.includes('run.app')
+      ? 'https://myfeedlk.web.app'
+      : window.location.origin;
+    const articleUrl = `${domain}/article/${article.slug || article.id}`;
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`;
+    
+    // Attempt to use native share if supported, fallback to window.open
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        navigator.share({
+          title: article.title,
+          url: articleUrl
+        }).catch(err => {
+          if (err.name !== 'AbortError') {
+            window.open(fbUrl, '_blank', 'width=600,height=400');
+          }
+        });
+      } catch {
+        window.open(fbUrl, '_blank', 'width=600,height=400');
+      }
+    } else {
+      window.open(fbUrl, '_blank', 'width=600,height=400');
+    }
   }
 
   async toggleSpeech(article: { title: string; summary: string; content: string }) {
