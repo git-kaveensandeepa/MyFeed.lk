@@ -69,6 +69,17 @@ import {RouterLink} from '@angular/router';
         </div>
       </div>
 
+      <section class="mb-24 text-center max-w-2xl mx-auto">
+        <h2 class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-6">Contact & Support</h2>
+        <p class="text-[#1d1d1f]/80 dark:text-white/80 font-medium leading-relaxed mb-6">
+          Have questions, feedback, or need assistance? You can reach out directly to the administrator via WhatsApp.
+        </p>
+        <a href="https://wa.me/94710947871" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-green-500 hover:bg-green-600 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-green-500/20 hover:scale-105 active:scale-95 cursor-pointer">
+          <mat-icon>chat</mat-icon>
+          WhatsApp Admin (071 094 7871)
+        </a>
+      </section>
+
       <div class="bg-black/[0.02] dark:bg-white/[0.02] rounded-[3rem] p-8 sm:p-16 border border-black/[0.05] dark:border-white/10 text-center">
         <h3 class="text-2xl sm:text-4xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-6">Stay part of the story.</h3>
         <p class="text-[#1d1d1f]/60 dark:text-white/60 mb-10 max-w-lg mx-auto font-medium">
