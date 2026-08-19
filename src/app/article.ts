@@ -1,4 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked} from '@angular/core';
+import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
@@ -403,6 +404,8 @@ export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
 
   private articleId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')))
@@ -428,19 +431,45 @@ export class ArticleComponent implements OnDestroy {
   });
 
   constructor() {
+    // 1. SEO Tags Effect (Re-runs when article data changes, e.g. views/likes update, which is safe)
     effect(() => {
-      // Smoothly scroll to the top whenever viewing a new article
+      const currentArt = this.article();
+      if (currentArt) {
+        // Update SEO Tags dynamically for search engines and social media
+        this.titleService.setTitle(`${currentArt.title} | MyFeed.lk`);
+        this.metaService.updateTag({ name: 'description', content: currentArt.summary });
+        
+        // Open Graph tags for Facebook / LinkedIn / WhatsApp
+        this.metaService.updateTag({ property: 'og:title', content: currentArt.title });
+        this.metaService.updateTag({ property: 'og:description', content: currentArt.summary });
+        this.metaService.updateTag({ property: 'og:image', content: currentArt.imageUrl });
+        this.metaService.updateTag({ property: 'og:type', content: 'article' });
+        
+        // Twitter Card tags
+        this.metaService.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+        this.metaService.updateTag({ name: 'twitter:title', content: currentArt.title });
+        this.metaService.updateTag({ name: 'twitter:description', content: currentArt.summary });
+        this.metaService.updateTag({ name: 'twitter:image', content: currentArt.imageUrl });
+      }
+    });
+
+    // 2. Navigation & View Increment Effect (MUST only re-run when the article ID changes in the URL)
+    effect(() => {
       const id = this.articleId();
       if (id && typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Record view increment dynamically after a short delay
-        setTimeout(() => {
-          const currentArt = untracked(() => this.article());
-          if (currentArt && currentArt.id) {
-            this.articleService.incrementViews(currentArt.id);
-          }
-        }, 1500);
+        // Untrack to prevent any accidental reactive loops if we read other signals inside
+        untracked(() => {
+          // Smoothly scroll to the top whenever navigating to a new article
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          // Record view increment dynamically after a short delay
+          setTimeout(() => {
+            const art = this.article();
+            if (art && art.id) {
+              this.articleService.incrementViews(art.id);
+            }
+          }, 1500);
+        });
       }
     });
   }

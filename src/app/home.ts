@@ -1,4 +1,5 @@
-import {ChangeDetectionStrategy, Component, computed, signal, inject, OnInit, OnDestroy} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, signal, inject, OnInit, OnDestroy, effect} from '@angular/core';
+import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
@@ -443,6 +444,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly searchService = inject(SearchService);
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
   
   pullDistance = signal(0);
   isRefreshing = signal(false);
@@ -484,6 +487,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    // Set Base SEO tags for Home Page
+    this.titleService.setTitle('The Feed.lk | Sri Lanka Tech Journal');
+    this.metaService.updateTag({ name: 'description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
+    this.metaService.updateTag({ property: 'og:title', content: 'The Feed.lk | Sri Lanka Tech Journal' });
+    this.metaService.updateTag({ property: 'og:description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
+    this.metaService.updateTag({ property: 'og:type', content: 'website' });
+
     // Rotate placeholder text every 3 seconds
     if (typeof window !== 'undefined') {
       this.placeholderTimer = setInterval(() => {

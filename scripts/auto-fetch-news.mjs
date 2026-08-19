@@ -286,7 +286,7 @@ async function generateAiImageUrlFromTitle(ai, title = '', category = 'Tech') {
     let visualPrompt = '';
     if (ai) {
       const promptRes = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.1-flash',
         contents: `Translate and convert this tech news headline into a concise 20-word visual description for a photorealistic editorial tech photograph.
 Headline: "${title}"
 Category: "${category}"
@@ -542,7 +542,7 @@ Classify the story into exactly one of these 3 category labels:
       attempt++;
       console.log(`Generating Long Sinhala Article with Gemini (Attempt ${attempt}/${maxAttempts})...`);
       
-      const modelName = attempt > 1 ? 'gemini-3.1-flash-lite' : 'gemini-3.7-flash';
+      const modelName = 'gemini-3.1-flash';
       const genResponse = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
@@ -581,8 +581,19 @@ Classify the story into exactly one of these 3 category labels:
     } catch (err) {
       console.warn(`Gemini generation attempt ${attempt} failed:`, err.message || err);
       if (attempt < maxAttempts) {
+        let waitMs = 6000 * attempt;
         const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED');
-        const waitMs = isRateLimit ? 10000 * attempt : 6000 * attempt;
+        
+        if (isRateLimit) {
+          // If the error message specifies a retry delay (e.g. "retry in 29.5s"), parse it.
+          const retryMatch = err?.message?.match(/retry in ([\d.]+)s/);
+          if (retryMatch && retryMatch[1]) {
+            waitMs = (parseFloat(retryMatch[1]) * 1000) + 2000; // Add 2s buffer
+          } else {
+            waitMs = 30000 * attempt; // Default heavy backoff for rate limits
+          }
+        }
+        
         console.log(`Waiting ${waitMs / 1000}s before retrying Gemini...`);
         await new Promise((res) => setTimeout(res, waitMs));
       }
