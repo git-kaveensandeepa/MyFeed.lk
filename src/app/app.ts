@@ -7,6 +7,7 @@ import {ThemeManager} from './theme';
 import {BookmarkManager} from './bookmark';
 import {ArticleService} from './article.service';
 import {TickerService} from './ticker.service';
+import {PwaService} from './pwa.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,7 +16,10 @@ import {TickerService} from './ticker.service';
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
-    '(window:scroll)': 'onWindowScroll()'
+    '(window:scroll)': 'onWindowScroll()',
+    '(window:copy)': 'preventCopy($event)',
+    '(window:cut)': 'preventCopy($event)',
+    '(window:contextmenu)': 'preventContextMenu($event)'
   }
 })
 export class App implements OnInit {
@@ -25,6 +29,7 @@ export class App implements OnInit {
   readonly bookmarkManager = inject(BookmarkManager);
   readonly articleService = inject(ArticleService);
   readonly tickerService = inject(TickerService);
+  readonly pwaService = inject(PwaService);
   
   showSplash = signal(true);
   splashFading = signal(false);
@@ -38,6 +43,38 @@ export class App implements OnInit {
     const ids = this.bookmarkManager.bookmarkedIds();
     return this.articleService.articles().filter(a => ids.includes(a.id));
   });
+
+  preventCopy(event: ClipboardEvent) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    // Allow copy inside input fields, textareas, or admin panel
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable ||
+      target.closest('.admin-panel') ||
+      target.closest('input') ||
+      target.closest('textarea')
+    ) {
+      return;
+    }
+    event.preventDefault();
+  }
+
+  preventContextMenu(event: MouseEvent) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    // Allow right click in input fields, textareas, or admin panel
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable ||
+      target.closest('.admin-panel')
+    ) {
+      return;
+    }
+    event.preventDefault();
+  }
 
   ngOnInit() {
     if (typeof window !== 'undefined') {

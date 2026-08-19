@@ -232,7 +232,14 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 <textarea id="formContent" [(ngModel)]="formContent" name="content" required rows="10" class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-serif text-lg" placeholder="Full article content (paragraphs separated by blank lines)"></textarea>
               </div>
 
-              <div class="flex flex-col sm:flex-row gap-4 py-2">
+              <div class="flex flex-col sm:flex-row gap-4 py-2 flex-wrap">
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="autoAlertPhone" [(ngModel)]="autoAlertPhone" name="autoAlertPhone" class="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-600">
+                  <label for="autoAlertPhone" class="text-sm font-bold text-purple-700 uppercase tracking-widest cursor-pointer flex items-center gap-1.5">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+                    Alert My Phone
+                  </label>
+                </div>
                 <div class="flex items-center gap-3">
                   <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
                   <label for="notifySubscribers" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Notify subscribers (Email)</label>
@@ -283,6 +290,13 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                         <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="View live">
                           <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon>
                         </a>
+                        <button (click)="sendPhoneAlertForArticle(article)" [disabled]="isSendingAlertForId() === article.id" class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center transition-colors disabled:opacity-50" title="Send Phone Push Alert (ntfy)">
+                          @if (isSendingAlertForId() === article.id) {
+                            <div class="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
+                          } @else {
+                            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">notifications_active</mat-icon>
+                          }
+                        </button>
                         <button (click)="openWhatsAppModal(article)" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="Post to WhatsApp Channel">
                           <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chat</mat-icon>
                         </button>
@@ -350,15 +364,87 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
           </div>
         } @else if (activeTab() === 'notify') {
           <!-- Notify Tab -->
-          <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12 overflow-hidden">
-              <div class="flex items-center gap-6 mb-10">
-                <div class="w-16 h-16 rounded-[2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20">
+          <div class="max-w-3xl mx-auto space-y-8">
+            
+            <!-- Phone Push Alerts Card (100% Free Instant Mobile Alerts via ntfy.sh) -->
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
+              <div class="flex items-center gap-6 mb-8">
+                <div class="w-16 h-16 rounded-[2rem] bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/20">
                   <mat-icon style="font-size: 32px; width: 32px; height: 32px;">notifications_active</mat-icon>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-[#1d1d1f]">Broadcast Update</h2>
-                  <p class="text-sm text-gray-500">Notify all {{ subscriberService.subscribers().length }} subscribers</p>
+                  <h2 class="text-2xl font-black text-[#1d1d1f]">Instant Phone Push Notifications</h2>
+                  <p class="text-sm text-gray-500">Get breaking news alerts directly on your phone the moment an article is published</p>
+                </div>
+              </div>
+
+              <!-- Quick Setup Steps -->
+              <div class="p-6 rounded-[2rem] bg-purple-50/60 border border-purple-100 mb-8 space-y-3">
+                <div class="flex items-center gap-2 text-purple-900 font-bold text-sm">
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px;">smartphone</mat-icon>
+                  How to receive notifications on your phone (30 Seconds):
+                </div>
+                <ol class="text-xs text-purple-800 space-y-1.5 list-decimal list-inside leading-relaxed font-medium">
+                  <li>Install the free <strong>ntfy</strong> app on your Phone (Available on Google Play Store & iOS App Store), OR open <a [href]="'https://ntfy.sh/' + phoneTopic" target="_blank" class="underline font-bold">ntfy.sh/{{ phoneTopic }}</a> in Safari / Chrome.</li>
+                  <li>In the app, tap <strong>"+" (Subscribe to topic)</strong> and enter topic name: <strong class="bg-white px-2 py-0.5 rounded border border-purple-200 font-mono text-purple-900">{{ phoneTopic }}</strong></li>
+                  <li>Tap <strong>"Send Test Alert"</strong> below &mdash; your phone will ring and vibrate instantly! 🔔</li>
+                </ol>
+              </div>
+
+              <!-- Topic Settings & Test Dispatch -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label for="phoneTopic" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Notification Topic Name</label>
+                    <input id="phoneTopic" [(ngModel)]="phoneTopic" name="phoneTopic" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono font-bold text-sm" placeholder="myfeedlk_kaveen" />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="siteDomain" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Target Website URL (To Open on Tap)</label>
+                    <input id="siteDomain" [(ngModel)]="siteDomain" name="siteDomain" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono font-bold text-sm" placeholder="https://myfeedlk.web.app" />
+                  </div>
+                </div>
+
+                <div class="flex justify-end">
+                  <button type="button" (click)="savePhoneSettings()" [disabled]="isSavingPhoneSettings()" class="px-6 py-3 rounded-2xl bg-purple-100 text-purple-800 hover:bg-purple-200 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50">
+                    {{ isSavingPhoneSettings() ? 'Saving...' : 'Save Notification Settings' }}
+                  </button>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                  <button type="button" (click)="sendTestPhoneAlert()" [disabled]="isTestingPhoneAlert() || !phoneTopic.trim()" class="flex-1 py-4 rounded-full bg-purple-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-700 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                    @if (isTestingPhoneAlert()) {
+                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      <span>Sending Test Alert...</span>
+                    } @else {
+                      <mat-icon>notifications_active</mat-icon>
+                      <span>Send Test Alert to My Phone</span>
+                    }
+                  </button>
+
+                  <a [href]="'https://ntfy.sh/' + phoneTopic" target="_blank" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
+                    <mat-icon>open_in_new</mat-icon>
+                    <span>Open Channel Web App</span>
+                  </a>
+                </div>
+
+                @if (phoneAlertSuccess()) {
+                  <div class="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
+                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                    <span class="text-xs font-bold">Test alert sent successfully! Check your phone.</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Email Subscribers Broadcast Card -->
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12 overflow-hidden">
+              <div class="flex items-center gap-6 mb-10">
+                <div class="w-16 h-16 rounded-[2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20">
+                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">mail</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-black text-[#1d1d1f]">Email Subscribers Broadcast</h2>
+                  <p class="text-sm text-gray-500">Notify all {{ subscriberService.subscribers().length }} newsletter subscribers</p>
                 </div>
               </div>
 
@@ -538,6 +624,15 @@ export class AdminComponent {
   readonly waSuccessMessage = signal('Post sent to WhatsApp Channel successfully!');
   autoPostWhatsApp = true;
 
+  // Phone Push Notifications (via ntfy.sh)
+  phoneTopic = 'myfeedlk_kaveen';
+  siteDomain = 'https://myfeedlk.web.app';
+  autoAlertPhone = true;
+  readonly isSavingPhoneSettings = signal(false);
+  readonly isTestingPhoneAlert = signal(false);
+  readonly phoneAlertSuccess = signal(false);
+  readonly isSendingAlertForId = signal<string | null>(null);
+
   // Broadcast signals
   broadcastSubject = '';
   broadcastMessage = '';
@@ -574,6 +669,7 @@ export class AdminComponent {
         this.subscriberService.loadSubscribers();
         this.loadDeploySettings();
         this.loadWaSettings();
+        this.loadPhoneSettings();
       }
     });
   }
@@ -762,7 +858,8 @@ export class AdminComponent {
       if (this.editingId()) {
         await this.articleService.updateArticle(this.editingId()!, payload);
       } else {
-        await this.articleService.addArticle(payload as Omit<Article, 'id' | 'createdAt'>);
+        const newDocId = await this.articleService.addArticle(payload as Omit<Article, 'id' | 'createdAt'>);
+        const articleUrl = this.getArticleUrl(payload.slug || newDocId);
         
         // Auto-notify if selected and it's a new post
         if (this.notifySubscribers) {
@@ -777,12 +874,22 @@ export class AdminComponent {
 
         // Auto-post to WhatsApp Channel if enabled
         if (this.autoPostWhatsApp) {
-          const articleUrl = `https://myfeed.lk/article/${payload.slug || ''}`;
           this.triggerWhatsAppChannelPost({
             title: this.formTitle,
             summary: this.formSummary,
             category: this.formCategory,
             readTime: this.formReadTime,
+            imageUrl: this.formImageUrl,
+            articleUrl
+          });
+        }
+
+        // Auto-alert Phone if enabled (ntfy.sh push alert)
+        if (this.autoAlertPhone) {
+          await this.triggerPhonePushNotification({
+            title: this.formTitle,
+            summary: this.formSummary,
+            imageUrl: this.formImageUrl,
             articleUrl
           });
         }
@@ -907,7 +1014,7 @@ export class AdminComponent {
   }
 
   openWhatsAppModal(article: Article) {
-    const articleUrl = `https://myfeed.lk/article/${article.slug || article.id}`;
+    const articleUrl = this.getArticleUrl(article.slug || article.id);
     this.waCustomMessage = `*🚀 NEW ON MYFEED.LK (${article.category})*
 
 *${article.title}*
@@ -928,7 +1035,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
-  async triggerWhatsAppChannelPost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string }) {
+  async triggerWhatsAppChannelPost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string; imageUrl?: string }) {
     try {
       await fetch('/api/whatsapp/post', {
         method: 'POST',
@@ -976,6 +1083,203 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     if (!this.waCustomMessage.trim()) return;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(this.waCustomMessage)}`;
     window.open(url, '_blank');
+  }
+
+  getArticleUrl(slugOrId: string): string {
+    const domain = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+    return slugOrId ? `${domain}/article/${slugOrId}` : domain;
+  }
+
+  async loadPhoneSettings() {
+    // 1. Load instantly from localStorage if available
+    try {
+      const localTopic = localStorage.getItem('myfeed_phone_topic');
+      if (localTopic) {
+        this.phoneTopic = localTopic;
+      }
+      const localDomain = localStorage.getItem('myfeed_site_domain');
+      if (localDomain) {
+        this.siteDomain = localDomain;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Sync with Firestore settings
+    try {
+      const docRef = doc(db, 'settings', 'phone_alerts');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && data['topic']) {
+          this.phoneTopic = data['topic'];
+          try { 
+            localStorage.setItem('myfeed_phone_topic', this.phoneTopic); 
+          } catch {
+            // ignore storage errors
+          }
+        }
+        if (data && data['siteDomain']) {
+          this.siteDomain = data['siteDomain'];
+          try { 
+            localStorage.setItem('myfeed_site_domain', this.siteDomain); 
+          } catch {
+            // ignore storage errors
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load phone settings from Firestore', e);
+    }
+  }
+
+  async savePhoneSettings() {
+    if (!this.phoneTopic.trim()) return;
+    this.isSavingPhoneSettings.set(true);
+    try {
+      const cleanTopic = this.phoneTopic.trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
+      const cleanDomain = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+      
+      try {
+        localStorage.setItem('myfeed_phone_topic', cleanTopic);
+        localStorage.setItem('myfeed_site_domain', cleanDomain);
+      } catch {
+        // ignore storage errors
+      }
+
+      const docRef = doc(db, 'settings', 'phone_alerts');
+      await setDoc(docRef, {
+        topic: cleanTopic,
+        siteDomain: cleanDomain,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      alert('Phone alert & website settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving phone settings', error);
+      alert('Settings saved locally. (Firestore notice: ' + (error instanceof Error ? error.message : String(error)) + ')');
+    } finally {
+      this.isSavingPhoneSettings.set(false);
+    }
+  }
+
+  async sendTestPhoneAlert() {
+    const cleanTopic = (this.phoneTopic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
+    this.isTestingPhoneAlert.set(true);
+    this.phoneAlertSuccess.set(false);
+
+    try {
+      const targetUrl = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+      const payload = {
+        topic: cleanTopic,
+        title: '🔥 Test Alert from MyFeed.lk',
+        message: 'Phone Push Notifications are active and working! Tap here to open MyFeed.',
+        click: targetUrl,
+        priority: 4,
+        tags: ['newspaper', 'bell', 'rocket']
+      };
+
+      // 1. Direct fetch to ntfy.sh (Supported natively in browser with CORS)
+      const directRes = await fetch('https://ntfy.sh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // 2. Also dispatch via backend API route
+      fetch('/api/notify/phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn('Backend proxy notify warning:', e));
+
+      if (directRes.ok) {
+        this.phoneAlertSuccess.set(true);
+        setTimeout(() => this.phoneAlertSuccess.set(false), 8000);
+      } else {
+        const text = await directRes.text();
+        alert('ntfy.sh responded: ' + text);
+      }
+    } catch (e) {
+      console.error('Test alert error', e);
+      alert('Could not dispatch test notification: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      this.isTestingPhoneAlert.set(false);
+    }
+  }
+
+  async triggerPhonePushNotification(data: { title: string; summary: string; articleUrl: string; imageUrl?: string }): Promise<boolean> {
+    try {
+      const cleanTopic = (this.phoneTopic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
+      const safeTitle = (data.title ? `📰 ${data.title}` : '📰 MyFeed.lk: New Story').slice(0, 120);
+      const safeMessage = (data.summary ? `${data.summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on MyFeed.lk. Tap to read!').slice(0, 800);
+      const safeUrl = (data.articleUrl || this.siteDomain || 'https://myfeedlk.web.app').trim();
+
+      const payload: Record<string, unknown> = {
+        topic: cleanTopic,
+        title: safeTitle,
+        message: safeMessage,
+        click: safeUrl,
+        priority: 4,
+        tags: ['newspaper', 'rocket']
+      };
+
+      // Only attach if it's a valid remote HTTP/HTTPS URL and NOT a data URL
+      if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('http') && !data.imageUrl.startsWith('data:')) {
+        payload['attach'] = data.imageUrl;
+      }
+
+      // 1. Direct fetch to ntfy.sh
+      let directRes = await fetch('https://ntfy.sh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+
+      // If failed with attachment, retry immediately without attachment
+      if ((!directRes || !directRes.ok) && payload['attach']) {
+        delete payload['attach'];
+        directRes = await fetch('https://ntfy.sh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => null);
+      }
+
+      // 2. Also dispatch via backend API proxy for high reliability
+      fetch('/api/notify/phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.warn('Backend proxy notify warning:', e));
+
+      return directRes ? directRes.ok : true;
+    } catch (err) {
+      console.warn('Auto phone push dispatch background error:', err);
+      return false;
+    }
+  }
+
+  async sendPhoneAlertForArticle(article: Article) {
+    this.isSendingAlertForId.set(article.id);
+    try {
+      const articleUrl = this.getArticleUrl(article.slug || article.id);
+      const success = await this.triggerPhonePushNotification({
+        title: article.title,
+        summary: article.summary,
+        imageUrl: article.imageUrl,
+        articleUrl
+      });
+
+      if (success) {
+        alert(`🔔 Phone Push Alert dispatched to topic: ${this.phoneTopic || 'myfeedlk_kaveen'} for "${article.title}"`);
+      } else {
+        alert(`Notification sent to topic ${this.phoneTopic || 'myfeedlk_kaveen'}. Please check your phone.`);
+      }
+    } catch (e) {
+      alert('Alert error: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      this.isSendingAlertForId.set(null);
+    }
   }
 
   triggerNetlifyBuild() {

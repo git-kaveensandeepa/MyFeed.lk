@@ -84,13 +84,16 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Free, Official RSS Feeds for Server Live Cache (High Quality Direct Tech Feeds)
+// 100% Free, Official RSS Feeds for Server Live Cache (AI, Local Sri Lanka, Tech)
 const SERVER_RSS_FEEDS = [
-  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
+  { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
+  { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
+  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI&hl=en-US&gl=US&ceid=US:en' },
+  { name: 'Daily FT Sri Lanka', url: 'https://www.ft.lk/rss/it-telecom-technology' },
+  { name: 'Ada Derana', url: 'http://www.adaderana.lk/rss.php' },
+  { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
-  { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
-  { name: 'Wired', url: 'https://www.wired.com/feed/rss' },
-  { name: 'Google Tech News', url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en' }
+  { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
 ];
 
 function getServerTopicImage(title = ''): string {
@@ -269,7 +272,10 @@ CRITICAL INSTRUCTIONS:
 
 English Title: ${article.title}
 English Description: ${article.description}
-Source URL: ${article.url}`;
+Source URL: ${article.url}
+
+CATEGORY RULE:
+Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, Claude, LLMs), 'Local' (for Sri Lanka news), or 'Tech' (for Apple, Samsung, hardware, general gadgets).`;
           
           const modelName = attempt > 1 ? 'gemini-3.1-flash-lite' : 'gemini-3.7-flash';
           genResponse = await ai.models.generateContent({
@@ -282,9 +288,10 @@ Source URL: ${article.url}`;
                 properties: {
                   sinhalaTitle: { type: Type.STRING },
                   sinhalaDescription: { type: Type.STRING, description: "A short 1-2 sentence summary" },
-                  sinhalaFullContent: { type: Type.STRING, description: "The full, comprehensive news article in Sinhala formatted with HTML <p> tags. Must be at least 3 paragraphs long." }
+                  sinhalaFullContent: { type: Type.STRING, description: "The full, comprehensive news article in Sinhala formatted with HTML <p> tags. Must be at least 3 paragraphs long." },
+                  category: { type: Type.STRING, description: "One of 'AI', 'Local', or 'Tech'" }
                 },
-                required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent']
+                required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'category']
               }
             }
           });
@@ -306,13 +313,16 @@ Source URL: ${article.url}`;
       }
       
       const translation = JSON.parse(genResponse?.text || '{}');
+      const rawCategory = (translation.category || 'Tech').toLowerCase();
+      const detectedCategory = rawCategory.includes('ai') || rawCategory.includes('artificial') ? 'AI' :
+                               rawCategory.includes('local') || rawCategory.includes('lanka') ? 'Local' : 'Tech';
       
       translatedArticles.push({
         id: `news-${index}-${Date.now()}`,
         title: translation.sinhalaTitle || article.title,
         summary: translation.sinhalaDescription || article.description,
         content: (translation.sinhalaFullContent || `<p>${translation.sinhalaDescription}</p>`) + `<br><p><a href="${article.url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">මුල් පුවත කියවන්න (Read original article)</a></p>`,
-        category: 'Tech',
+        category: detectedCategory,
         imageUrl: article.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
         date: new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '4 min read',
@@ -407,7 +417,8 @@ REQUIREMENTS:
    - <p>Comparison with rivals and roadmap</p>
    - <h2>අවසාන නිගමනය සහ MyFeed.lk විග්‍රහය</h2>
    - <p>Final verdict and takeaway</p>
-3. High journalistic standard in modern Sinhala.`;
+3. High journalistic standard in modern Sinhala.
+4. Classify 'suggestedCategory' as strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, LLMs, robotics), 'Local' (for Sri Lanka tech/news), or 'Tech' (for Apple, Samsung, hardware, gadgets).`;
 
         const genResponse = await ai.models.generateContent({
           model: 'gemini-3.7-flash',
@@ -420,10 +431,10 @@ REQUIREMENTS:
                 sinhalaTitle: { type: Type.STRING },
                 sinhalaDescription: { type: Type.STRING },
                 sinhalaFullContent: { type: Type.STRING },
-                suggestedCategory: { type: Type.STRING },
+                suggestedCategory: { type: Type.STRING, description: "One of 'AI', 'Local', or 'Tech'" },
                 readTime: { type: Type.STRING }
               },
-              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent']
+              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory']
             }
           }
         });
@@ -571,7 +582,7 @@ Rules:
     if (url.pathname === '/api/whatsapp/post' && request.method === 'POST') {
       try {
         const body = await request.json();
-        const { title, summary, articleUrl, category, readTime, customMessage } = body;
+        const { title, summary, articleUrl, category, readTime, customMessage, imageUrl } = body;
         
         // WhatsApp Business Cloud API or custom Webhook Integration
         const waAccessToken = process.env['WHATSAPP_ACCESS_TOKEN'] || process.env['WHATSAPP_TOKEN'];
@@ -590,14 +601,18 @@ ${summary}
 
 _Curated with precision by MyFeed.lk Sri Lanka_`;
 
-        // 1. If custom Webhook is configured (Zapier / Make / Evolution API / Baileys)
+        // 1. If custom Webhook is configured (Zapier / Make / Evolution API / Baileys / WhatsApp Gateway)
         if (waWebhookUrl) {
           const webhookRes = await fetch(waWebhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text: formattedPost,
+              caption: formattedPost,
+              image: imageUrl || '',
+              imageUrl: imageUrl || '',
               title,
+              summary,
               url: articleUrl,
               category
             })
@@ -610,18 +625,28 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
 
         // 2. If Official Meta WhatsApp Cloud API credentials are provided
         if (waAccessToken && waPhoneNumberId && waRecipient) {
+          const waPayload = imageUrl ? {
+            messaging_product: 'whatsapp',
+            to: waRecipient,
+            type: 'image',
+            image: {
+              link: imageUrl,
+              caption: formattedPost
+            }
+          } : {
+            messaging_product: 'whatsapp',
+            to: waRecipient,
+            type: 'text',
+            text: { body: formattedPost }
+          };
+
           const waApiRes = await fetch(`https://graph.facebook.com/v19.0/${waPhoneNumberId}/messages`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${waAccessToken}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              messaging_product: 'whatsapp',
-              to: waRecipient,
-              type: 'text',
-              text: { body: formattedPost }
-            })
+            body: JSON.stringify(waPayload)
           });
 
           const waResult = await waApiRes.json();
@@ -637,6 +662,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           mode: 'formatted_payload',
           message: 'Post formatted and ready for WhatsApp dispatch',
           formattedText: formattedPost,
+          imageUrl: imageUrl || '',
           directShareUrl: `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedPost)}`
         }), {
           status: 200,
@@ -648,6 +674,91 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+    }
+
+    // Instant Phone Push Notification (via ntfy.sh - 100% Free & Open-Source)
+    if (url.pathname === '/api/notify/phone' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, summary, articleUrl, topic = 'myfeedlk_kaveen', imageUrl } = body;
+
+        const cleanTopic = (topic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
+        const safeTitle = (title ? `📰 ${title}` : '📰 MyFeed.lk: New Story').slice(0, 120);
+        const safeMessage = (summary ? `${summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on MyFeed.lk. Tap to read!').slice(0, 800);
+        const safeUrl = (articleUrl || 'https://myfeedlk.web.app').trim();
+        
+        const payload: Record<string, unknown> = {
+          topic: cleanTopic,
+          title: safeTitle,
+          message: safeMessage,
+          click: safeUrl,
+          priority: 4,
+          tags: ['newspaper', 'rocket']
+        };
+
+        // Only attach if it's a valid remote HTTP/HTTPS URL and not a data URL
+        if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+          payload['attach'] = imageUrl;
+        }
+
+        let res = await fetch('https://ntfy.sh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // If rejected due to attachment or image fetch error, retry immediately without attachment
+        if (!res.ok && payload['attach']) {
+          delete payload['attach'];
+          res = await fetch('https://ntfy.sh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const resText = await res.text();
+        return new Response(JSON.stringify({ success: res.ok, status: res.status, topic: cleanTopic, response: resText }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (phoneErr: unknown) {
+        const err = phoneErr as { message?: string };
+        return new Response(JSON.stringify({ error: err.message || 'Phone notification failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Image Proxy for Web Share API / File blob extraction (bypasses CORS)
+    if (url.pathname === '/api/proxy-image' && request.method === 'GET') {
+      try {
+        const targetUrl = url.searchParams.get('url');
+        if (!targetUrl) {
+          return new Response('Missing url parameter', { status: 400 });
+        }
+        const imgRes = await fetch(targetUrl);
+        if (!imgRes.ok) {
+          return new Response('Failed to fetch image', { status: imgRes.status });
+        }
+        const contentType = imgRes.headers.get('Content-Type') || 'image/jpeg';
+        const buffer = await imgRes.arrayBuffer();
+        return new Response(buffer, {
+          status: 200,
+          headers: {
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      } catch {
+        return new Response('Image proxy error', { status: 500 });
       }
     }
 

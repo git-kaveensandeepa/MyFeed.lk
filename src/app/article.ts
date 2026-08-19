@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
@@ -39,6 +39,15 @@ import {BookmarkManager} from './bookmark';
             </a>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+              <!-- Social Story Card / Poster Generator Button -->
+              <button 
+                (click)="openPosterModal(article)"
+                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-blue-500/20 shrink-0 active:scale-95"
+                title="Create Social Media Story Card">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">image</mat-icon>
+                <span>Story Poster</span>
+              </button>
+
               <!-- Audio TTS Listen -->
               <button 
                 (click)="toggleSpeech(article)"
@@ -73,34 +82,21 @@ import {BookmarkManager} from './bookmark';
                 }
               </button>
 
-              <!-- Facebook Post Formatted Copy -->
+              <!-- WhatsApp Direct Share & Forward Button -->
               <button 
-                (click)="copyFacebookPost(article)"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-[#1877F2]/10 hover:bg-[#1877F2]/20 dark:bg-[#1877F2]/20 dark:hover:bg-[#1877F2]/30 text-[#1877F2] dark:text-[#4294ff] font-bold text-xs transition-all cursor-pointer border border-[#1877F2]/30 shrink-0 group active:scale-95 shadow-sm"
-                title="Copy ready-to-post Facebook summary, link & hashtags">
-                <svg class="w-3.5 h-3.5 fill-current shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                <span>{{ copyFacebookSuccess() ? 'FB Copied!' : 'FB Post' }}</span>
-              </button>
-
-              <!-- Copy Full Article Text -->
-              <button 
-                (click)="copyArticleText(article)"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 shrink-0 group active:scale-95"
-                title="Copy entire article text to clipboard">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-gray-600 dark:text-gray-300 group-hover:scale-110 transition-transform">content_copy</mat-icon>
-                <span>{{ copyTextSuccess() ? 'Text Copied!' : 'Copy Text' }}</span>
-              </button>
-
-              <!-- Download Image -->
-              <button 
-                (click)="downloadImage(article.imageUrl, article.title)"
-                [disabled]="isDownloadingImage()"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 shrink-0 group active:scale-95"
-                title="Download article image">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [class.animate-bounce]="isDownloadingImage()" class="text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">file_download</mat-icon>
-                <span>{{ isDownloadingImage() ? 'Saving...' : 'Download' }}</span>
+                (click)="shareToWhatsApp(article)"
+                [disabled]="isSharing()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs transition-all cursor-pointer shrink-0 group active:scale-95 shadow-md shadow-[#25D366]/20 border border-[#25D366]"
+                title="Forward article and image to WhatsApp">
+                @if (isSharing()) {
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="animate-spin">sync</mat-icon>
+                  <span>Sharing...</span>
+                } @else {
+                  <svg class="w-4 h-4 fill-current shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
+                  <span>WhatsApp</span>
+                }
               </button>
 
               <!-- Share Link -->
@@ -126,7 +122,7 @@ import {BookmarkManager} from './bookmark';
           </div>
 
           <header class="mb-8 sm:mb-16 text-center max-w-full overflow-hidden">
-            <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 mb-4 sm:mb-8 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/50 dark:text-white/50 uppercase select-text">
+            <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 mb-4 sm:mb-8 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/50 dark:text-white/50 uppercase">
               <span class="text-blue-600">{{ article.category }}</span>
               <span class="w-1 h-1 rounded-full bg-[#1d1d1f]/20 dark:bg-white/20"></span>
               <span>{{ article.date }} @if (article.uploadTimeStr) { &bull; {{ article.uploadTimeStr }} }</span>
@@ -134,39 +130,27 @@ import {BookmarkManager} from './bookmark';
               <span class="flex items-center gap-1"><mat-icon style="font-size: 14px; width: 14px; height: 14px;">schedule</mat-icon> {{ article.readTime }}</span>
             </div>
             
-            <h1 class="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-4 sm:mb-8 leading-[1.25] sm:leading-[1.1] max-w-4xl mx-auto drop-shadow-sm break-words hyphens-auto select-text">
+            <h1 class="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-4 sm:mb-8 leading-[1.25] sm:leading-[1.1] max-w-4xl mx-auto drop-shadow-sm break-words hyphens-auto">
               {{ article.title }}
             </h1>
             
-            <p class="text-sm sm:text-lg md:text-2xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed max-w-3xl mx-auto break-words select-text">
+            <p class="text-sm sm:text-lg md:text-2xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed max-w-3xl mx-auto break-words">
               {{ article.summary }}
             </p>
           </header>
         </div>
 
-        <!-- Featured Image Figure with Overlay Download Action -->
+        <!-- Featured Image Figure -->
         <figure class="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-16 md:mb-24 relative group">
           <div class="w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2.2/1] rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative shadow-xl sm:shadow-2xl shadow-black/10">
             <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer"
-                 class="absolute inset-0 w-full h-full object-cover select-auto" />
-            
-            <!-- Quick Download Floating Button on Image -->
-            <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-20">
-              <button 
-                (click)="downloadImage(article.imageUrl, article.title)"
-                [disabled]="isDownloadingImage()"
-                class="inline-flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-black/70 hover:bg-black/90 dark:bg-white/80 dark:hover:bg-white text-white dark:text-[#121212] backdrop-blur-md shadow-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border border-white/20 dark:border-black/10 hover:scale-105 active:scale-95"
-                title="Download this image">
-                <mat-icon style="font-size: 18px; width: 18px; height: 18px;" [class.animate-spin]="isDownloadingImage()">file_download</mat-icon>
-                <span>{{ isDownloadingImage() ? 'Downloading...' : 'Download Image' }}</span>
-              </button>
-            </div>
+                 class="absolute inset-0 w-full h-full object-cover" />
           </div>
         </figure>
 
         <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 max-w-full overflow-hidden">
           <!-- Author / Byline Block with AI Transparency Compliance -->
-          <div class="flex items-center gap-3 sm:gap-5 mb-8 sm:mb-12 pb-6 sm:pb-8 border-b border-black/5 dark:border-white/10 select-text">
+          <div class="flex items-center gap-3 sm:gap-5 mb-8 sm:mb-12 pb-6 sm:pb-8 border-b border-black/5 dark:border-white/10">
             @if (article.authorType === 'human') {
               <img src="/kaveen.jpg" alt="Kaveen Sandeepa" referrerpolicy="no-referrer" class="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover bg-gray-100 dark:bg-white/10 shadow-sm shrink-0" />
               <div class="min-w-0 flex-1">
@@ -191,54 +175,123 @@ import {BookmarkManager} from './bookmark';
             }
           </div>
 
-          <!-- Selectable Article Body Content -->
+          <!-- Article Body Content -->
           <div 
-            class="prose prose-base sm:prose-xl max-w-none text-[#1d1d1f]/80 dark:text-gray-300 leading-[1.8] sm:leading-[1.9] font-serif break-words overflow-hidden select-text [&_h2]:text-xl [&_h2]:sm:text-2xl [&_h2]:font-bold [&_h2]:text-[#1d1d1f] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-5 [&_li]:mb-2.5 [&_strong]:font-bold [&_strong]:text-[#1d1d1f] [&_strong]:dark:text-white"
+            class="prose prose-base sm:prose-xl max-w-none text-[#1d1d1f]/80 dark:text-gray-300 leading-[1.8] sm:leading-[1.9] font-serif break-words overflow-hidden [&_h2]:text-xl [&_h2]:sm:text-2xl [&_h2]:font-bold [&_h2]:text-[#1d1d1f] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-5 [&_li]:mb-2.5 [&_strong]:font-bold [&_strong]:text-[#1d1d1f] [&_strong]:dark:text-white"
             [innerHTML]="article.content">
           </div>
 
           <!-- Bottom Action & Sharing Bar for Readers -->
-          <div class="mt-12 sm:mt-16 p-6 sm:p-8 rounded-3xl bg-gray-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10">
+          <div class="mt-8 sm:mt-12 p-6 sm:p-8 rounded-3xl bg-gray-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-1">
-                  Share or Save this Story
+                  Share this Story
                 </h3>
                 <p class="text-xs sm:text-sm text-[#1d1d1f]/60 dark:text-white/60">
-                  Copy summary, download high-res image, or share on Facebook.
+                  Forward story summary and link directly to WhatsApp.
                 </p>
               </div>
 
-              <div class="flex flex-wrap items-center gap-2">
-                <!-- FB Share & Copy -->
+              <div class="flex flex-wrap items-center gap-3">
+                <!-- WhatsApp Forward Button -->
                 <button 
-                  (click)="copyFacebookPost(article)"
-                  class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#1877F2]/20 active:scale-95"
-                  title="Copy Facebook formatted post">
-                  <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  <span>{{ copyFacebookSuccess() ? 'FB Copied!' : 'Copy for Facebook' }}</span>
+                  (click)="shareToWhatsApp(article)"
+                  [disabled]="isSharing()"
+                  class="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#25D366] text-white hover:bg-[#20ba5a] font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-lg shadow-[#25D366]/20 active:scale-95 border border-[#25D366]"
+                  title="Forward article and image to WhatsApp">
+                  @if (isSharing()) {
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="animate-spin">sync</mat-icon>
+                    <span>Preparing Image...</span>
+                  } @else {
+                    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                    </svg>
+                    <span>Share to WhatsApp</span>
+                  }
                 </button>
 
-                <!-- Copy Text -->
+                <!-- Copy Link -->
                 <button 
-                  (click)="copyArticleText(article)"
-                  class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 active:scale-95">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">content_copy</mat-icon>
-                  <span>{{ copyTextSuccess() ? 'Copied!' : 'Copy Text' }}</span>
-                </button>
-
-                <!-- Download Image -->
-                <button 
-                  (click)="downloadImage(article.imageUrl, article.title)"
-                  class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 active:scale-95">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-600 dark:text-emerald-400">file_download</mat-icon>
-                  <span>Download Image</span>
+                  (click)="copyLink()"
+                  class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 active:scale-95">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
+                  <span>{{ copySuccess() ? 'Copied Link!' : 'Copy Link' }}</span>
                 </button>
               </div>
             </div>
           </div>
+
+          <!-- Related Articles Section (සබැඳි පුවත්) -->
+          @if (relatedArticles().length > 0) {
+            <section class="mt-14 sm:mt-20 pt-10 sm:pt-14 border-t border-black/5 dark:border-white/10 animate-fade-in-up">
+              <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8 sm:mb-10">
+                <div>
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2.5 border border-blue-100 dark:border-blue-900/30">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">auto_stories</mat-icon>
+                    <span>Recommended Stories</span>
+                  </div>
+                  <h2 class="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-[#1d1d1f] dark:text-white">
+                    සබැඳි පුවත් <span class="text-[#1d1d1f]/40 dark:text-white/40 font-serif italic text-base sm:text-xl font-normal">&bull; Related Articles</span>
+                  </h2>
+                </div>
+                <a routerLink="/" class="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:gap-2 transition-all group shrink-0">
+                  <span>සියලු පුවත් (View All)</span>
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="group-hover:translate-x-1 transition-transform">arrow_forward</mat-icon>
+                </a>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                @for (rel of relatedArticles(); track rel.id; let i = $index) {
+                  <article [routerLink]="['/article', rel.slug || rel.id]" class="group bg-white dark:bg-[#1a1a1a] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-blue-950/20 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer flex flex-col h-full border border-black/5 dark:border-white/10 relative overflow-hidden" [style.animation-delay]="(0.1 + (i * 0.1)) + 's'">
+                    <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 sm:mb-5 shadow-inner">
+                      <img [src]="rel.imageUrl" [alt]="rel.title" referrerpolicy="no-referrer"
+                           class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                      <button 
+                        (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(rel.id)"
+                        class="absolute top-3 right-3 z-20 p-2 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-md text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
+                        [title]="bookmarkManager.isBookmarked(rel.id) ? 'Remove bookmark' : 'Bookmark article'">
+                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" [class.text-blue-600]="bookmarkManager.isBookmarked(rel.id)">
+                          {{ bookmarkManager.isBookmarked(rel.id) ? 'bookmark' : 'bookmark_border' }}
+                        </mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="flex flex-col flex-grow">
+                      <div class="flex flex-wrap items-center gap-2 mb-2 text-[10px] font-bold tracking-wider uppercase text-[#1d1d1f]/40 dark:text-white/40">
+                        <span class="text-blue-600 font-extrabold">{{ rel.category }}</span>
+                        @if (rel.authorType !== 'human') {
+                          <span class="inline-flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded-full text-[9px]">
+                            <mat-icon style="font-size: 10px; width: 10px; height: 10px;">auto_awesome</mat-icon> AI
+                          </span>
+                        }
+                        <span class="w-1 h-1 rounded-full bg-black/10 dark:bg-white/20"></span>
+                        <span>{{ rel.date }}</span>
+                      </div>
+
+                      <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                        {{ rel.title }}
+                      </h3>
+
+                      <p class="text-xs sm:text-sm text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 mb-4 flex-grow leading-relaxed">
+                        {{ rel.summary }}
+                      </p>
+
+                      <div class="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/10 text-[10px] sm:text-xs font-bold text-[#1d1d1f]/40 dark:text-white/40 uppercase mt-auto">
+                        <span class="flex items-center gap-1">
+                          <mat-icon style="font-size: 13px; width: 13px; height: 13px;">schedule</mat-icon>
+                          {{ rel.readTime }}
+                        </span>
+                        <span class="text-blue-600 dark:text-blue-400 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                          Read <mat-icon style="font-size: 13px; width: 13px; height: 13px;">arrow_forward</mat-icon>
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            </section>
+          }
 
           <!-- AI Compliance & Transparency Disclosure Box -->
           @if (article.authorType !== 'human') {
@@ -254,6 +307,57 @@ import {BookmarkManager} from './bookmark';
           }
         </div>
       </main>
+
+      <!-- Story Poster Preview Modal -->
+      @if (showPosterModal()) {
+        <div class="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div class="bg-white dark:bg-[#1a1a1a] rounded-3xl max-w-md w-full p-6 border border-black/10 dark:border-white/20 shadow-2xl relative flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-black tracking-tight text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <mat-icon class="text-blue-600">photo_camera</mat-icon>
+                <span>Social Story Poster</span>
+              </h3>
+              <button (click)="closePosterModal()" class="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#1d1d1f]/60 dark:text-white/60 cursor-pointer">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Canvas Container / Preview -->
+            <div class="flex-1 overflow-y-auto flex items-center justify-center bg-gray-100 dark:bg-black/40 rounded-2xl p-2 mb-4">
+              @if (isGeneratingPoster()) {
+                <div class="py-20 flex flex-col items-center gap-3">
+                  <div class="w-8 h-8 rounded-full border-2 border-blue-600/20 border-t-blue-600 animate-spin"></div>
+                  <span class="text-xs font-bold text-[#1d1d1f]/60 dark:text-white/60">Generating HD Poster...</span>
+                </div>
+              } @else if (posterDataUrl()) {
+                <img [src]="posterDataUrl()" alt="Story Poster" class="max-h-[50vh] w-auto rounded-xl shadow-md object-contain" />
+              }
+            </div>
+
+            <!-- Hidden Canvas -->
+            <canvas #posterCanvas class="hidden"></canvas>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3">
+              <button 
+                (click)="downloadPoster()"
+                [disabled]="isGeneratingPoster() || !posterDataUrl()"
+                class="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">download</mat-icon>
+                <span>Download PNG</span>
+              </button>
+              <button 
+                (click)="shareToWhatsApp(article)"
+                class="w-full py-3 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs shadow-md shadow-[#25D366]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+                <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     } @else {
       <div class="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center text-[#1d1d1f]/50 dark:text-white/50">
         <mat-icon class="opacity-50 mb-4" style="font-size: 48px; width: 48px; height: 48px;">error_outline</mat-icon>
@@ -283,12 +387,187 @@ export class ArticleComponent implements OnDestroy {
     return this.articleService.articles().find(a => a.slug === id || a.id === id) || null;
   });
 
+  readonly relatedArticles = computed(() => {
+    const current = this.article();
+    if (!current) return [];
+    const all = this.articleService.articles();
+    // Exclude currently viewed article
+    const others = all.filter(a => a.id !== current.id && a.slug !== current.slug);
+    // Prioritize articles with matching category
+    const sameCategory = others.filter(a => a.category?.toLowerCase() === current.category?.toLowerCase());
+    const differentCategory = others.filter(a => a.category?.toLowerCase() !== current.category?.toLowerCase());
+    
+    return [...sameCategory, ...differentCategory].slice(0, 3);
+  });
+
+  constructor() {
+    effect(() => {
+      // Smoothly scroll to the top whenever viewing a new article
+      if (this.articleId() && typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
+
   readonly scrollProgress = signal(0);
   readonly copySuccess = signal(false);
-  readonly copyTextSuccess = signal(false);
-  readonly copyFacebookSuccess = signal(false);
-  readonly isDownloadingImage = signal(false);
+  readonly isSharing = signal(false);
   readonly toastMessage = signal<string | null>(null);
+
+  // Social Media Story / Poster Generator (HTML5 Canvas)
+  readonly showPosterModal = signal(false);
+  readonly isGeneratingPoster = signal(false);
+  readonly posterDataUrl = signal<string | null>(null);
+
+  async openPosterModal(article: { title: string; summary: string; category?: string; date?: string; imageUrl?: string }) {
+    this.showPosterModal.set(true);
+    this.isGeneratingPoster.set(true);
+    this.posterDataUrl.set(null);
+
+    // Render Canvas Story Card (1080 x 1350 High Resolution)
+    setTimeout(async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1350;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Background Dark Gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, 1350);
+        bgGrad.addColorStop(0, '#0f172a');
+        bgGrad.addColorStop(0.5, '#1e293b');
+        bgGrad.addColorStop(1, '#090d16');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, 1080, 1350);
+
+        // Header Branding
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('MyFeed', 80, 110);
+        
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillText('.lk', 250, 110);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '500 24px sans-serif';
+        ctx.fillText('SRI LANKA TECH JOURNAL', 80, 150);
+
+        // Category Tag
+        ctx.fillStyle = '#2563eb';
+        ctx.beginPath();
+        ctx.roundRect(80, 190, 160, 48, 24);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText((article.category || 'TECH').toUpperCase(), 160, 222);
+        ctx.textAlign = 'left';
+
+        // Load Article Image onto Canvas
+        if (article.imageUrl) {
+          try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const imgLoaded = new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+            });
+            img.src = article.imageUrl;
+            await imgLoaded;
+
+            // Draw Rounded Image Card
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(80, 270, 920, 520, 32);
+            ctx.clip();
+            ctx.drawImage(img, 80, 270, 920, 520);
+            ctx.restore();
+          } catch {
+            // Placeholder rect if image CORS fails
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(80, 270, 920, 520, 32);
+            ctx.fill();
+          }
+        }
+
+        // Article Title (Multi-line wrapping)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 44px sans-serif';
+        const words = article.title.split(' ');
+        let line = '';
+        let y = 860;
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > 920 && n > 0) {
+            ctx.fillText(line, 80, y);
+            line = words[n] + ' ';
+            y += 56;
+            if (y > 980) break;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, 80, y);
+
+        // Summary Text
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'italic 28px sans-serif';
+        const summaryWords = article.summary.split(' ');
+        let sLine = '';
+        let sy = y + 70;
+        for (let n = 0; n < summaryWords.length; n++) {
+          const testLine = sLine + summaryWords[n] + ' ';
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > 920 && n > 0) {
+            ctx.fillText(sLine, 80, sy);
+            sLine = summaryWords[n] + ' ';
+            sy += 42;
+            if (sy > 1180) break;
+          } else {
+            sLine = testLine;
+          }
+        }
+        ctx.fillText(sLine, 80, sy);
+
+        // Footer Bar
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 1230, 1080, 120);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText('Read full story on myfeed.lk', 80, 1300);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 24px sans-serif';
+        ctx.fillText(article.date || 'Updated Daily', 800, 1300);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        this.posterDataUrl.set(dataUrl);
+      } catch (e) {
+        console.error('Poster generation error', e);
+      } finally {
+        this.isGeneratingPoster.set(false);
+      }
+    }, 100);
+  }
+
+  closePosterModal() {
+    this.showPosterModal.set(false);
+  }
+
+  downloadPoster() {
+    const url = this.posterDataUrl();
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `myfeed-story-${Date.now()}.png`;
+    a.click();
+    this.showToast('Story Poster Downloaded! 📸');
+  }
 
   readonly isSpeaking = signal(false);
   readonly isPaused = signal(false);
@@ -307,122 +586,84 @@ export class ArticleComponent implements OnDestroy {
   }
 
   /**
-   * Copies formatted text specifically styled for Facebook posts
-   * containing headline, summary, key highlights, full article link, and hashtags.
+   * Forwards formatted article with Feature image file, Summary, and Read More link directly to WhatsApp app/web
    */
-  copyFacebookPost(article: { title: string; summary: string; category: string; content?: string }) {
+  async shareToWhatsApp(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string; imageUrl?: string }) {
     if (typeof window === 'undefined') return;
 
-    const currentUrl = window.location.href;
-    const cat = (article.category || 'Tech').replace(/\s+/g, '');
+    const domain = window.location.origin.includes('localhost') || window.location.origin.includes('run.app')
+      ? 'https://myfeedlk.web.app'
+      : window.location.origin;
+    const articleUrl = `${domain}/article/${article.slug || article.id}`;
 
-    // Extract category specific tags
-    let catTags = '#Technology #TechNews #MyFeedLK';
-    if (cat.toLowerCase().includes('ai')) {
-      catTags = '#ArtificialIntelligence #AI #TechTrends #FutureTech';
-    } else if (cat.toLowerCase().includes('local')) {
-      catTags = '#SriLanka #LKA #LocalNews #SriLankaNews #Colombo';
-    } else if (cat.toLowerCase().includes('tech')) {
-      catTags = '#TechNews #Innovation #Gadgets #Software';
-    }
+    const formattedPost = `*🚀 NEW ON MYFEED.LK (${article.category || 'News'})*
 
-    // Clean plain text points if available
-    let keyExcerpt = '';
-    if (article.content) {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = article.content;
-      const text = (tmp.textContent || tmp.innerText || '').trim();
-      const sentences = text.split(/[.\n]/).map(s => s.trim()).filter(s => s.length > 25);
-      if (sentences.length > 0) {
-        keyExcerpt = sentences.slice(0, 2).map(s => `▫️ ${s}.`).join('\n\n');
+*${article.title}*
+
+${article.summary}
+
+⏱️ ${article.readTime || '3 min read'}
+🔗 *Read full story:* ${articleUrl}
+
+_Curated with precision by MyFeed.lk Sri Lanka_`;
+
+    // 1. Check if device supports Web Share API with files (Android / iOS / Mobile Chrome & Safari)
+    if (article.imageUrl && typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        this.isSharing.set(true);
+        this.showToast('Preparing image & details for WhatsApp... ⏳');
+
+        // Fetch image blob via proxy to avoid CORS issues
+        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(article.imageUrl)}`;
+        let blob: Blob | null = null;
+        try {
+          const res = await fetch(proxyUrl);
+          if (res.ok) {
+            blob = await res.blob();
+          }
+        } catch {
+          // Direct fetch fallback if proxy unavailable
+          try {
+            const res = await fetch(article.imageUrl, { mode: 'cors' });
+            if (res.ok) blob = await res.blob();
+          } catch {
+            // ignore
+          }
+        }
+
+        if (blob) {
+          const fileType = blob.type || 'image/jpeg';
+          const ext = fileType.includes('png') ? 'png' : fileType.includes('webp') ? 'webp' : 'jpg';
+          const file = new File([blob], `myfeed-${article.slug || article.id}.${ext}`, { type: fileType });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: article.title,
+              text: formattedPost,
+              files: [file]
+            });
+            this.isSharing.set(false);
+            this.showToast('Shared with image! ✨');
+            return;
+          }
+        }
+      } catch (err: unknown) {
+        const error = err as { name?: string };
+        if (error?.name === 'AbortError') {
+          // User closed share dialog
+          this.isSharing.set(false);
+          return;
+        }
+      } finally {
+        this.isSharing.set(false);
       }
     }
 
-    const formattedFbPost = `📰 ${article.title}
-
-✨ ${article.summary}
-
-${keyExcerpt ? `${keyExcerpt}\n\n` : ''}🔗 සම්පූර්ණ පුවත කියවන්න (Read Full Story):
-${currentUrl}
-
-━━━━━━━━━━━━━━━━━━━━
-🏷️ #MyFeedLK #SriLanka #LKA #SriLankaNews #BreakingNews #${cat} ${catTags} #SinhalaNews #NewsUpdate`;
-
-    navigator.clipboard.writeText(formattedFbPost).then(() => {
-      this.copyFacebookSuccess.set(true);
-      this.showToast('Facebook Post format copied! Ready to paste 🚀');
-      setTimeout(() => this.copyFacebookSuccess.set(false), 3000);
-    }).catch(() => {
-      this.showToast('Could not copy to clipboard.');
-    });
-  }
-
-  /**
-   * Copies the full cleaned text of the article
-   */
-  copyArticleText(article: { title: string; summary: string; content?: string }) {
-    if (typeof window === 'undefined') return;
-
-    const tmp = document.createElement('div');
-    tmp.innerHTML = article.content || '';
-    const cleanContent = (tmp.textContent || tmp.innerText || '').trim();
-    
-    const fullText = `${article.title}\n\n${article.summary}\n\n${cleanContent}\n\n📖 Source: MyFeed.lk (${window.location.href})`;
-
-    navigator.clipboard.writeText(fullText).then(() => {
-      this.copyTextSuccess.set(true);
-      this.showToast('Article text copied to clipboard! 📋');
-      setTimeout(() => this.copyTextSuccess.set(false), 3000);
-    }).catch(() => {
-      this.showToast('Failed to copy article text.');
-    });
-  }
-
-  /**
-   * Downloads the article image as a file
-   */
-  async downloadImage(imageUrl: string, title: string) {
-    if (typeof window === 'undefined' || !imageUrl) return;
-
-    this.isDownloadingImage.set(true);
-    const cleanTitle = (title || 'myfeed-article-image')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 50);
-    const filename = `${cleanTitle || 'myfeed-image'}.jpg`;
-
-    try {
-      // Attempt to fetch as blob to trigger true download
-      const response = await fetch(imageUrl, { mode: 'cors' });
-      if (response.ok) {
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-        this.showToast('Image downloaded! 📸');
-        return;
-      }
-    } catch {
-      // If CORS blocks direct fetch, trigger standard anchor click
-    }
-
-    // Direct anchor fallback
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = filename;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    this.showToast('Image download started! 📸');
-    this.isDownloadingImage.set(false);
+    // 2. Fallback for Desktop browser or if Web Share API with files is not supported
+    // WhatsApp direct deep link with complete formatted text and read more link
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedPost)}`;
+    window.open(waUrl, '_blank');
+    this.showToast('Opening WhatsApp... 🚀');
   }
 
   async toggleSpeech(article: { title: string; summary: string; content: string }) {

@@ -14,8 +14,53 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7");
 
-// 100% Free, Official Direct Tech RSS Feeds with Rich Media
+// 100% Free, Official Direct RSS Feeds with rich Category diversity (AI, Local, Tech)
 const RSS_FEEDS = [
+  // --- AI (Artificial Intelligence & Machine Learning) ---
+  {
+    name: 'TechCrunch AI',
+    url: 'https://techcrunch.com/category/artificial-intelligence/feed/',
+    category: 'AI'
+  },
+  {
+    name: 'The Verge AI',
+    url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml',
+    category: 'AI'
+  },
+  {
+    name: 'VentureBeat AI',
+    url: 'https://venturebeat.com/category/ai/feed/',
+    category: 'AI'
+  },
+  {
+    name: 'Google News - AI & Machine Learning',
+    url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+OpenAI+OR+Gemini+AI+OR+Claude+AI&hl=en-US&gl=US&ceid=US:en',
+    category: 'AI'
+  },
+
+  // --- Local (Sri Lanka Tech, Innovation & Local News) ---
+  {
+    name: 'Daily FT - Sri Lanka IT & Telecom',
+    url: 'https://www.ft.lk/rss/it-telecom-technology',
+    category: 'Local'
+  },
+  {
+    name: 'Google News - Sri Lanka Tech & Digital',
+    url: 'https://news.google.com/rss/search?q=Sri+Lanka+technology+OR+Sri+Lanka+digital+OR+Sri+Lanka+telecom+OR+Dialog+Axiata&hl=en-US&gl=US&ceid=US:en',
+    category: 'Local'
+  },
+  {
+    name: 'Ada Derana',
+    url: 'http://www.adaderana.lk/rss.php',
+    category: 'Local'
+  },
+  {
+    name: 'Daily Mirror - Sri Lanka Business & Tech',
+    url: 'https://www.dailymirror.lk/rss/business-main/36',
+    category: 'Local'
+  },
+
+  // --- Tech (Smartphones, Hardware, Apple, Samsung, Gadgets) ---
   {
     name: 'The Verge',
     url: 'https://www.theverge.com/rss/index.xml',
@@ -62,12 +107,7 @@ const RSS_FEEDS = [
     category: 'Tech'
   },
   {
-    name: 'Ada Derana',
-    url: 'http://www.adaderana.lk/rss.php',
-    category: 'Local'
-  },
-  {
-    name: 'Google News - Technology & AI',
+    name: 'Google News - Technology',
     url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en',
     category: 'Tech'
   }
@@ -488,7 +528,14 @@ REQUIRED HTML STRUCTURE for 'sinhalaFullContent':
 SOURCE MATERIAL:
 Title: ${article.title}
 Summary: ${article.description}
-Source: ${article.source?.name || 'Global News'}`;
+Source: ${article.source?.name || 'Global News'}
+Feed Default Category: ${article.category || 'Tech'}
+
+CATEGORY CLASSIFICATION RULE:
+Classify the story into exactly one of these 3 category labels:
+- 'AI' : If about Artificial Intelligence, Machine Learning, ChatGPT, OpenAI, Claude, Gemini, DeepSeek, Copilot, Midjourney, LLMs, Neural Networks, Humanoid AI robots.
+- 'Local' : If about Sri Lanka, Colombo, Dialog, Mobitel, SLT, local startups, IT/telecom sector in Sri Lanka, local business & technology events.
+- 'Tech' : If about smartphones (Apple, Samsung, Google Pixel), gadgets, semiconductors, hardware, Windows, Android, cybersecurity, space, gaming.`;
 
   while (attempt < maxAttempts) {
     try {
@@ -515,9 +562,13 @@ Source: ${article.source?.name || 'Global News'}`;
               sinhalaFullContent: { 
                 type: Type.STRING, 
                 description: "A LONG-FORM comprehensive multi-paragraph Sinhala article with HTML subheadings, bullet lists, and paragraphs. Minimum 500+ words." 
+              },
+              category: {
+                type: Type.STRING,
+                description: "One of 'AI', 'Local', or 'Tech'"
               }
             },
-            required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent']
+            required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'category']
           }
         }
       });
@@ -637,11 +688,15 @@ async function runAutoNewsUpload() {
         `<span>මුල් පුවත් වාර්තාව කියවන්න (Source: ${article.source?.name || 'Official Tech Feed'}) &rarr;</span>` +
         `</a></p></div>`;
 
+      const detectedCategory = fullArticle.category || article.category || 'Tech';
+      const cleanCategory = (detectedCategory.toLowerCase().includes('ai') || detectedCategory.toLowerCase().includes('artificial')) ? 'AI' :
+                            (detectedCategory.toLowerCase().includes('local') || detectedCategory.toLowerCase().includes('sri lanka') || detectedCategory.toLowerCase().includes('lanka')) ? 'Local' : 'Tech';
+
       const articleDoc = {
         title: fullArticle.sinhalaTitle,
         summary: fullArticle.sinhalaDescription,
         content: formattedContent,
-        category: article.category || 'Tech',
+        category: cleanCategory,
         imageUrl: finalImageUrl,
         date: new Date(article.publishedAt || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         readTime: '5 min read',
@@ -658,6 +713,53 @@ async function runAutoNewsUpload() {
       console.log(`✓ Successfully uploaded NEW Long Sinhala Article to Firebase! (Doc ID: ${docRef.id})`);
       console.log(`  Title: ${fullArticle.sinhalaTitle}`);
       uploadedCount++;
+
+      // Auto-post to WhatsApp Channel if configured
+      const siteBaseUrl = process.env['SITE_URL'] || 'https://myfeedlk.web.app';
+      const waWebhook = process.env['WHATSAPP_WEBHOOK_URL'];
+      if (waWebhook) {
+        try {
+          const articleUrl = `${siteBaseUrl}/article/${docRef.id}`;
+          const formattedPost = `*🚀 NEW ON MYFEED.LK (${cleanCategory})*\n\n*${fullArticle.sinhalaTitle}*\n\n${fullArticle.sinhalaDescription}\n\n⏱️ 5 min read\n🔗 *Read full story:* ${articleUrl}\n\n_Curated with precision by MyFeed.lk Sri Lanka_`;
+          await fetch(waWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: formattedPost,
+              caption: formattedPost,
+              image: finalImageUrl,
+              imageUrl: finalImageUrl,
+              title: fullArticle.sinhalaTitle,
+              summary: fullArticle.sinhalaDescription,
+              url: articleUrl,
+              category: cleanCategory
+            })
+          });
+          console.log(`  ✓ Auto-posted to WhatsApp Channel Webhook!`);
+        } catch (waErr) {
+          console.warn('  WhatsApp Webhook auto-post notice:', waErr.message || waErr);
+        }
+      }
+
+      // Auto-dispatch Instant Phone Push Notification (100% Free via ntfy.sh)
+      try {
+        const phoneTopic = process.env['PHONE_NOTIFICATION_TOPIC'] || 'myfeedlk_kaveen';
+        const articleUrl = `${siteBaseUrl}/article/${docRef.id}`;
+        await fetch(`https://ntfy.sh/${phoneTopic}`, {
+          method: 'POST',
+          headers: {
+            'Title': `📰 MyFeed.lk (${cleanCategory}): ${fullArticle.sinhalaTitle}`,
+            'Click': articleUrl,
+            'Tags': 'newspaper,rocket',
+            'Priority': 'high',
+            ...(finalImageUrl ? { 'Attach': finalImageUrl } : {})
+          },
+          body: `${fullArticle.sinhalaDescription}\n\nTap to read on MyFeed.lk`
+        });
+        console.log(`  ✓ Phone Push Alert dispatched to topic: ${phoneTopic}`);
+      } catch (phoneErr) {
+        console.warn('  Phone Push alert notice:', phoneErr.message || phoneErr);
+      }
 
       if (sourceUrl) existingSourceUrls.add(sourceUrl);
       existingOriginalTitles.add(normalizedTitleKey);

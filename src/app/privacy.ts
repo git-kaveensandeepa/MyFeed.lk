@@ -1,73 +1,76 @@
 import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {MatIconModule} from '@angular/material/icon';
+import {RouterLink} from '@angular/router';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-privacy',
+  imports: [MatIconModule, RouterLink],
   template: `
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 min-h-[calc(100vh-200px)]">
-      <header class="mb-12">
-        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-[#1d1d1f] mb-4">
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 md:py-24 min-h-[calc(100vh-200px)] animate-fade-in-up">
+      <!-- Back Link -->
+      <a routerLink="/" class="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#1d1d1f]/50 dark:text-white/50 hover:text-[#1d1d1f] dark:hover:text-white transition-all mb-8 sm:mb-12 cursor-pointer group">
+        <mat-icon class="group-hover:-translate-x-1 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">keyboard_backspace</mat-icon>
+        <span>Back to Feed</span>
+      </a>
+
+      <header class="mb-10 sm:mb-14">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100 dark:border-blue-900/40">
+          <span>Trust & Privacy</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-3">
           Privacy Policy
         </h1>
-        <p class="text-lg text-[#1d1d1f]/60 font-medium">
-          Last updated: August 1, 2026
+        <p class="text-sm sm:text-base text-[#1d1d1f]/60 dark:text-white/60 font-medium">
+          Last updated: August 2026 &bull; Compliant with global AI transparency standards
         </p>
       </header>
 
-      <div class="prose prose-lg md:prose-xl max-w-none text-[#1d1d1f]/80 leading-relaxed font-serif pb-20">
-        <p>
-          At MyFeed.lk, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the site.
+      <div class="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 sm:p-10 md:p-14 shadow-sm border border-black/[0.06] dark:border-white/10 text-[#1d1d1f]/80 dark:text-white/80 leading-relaxed font-sans space-y-8">
+        <p class="text-base sm:text-lg font-serif italic text-[#1d1d1f]/70 dark:text-white/70">
+          At MyFeed.lk, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website.
         </p>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">1. Information We Collect</h2>
-        <p>
-          We may collect information about you in a variety of ways. The information we may collect on the Site includes:
-        </p>
-        <ul class="list-disc pl-6 mb-6">
-          <li><strong>Personal Data:</strong> Personally identifiable information, such as your name, shipping address, email address, and telephone number, and demographic information, such as your age, gender, hometown, and interests, that you voluntarily give to us when you register with the Site or when you choose to participate in various activities related to the Site.</li>
-          <li><strong>Derivative Data:</strong> Information our servers automatically collect when you access the Site, such as your IP address, your browser type, your operating system, your access times, and the pages you have viewed directly before and after accessing the Site.</li>
-        </ul>
+        <section>
+          <h2 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 1. Information We Collect
+          </h2>
+          <p class="mb-3 text-sm sm:text-base">
+            We collect minimal information necessary to deliver a fast, frictionless news experience:
+          </p>
+          <ul class="list-disc pl-6 space-y-2 text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
+            <li><strong>Subscriber Email:</strong> If you voluntarily subscribe to our newsletter, your email address is securely stored for digest dispatch.</li>
+            <li><strong>Local Bookmarks:</strong> Your saved reading list is stored client-side in your browser's Local Storage for private, tracker-free offline persistence.</li>
+            <li><strong>Technical Telemetry:</strong> Standard non-identifying access metrics (such as browser type and load performance) to maintain platform uptime.</li>
+          </ul>
+        </section>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">2. Use of Your Information</h2>
-        <p>
-          Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Site to:
-        </p>
-        <ul class="list-disc pl-6 mb-6">
-          <li>Create and manage your account.</li>
-          <li>Deliver targeted advertising, coupons, newsletters, and other information regarding promotions and the Site to you.</li>
-          <li>Email you regarding your account or order.</li>
-          <li>Fulfill and manage purchases, orders, payments, and other transactions related to the Site.</li>
-          <li>Generate a personal profile about you to make future visits to the Site more personalized.</li>
-        </ul>
+        <section>
+          <h2 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 2. AI Data Processing & Transparency
+          </h2>
+          <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
+            MyFeed.lk utilizes generative artificial intelligence systems to summarize and localize global technology news into accessible Sinhala and English formats. We do not use user personal data to train proprietary machine learning models. All AI-assisted stories are processed strictly through compliant enterprise AI APIs adhering to international privacy frameworks.
+          </p>
+        </section>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">3. Disclosure of Your Information</h2>
-        <p>
-          We may share information we have collected about you in certain situations. Your information may be disclosed as follows:
-        </p>
-        <ul class="list-disc pl-6 mb-6">
-          <li><strong>By Law or to Protect Rights:</strong> If we believe the release of information about you is necessary to respond to legal process, to investigate or remedy potential violations of our policies, or to protect the rights, property, and safety of others, we may share your information as permitted or required by any applicable law, rule, or regulation.</li>
-          <li><strong>Third-Party Service Providers:</strong> We may share your information with third parties that perform services for us or on our behalf, including payment processing, data analysis, email delivery, hosting services, customer service, and marketing assistance.</li>
-        </ul>
+        <section>
+          <h2 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 3. Security of Your Information
+          </h2>
+          <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
+            We use administrative, technical, and physical security measures to help protect your personal information. Database records are secured with strict Firestore security rules and encrypted communication protocols.
+          </p>
+        </section>
 
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">4. AI Data Processing & Transparency Standards</h2>
-        <p>
-          MyFeed.lk utilizes generative artificial intelligence systems to summarize and localize global technology news. We do not use user personal data to train proprietary machine learning models without consent. All AI-assisted stories are processed strictly through compliant, enterprise-grade AI APIs adhering to international privacy frameworks and ethical content guidelines.
-        </p>
-
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">5. Security of Your Information</h2>
-        <p>
-          We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.
-        </p>
-
-        <h2 class="text-2xl font-bold text-[#1d1d1f] mt-10 mb-4 font-sans">6. Contact Us</h2>
-        <p>
-          If you have questions or comments about this Privacy Policy, please contact our founder and editor:
-        </p>
-        <div class="font-sans space-y-1 mt-3">
-          <p class="font-bold text-[#1d1d1f]">Kaveen Sandeepa (Founder & Editor-in-Chief)</p>
-          <p>Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a></p>
-          <p>Direct / WhatsApp: <a href="tel:+94710947861" class="text-blue-600 hover:underline font-mono">+94 71 094 7861</a></p>
-        </div>
+        <section class="pt-6 border-t border-black/5 dark:border-white/10">
+          <h2 class="text-lg font-black text-[#1d1d1f] dark:text-white mb-3">4. Direct Inquiries & Contact</h2>
+          <div class="bg-black/[0.02] dark:bg-white/[0.03] p-5 rounded-2xl border border-black/5 dark:border-white/10 space-y-1.5 text-xs sm:text-sm">
+            <p class="font-bold text-[#1d1d1f] dark:text-white">Kaveen Sandeepa (Founder & Editor-in-Chief)</p>
+            <p>Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a></p>
+            <p>Direct / WhatsApp: <a href="https://wa.me/94710947861" target="_blank" class="text-blue-600 hover:underline font-mono">+94 71 094 7861</a></p>
+          </div>
+        </section>
       </div>
     </main>
   `
