@@ -11,6 +11,7 @@ import {
   deleteDoc, 
   getDoc,
   increment,
+  writeBatch,
   Unsubscribe 
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -462,8 +463,27 @@ export class ArticleService implements OnDestroy {
     try {
       const docRef = doc(db, 'articles', id);
       await deleteDoc(docRef);
+      // Optimistically update signal state
+      this._articles.update(list => list.filter(a => a.id !== id && a.slug !== id));
     } catch (error) {
       console.error('Error deleting article from Firestore:', error);
+      throw error;
+    }
+  }
+
+  async deleteMultipleArticles(ids: string[]) {
+    if (!ids || ids.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      for (const id of ids) {
+        batch.delete(doc(db, 'articles', id));
+      }
+      await batch.commit();
+      // Optimistically update signal state
+      const idSet = new Set(ids);
+      this._articles.update(list => list.filter(a => !idSet.has(a.id) && (!a.slug || !idSet.has(a.slug))));
+    } catch (error) {
+      console.error('Error batch deleting articles from Firestore:', error);
       throw error;
     }
   }

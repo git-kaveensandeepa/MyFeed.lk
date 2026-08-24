@@ -1,10 +1,11 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, computed} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {HttpClient} from '@angular/common/http';
 import {ArticleService, Article} from './article.service';
 import {SubscriberService} from './subscriber.service';
+import {AdManagerService, Ad} from './ad-manager.service';
 import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc} from 'firebase/firestore';
 import {db, auth} from './firebase';
 import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} from 'firebase/auth';
@@ -39,8 +40,8 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             <h1 class="text-4xl font-black text-[#1d1d1f] mb-2">Dashboard</h1>
             <p class="text-gray-500 font-medium">Logged in as {{ user()?.email }}</p>
           </div>
-          <div class="flex gap-4">
-            @if (activeTab() === 'articles') {
+          <div class="flex flex-wrap justify-center gap-4">
+            @if (activeTab() === 'articles' || activeTab() === 'ads') {
               <button (click)="isAdding.set(true)" class="px-6 py-3 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all flex items-center gap-2">
                 <mat-icon>add</mat-icon> New Post
               </button>
@@ -52,24 +53,137 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
         </header>
 
         <!-- Navigation Tabs -->
-        <div class="flex border-b border-gray-200 mb-10 gap-8">
+        <div class="flex border-b border-gray-200 mb-8 gap-6 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide no-scrollbar pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
           <button 
             (click)="activeTab.set('articles')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
             [class.text-blue-600]="activeTab() === 'articles'"
             [class.text-gray-400]="activeTab() !== 'articles'">
             Articles ({{ articleService.articles().length }})
-            @if (activeTab() === 'articles') {
+            <!-- ADS MANAGEMENT SECTION -->
+        @if (activeTab() === 'ads') {
+          @if (isAdding()) {
+            <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
+              <h2 class="text-2xl font-black mb-8">{{ editingAdId() ? 'Edit' : 'Create' }} Ad Campaign</h2>
+              <form (ngSubmit)="saveAd()" class="flex flex-col gap-6">
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
+                  <input type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
+                  <input type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</label>
+                  <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
+                    @if (adFormImageUrl) {
+                      <div class="relative w-full h-32 md:h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
+                        <img [src]="adFormImageUrl" alt="Ad Preview" class="w-full h-full object-contain">
+                        <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
+                          <button type="button" (click)="adFormImageUrl = ''" class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all">
+                            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="py-4">
+                        <mat-icon class="text-gray-400 mb-2" style="font-size: 40px; width: 40px; height: 40px;">add_photo_alternate</mat-icon>
+                        <p class="text-sm font-bold text-gray-500 mb-1">Click to upload ad banner image</p>
+                      </div>
+                    }
+                    <input type="file" accept="image/*" (change)="onAdImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!adFormImageUrl">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
+                  <select [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
+                    <option value="home-top">Home Page - Top (Banner)</option>
+                    <option value="home-bottom">Home Page - Bottom</option>
+                    <option value="article-inline">Inside Article (Inline)</option>
+                    <option value="sidebar">Sidebar / Additional</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                  <label for="adIsActive" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Ad is Active (Visible on site)</label>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                  <button type="submit" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all shadow-lg w-full md:w-auto">
+                    {{ editingAdId() ? 'Update' : 'Publish' }} Ad
+                  </button>
+                  <button type="button" (click)="cancelAdEdit()" class="px-8 py-4 bg-gray-100 text-gray-600 rounded-full font-bold tracking-widest uppercase hover:bg-gray-200 transition-all w-full md:w-auto">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          } @else {
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
+              <div class="p-6 md:p-8 flex justify-between items-center border-b border-gray-100">
+                <h3 class="text-xl font-black">Active & Inactive Ads</h3>
+              </div>
+              <div class="divide-y divide-gray-100">
+                @for (ad of adService.ads(); track ad.id) {
+                  <div class="p-6 flex flex-col md:flex-row items-center gap-6 hover:bg-gray-50 transition-colors">
+                    <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                      <img [src]="ad.imageUrl" alt="Ad" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                      <h4 class="font-bold text-lg text-gray-900 mb-1">{{ ad.title }} <span class="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ ad.placement }}</span></h4>
+                      <p class="text-sm text-gray-500 mb-2 truncate max-w-xs md:max-w-md">{{ ad.link }}</p>
+                      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                           [class.bg-green-100]="ad.isActive" [class.text-green-700]="ad.isActive"
+                           [class.bg-gray-100]="!ad.isActive" [class.text-gray-500]="!ad.isActive">
+                        {{ ad.isActive ? 'Active' : 'Inactive' }}
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                      <button (click)="toggleAdStatus(ad)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-bold text-xs uppercase tracking-wider hover:bg-gray-200">
+                        Toggle
+                      </button>
+                      <button (click)="editAd(ad)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button (click)="deleteAd(ad.id)" class="p-2 text-red-600 hover:bg-red-50 rounded-full">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+                @if (adService.ads().length === 0) {
+                  <div class="p-12 text-center text-gray-400 font-medium">
+                    No ads created yet. Click "New Post" (or New Ad) to add one.
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+        
+
+
+        @if (activeTab() === 'articles') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
           <button 
             (click)="activeTab.set('subscribers')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative "
             [class.text-blue-600]="activeTab() === 'subscribers'"
             [class.text-gray-400]="activeTab() !== 'subscribers'">
-            Subscribers ({{ subscriberService.subscribers().length }})
+            Subscribers
             @if (activeTab() === 'subscribers') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+            }
+          </button>
+          <button 
+            (click)="activeTab.set('ads')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            [class.text-blue-600]="activeTab() === 'ads'"
+            [class.text-gray-400]="activeTab() !== 'ads'">
+            Ads
+            @if (activeTab() === 'ads') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
@@ -100,7 +214,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             [class.text-blue-600]="activeTab() === 'deploy'"
             [class.text-gray-400]="activeTab() !== 'deploy'">
             Deploy
-            @if (activeTab() === 'deploy') {
+                    @if (activeTab() === 'deploy') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
@@ -121,18 +235,40 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                   <mat-icon class="text-blue-600" style="font-size: 20px; width: 20px; height: 20px;">auto_awesome</mat-icon>
                   <h3 class="font-bold text-xs uppercase tracking-wider text-blue-900">AI Long Article Assistant (සිංහලෙන් දීර්ඝ ලිපි නිර්මාණය)</h3>
                 </div>
-                <p class="text-xs text-blue-700/70 mb-4">ඔබට අවශ්‍ය පුවතේ මාතෘකාව හෝ ඉංග්‍රීසි/සිංහල සිරස්තලය මෙහි ඇතුළත් කර ක්ලික් කරන්න. AI මඟින් පූර්ණ විස්තරාත්මක සිංහල ලිපියක් (Long-form report) ක්ෂණිකව සකසා දෙනු ඇත.</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                  <input type="text" [(ngModel)]="aiTopicPrompt" [ngModelOptions]="{standalone: true}" placeholder="උදා: OpenAI GPT-5 Announcement, Apple Vision Pro 2, Sri Lanka 5G..." class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
-                  <button type="button" (click)="generateWithAI()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
-                    @if (isGeneratingAi()) {
-                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                      <span>Generating Long Article...</span>
-                    } @else {
-                      <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
-                      <span>Generate with AI</span>
-                    }
-                  </button>
+                <p class="text-xs text-blue-700/70 mb-4">ඔබට අවශ්‍ය පුවතේ මාතෘකාව හෝ පුවත් ලින්ක් එකක් (News URL) ලබා දී AI මඟින් පූර්ණ සිංහල ලිපියක් සකසා ගන්න.</p>
+                
+                <div class="flex flex-col gap-3">
+                  <!-- From Topic -->
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" [(ngModel)]="aiTopicPrompt" [ngModelOptions]="{standalone: true}" placeholder="මාතෘකාවක් දෙන්න (e.g., Apple Vision Pro 2)" class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    <button type="button" (click)="generateWithAI()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
+                      @if (isGeneratingAi()) {
+                        <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      } @else {
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                        <span>From Topic</span>
+                      }
+                    </button>
+                  </div>
+                  
+                  <div class="flex items-center gap-4 my-1">
+                    <div class="h-px bg-blue-200/60 flex-1"></div>
+                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">OR</span>
+                    <div class="h-px bg-blue-200/60 flex-1"></div>
+                  </div>
+
+                  <!-- From URL -->
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="url" [(ngModel)]="aiUrlPrompt" [ngModelOptions]="{standalone: true}" placeholder="පුවත් ලින්ක් එක මෙතනට දාන්න (e.g., https://news.google.com/...)" class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    <button type="button" (click)="generateFromUrl()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
+                      @if (isGeneratingAi()) {
+                        <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      } @else {
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">link</mat-icon>
+                        <span>From URL</span>
+                      }
+                    </button>
+                  </div>
                 </div>
               </div>
             }
@@ -255,7 +391,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                 </div>
               </div>
               
-              <div class="flex gap-4 mt-4">
+              <div class="flex flex-col sm:flex-row gap-4 mt-4">
                 <button type="submit" class="px-8 py-4 bg-[#1d1d1f] text-white rounded-full font-bold tracking-widest uppercase hover:bg-black transition-all shadow-lg w-full md:w-auto">
                   {{ editingId() ? 'Update' : 'Publish' }} Post
                 </button>
@@ -268,59 +404,198 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
           </div>
         }
 
-        <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
-                  <th class="p-6 font-bold">Title</th>
-                  <th class="p-6 font-bold">Category</th>
-                  <th class="p-6 font-bold">Date</th>
-                  <th class="p-6 font-bold text-center">Views</th>
-                  <th class="p-6 font-bold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (article of articleService.articles(); track article.id) {
-                  <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td class="p-6 font-bold text-[#1d1d1f]">{{ article.title }}</td>
-                    <td class="p-6">
-                      <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold">{{ article.category }}</span>
-                    </td>
-                    <td class="p-6 text-sm text-gray-500">{{ article.date }}</td>
-                    <td class="p-6 text-center">
-                      <span class="inline-flex items-center gap-1 text-sm font-bold text-[#1d1d1f]/60">
-                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">visibility</mat-icon>
-                        {{ article.views || 0 }}
-                      </span>
-                    </td>
-                    <td class="p-6 text-right">
-                      <div class="flex items-center justify-end gap-2">
-                        <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="View live">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">visibility</mat-icon>
-                        </a>
-                        <button (click)="sendPhoneAlertForArticle(article)" [disabled]="isSendingAlertForId() === article.id" class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center transition-colors disabled:opacity-50" title="Send Phone Push Alert (ntfy)">
-                          @if (isSendingAlertForId() === article.id) {
-                            <div class="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
-                          } @else {
-                            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">notifications_active</mat-icon>
-                          }
-                        </button>
-                        <button (click)="openWhatsAppModal(article)" class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors" title="Post to WhatsApp Channel">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chat</mat-icon>
-                        </button>
-                        <button (click)="editArticle(article)" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors" title="Edit">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">edit</mat-icon>
-                        </button>
-                        <button (click)="deleteArticle(article.id)" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+        <!-- ARTICLES MANAGEMENT SECTION -->
+        <div class="space-y-6">
+          <!-- Top Search & Filter Bar -->
+          <div class="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <!-- Search input -->
+            <div class="relative flex-1">
+              <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</mat-icon>
+              <input 
+                type="text" 
+                [(ngModel)]="searchArticleQuery" 
+                placeholder="ලිපි සොයන්න (Search by title, summary, or category)..." 
+                class="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none text-sm font-medium transition-all"
+              />
+              @if (searchArticleQuery()) {
+                <button (click)="searchArticleQuery.set('')" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                </button>
+              }
+            </div>
+
+            <!-- Category Filter Tabs / Selector -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+              <span class="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0 mr-1 hidden sm:inline">Category:</span>
+              <select 
+                [(ngModel)]="filterCategory" 
+                class="px-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-700 outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer">
+                <option value="ALL">All Categories (සියලු වර්ග)</option>
+                <option value="AI">AI</option>
+                <option value="Tech">Tech</option>
+                <option value="Local">Local</option>
+                <option value="Global">Global</option>
+                <option value="Business">Business</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Sports">Sports</option>
+              </select>
+
+              @if (selectedArticleIds().length > 0) {
+                <button 
+                  (click)="openBulkDeleteModal()" 
+                  class="px-4 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-red-600/20 flex items-center gap-1.5 cursor-pointer shrink-0 animate-fade-in">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_sweep</mat-icon>
+                  <span>Delete Selected ({{ selectedArticleIds().length }})</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Articles Table Card -->
+          <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
+            <!-- Header bar with counter & quick actions -->
+            <div class="p-6 sm:p-8 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 class="text-xl font-bold text-[#1d1d1f] flex items-center gap-2">
+                  <span>පුවත් කළමනාකරණය (Published News Articles)</span>
+                  <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-black">{{ filteredArticles().length }}</span>
+                </h2>
+                <p class="text-xs text-gray-500 mt-1">
+                  ඔබට අවශ්‍ය පුවත පහසුවෙන්ම Edit කිරීමට හෝ Delete කිරීමට මෙතැනින් හැක.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (selectedArticleIds().length > 0) {
+                  <button 
+                    (click)="clearSelection()" 
+                    class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold transition-all cursor-pointer">
+                    Clear Selection ({{ selectedArticleIds().length }})
+                  </button>
                 }
-              </tbody>
-            </table>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse min-w-[900px]">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
+                    <th class="p-5 w-12 text-center">
+                      <input 
+                        type="checkbox" 
+                        [checked]="isAllSelected()" 
+                        (change)="toggleSelectAll()" 
+                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                        title="Select All"
+                      />
+                    </th>
+                    <th class="p-5 font-bold">News Article</th>
+                    <th class="p-5 font-bold">Category</th>
+                    <th class="p-5 font-bold">Date</th>
+                    <th class="p-5 font-bold text-center">Views</th>
+                    <th class="p-5 font-bold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (filteredArticles().length === 0) {
+                    <tr>
+                      <td colspan="6" class="p-12 text-center text-gray-400">
+                        <mat-icon style="font-size: 36px; width: 36px; height: 36px;" class="mb-2 opacity-50">search_off</mat-icon>
+                        <p class="font-bold text-sm">ලිපි කිසිවක් හමු නොවීය (No matching articles found)</p>
+                        <p class="text-xs text-gray-400 mt-1">කරුණාකර වෙනත් නමකින් සොයන්න හෝ Filter වෙනස් කරන්න.</p>
+                      </td>
+                    </tr>
+                  } @else {
+                    @for (article of filteredArticles(); track article.id) {
+                      <tr 
+                        class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                        [class.bg-blue-50/40]="isArticleSelected(article.id)">
+                        <!-- Checkbox -->
+                        <td class="p-5 text-center">
+                          <input 
+                            type="checkbox" 
+                            [checked]="isArticleSelected(article.id)" 
+                            (change)="toggleSelectArticle(article.id)" 
+                            class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                          />
+                        </td>
+
+                        <!-- Title + Thumbnail -->
+                        <td class="p-5">
+                          <div class="flex items-center gap-3.5 max-w-md">
+                            @if (article.imageUrl) {
+                              <img 
+                                [src]="article.imageUrl" 
+                                [alt]="article.title" 
+                                class="w-12 h-12 rounded-xl object-cover shrink-0 border border-black/5 bg-gray-100" 
+                                referrerpolicy="no-referrer"
+                              />
+                            }
+                            <div>
+                              <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="font-bold text-sm text-[#1d1d1f] hover:text-blue-600 transition-colors line-clamp-2">
+                                {{ article.title }}
+                              </a>
+                              <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">{{ article.summary }}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <!-- Category -->
+                        <td class="p-5">
+                          <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                            {{ article.category }}
+                          </span>
+                        </td>
+
+                        <!-- Date -->
+                        <td class="p-5 text-xs text-gray-500 whitespace-nowrap">{{ article.date }}</td>
+
+                        <!-- Views -->
+                        <td class="p-5 text-center">
+                          <span class="inline-flex items-center gap-1 text-xs font-bold text-[#1d1d1f]/60 bg-gray-100 px-2.5 py-1 rounded-full">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon>
+                            {{ article.views || 0 }}
+                          </span>
+                        </td>
+
+                        <!-- Actions (View, Phone Alert, WhatsApp, Edit, Delete) -->
+                        <td class="p-5 text-right">
+                          <div class="flex items-center justify-end gap-1.5">
+                            <!-- View live -->
+                            <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all hover:scale-105" title="View Live Story">
+                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">visibility</mat-icon>
+                            </a>
+                            <!-- Phone alert -->
+                            <button (click)="sendPhoneAlertForArticle(article)" [disabled]="isSendingAlertForId() === article.id" class="w-9 h-9 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50" title="Send Push Alert">
+                              @if (isSendingAlertForId() === article.id) {
+                                <div class="w-3.5 h-3.5 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
+                              } @else {
+                                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+                              }
+                            </button>
+                            <!-- WhatsApp -->
+                            <button (click)="openWhatsAppModal(article)" class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all hover:scale-105" title="Share to WhatsApp">
+                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
+                            </button>
+                            <!-- Edit -->
+                            <button (click)="editArticle(article)" class="w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all hover:scale-105" title="Edit Story">
+                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">edit</mat-icon>
+                            </button>
+                            <!-- Delete Button (Red) -->
+                            <button 
+                              (click)="openDeleteModal(article)" 
+                              class="w-9 h-9 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all hover:scale-105 cursor-pointer shadow-sm" 
+                              title="Delete News Article (පුවත ඉවත් කරන්න)">
+                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete</mat-icon>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
         } @else if (activeTab() === 'subscribers') {
@@ -334,7 +609,7 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             </div>
             
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
+              <table class="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
                     <th class="p-6 font-bold">Email Address</th>
@@ -604,19 +879,182 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
           </div>
         }
       }
+
+      <!-- SINGLE ARTICLE DELETE CONFIRMATION MODAL -->
+      @if (articlePendingDelete(); as art) {
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-black/10 animate-scale-in">
+            <!-- Modal Header -->
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <mat-icon style="font-size: 26px; width: 26px; height: 26px;">delete_forever</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#1d1d1f]">පුවත Delete කිරීම තහවුරු කරන්න</h3>
+                <p class="text-xs text-gray-500">Confirm News Article Deletion</p>
+              </div>
+            </div>
+
+            <!-- Warning Alert -->
+            <div class="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-800 text-xs sm:text-sm font-medium mb-5 leading-relaxed">
+              <strong>අවවාදයයි:</strong> මෙම පුවත සම්පූර්ණයෙන්ම Firestore database එකෙන් සහ වෙබ් අඩවියෙන් ඉවත් කෙරේ. මෙම ක්‍රියාව ආපසු හැරවිය නොහැක.
+            </div>
+
+            <!-- Article Details Preview Box -->
+            <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 mb-6 flex items-start gap-3.5">
+              @if (art.imageUrl) {
+                <img [src]="art.imageUrl" [alt]="art.title" referrerpolicy="no-referrer" class="w-16 h-16 rounded-xl object-cover shrink-0 bg-gray-200 border border-black/5" />
+              }
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider">{{ art.category }}</span>
+                  <span class="text-[10px] text-gray-400 font-medium">{{ art.date }}</span>
+                </div>
+                <h4 class="font-bold text-xs sm:text-sm text-[#1d1d1f] line-clamp-2 leading-snug">{{ art.title }}</h4>
+                <p class="text-[11px] text-gray-500 line-clamp-1 mt-0.5">{{ art.summary }}</p>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-end">
+              <button 
+                type="button" 
+                (click)="cancelDelete()" 
+                [disabled]="isDeleting()"
+                class="px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">
+                Cancel (අවලංගු කරන්න)
+              </button>
+              <button 
+                type="button" 
+                (click)="confirmDeleteSingle()" 
+                [disabled]="isDeleting()"
+                class="px-6 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                @if (isDeleting()) {
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Deleting...</span>
+                } @else {
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete</mat-icon>
+                  <span>Delete Permanently</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- BULK ARTICLES DELETE CONFIRMATION MODAL -->
+      @if (showBulkDeleteConfirm()) {
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-black/10 animate-scale-in">
+            <!-- Modal Header -->
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <mat-icon style="font-size: 26px; width: 26px; height: 26px;">delete_sweep</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#1d1d1f]">තෝරාගත් ලිපි {{ selectedArticleIds().length }} ම Delete කිරීම</h3>
+                <p class="text-xs text-gray-500">Batch Delete {{ selectedArticleIds().length }} Articles</p>
+              </div>
+            </div>
+
+            <!-- Warning Alert -->
+            <div class="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-800 text-xs sm:text-sm font-medium mb-4 leading-relaxed">
+              <strong>අවවාදයයි:</strong> ඔබ තෝරාගත් පුවත් ලිපි <strong>{{ selectedArticleIds().length }}</strong> ම ස්ථිරවම ඉවත් කරනු ඇත.
+            </div>
+
+            <!-- Selected Items List Preview -->
+            <div class="max-h-48 overflow-y-auto p-3 rounded-2xl bg-gray-50 border border-gray-100 mb-6 space-y-2">
+              @for (artId of selectedArticleIds(); track artId) {
+                @if (getArticleById(artId); as item) {
+                  <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white border border-gray-100 text-xs">
+                    <span class="font-bold text-[#1d1d1f] line-clamp-1 flex-1">{{ item.title }}</span>
+                    <span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold shrink-0">{{ item.category }}</span>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-end">
+              <button 
+                type="button" 
+                (click)="cancelDelete()" 
+                [disabled]="isDeleting()"
+                class="px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                (click)="confirmDeleteBulk()" 
+                [disabled]="isDeleting()"
+                class="px-6 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                @if (isDeleting()) {
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Deleting {{ selectedArticleIds().length }} Items...</span>
+                } @else {
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_sweep</mat-icon>
+                  <span>Delete All {{ selectedArticleIds().length }} Articles</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- TOAST NOTIFICATION -->
+      @if (deleteToast(); as toastMsg) {
+        <div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-[#1d1d1f] text-white shadow-2xl border border-white/10 text-xs sm:text-sm font-semibold max-w-[90vw] animate-fade-in-up">
+          <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-emerald-400 shrink-0">check_circle</mat-icon>
+          <span>{{ toastMsg }}</span>
+          <button (click)="deleteToast.set(null)" class="ml-2 text-white/50 hover:text-white p-1">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
+          </button>
+        </div>
+      }
     </main>
   `
 })
 export class AdminComponent {
   readonly articleService = inject(ArticleService);
   readonly subscriberService = inject(SubscriberService);
+  adService = inject(AdManagerService);
   
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy'>('articles');
+  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads'>('articles');
   
   private http = inject(HttpClient);
+
+  // Article Search, Filter & Bulk Selection signals
+  searchArticleQuery = signal('');
+  filterCategory = signal('ALL');
+  selectedArticleIds = signal<string[]>([]);
+
+  readonly filteredArticles = computed(() => {
+    const q = this.searchArticleQuery().trim().toLowerCase();
+    const cat = this.filterCategory();
+    return this.articleService.articles().filter(article => {
+      const matchCat = cat === 'ALL' || article.category?.toLowerCase() === cat.toLowerCase();
+      const matchQuery = !q || 
+        article.title?.toLowerCase().includes(q) || 
+        article.summary?.toLowerCase().includes(q) ||
+        article.category?.toLowerCase().includes(q);
+      return matchCat && matchQuery;
+    });
+  });
+
+  readonly isAllSelected = computed(() => {
+    const list = this.filteredArticles();
+    const selected = this.selectedArticleIds();
+    return list.length > 0 && list.every(a => selected.includes(a.id));
+  });
+
+  // Delete Modals & Toast State
+  readonly articlePendingDelete = signal<Article | null>(null);
+  readonly showBulkDeleteConfirm = signal(false);
+  readonly isDeleting = signal(false);
+  readonly deleteToast = signal<string | null>(null);
 
   // Deployment signals
   netlifyHookUrl = '';
@@ -659,7 +1097,15 @@ export class AdminComponent {
   formReadTime = '';
   formAuthorType: 'ai' | 'human' = 'ai';
   
+  editingAdId = signal<string | null>(null);
+  adFormTitle = '';
+  adFormLink = '';
+  adFormImageUrl = '';
+  adFormIsActive = true;
+  adFormPlacement = 'home-top';
+
   aiTopicPrompt = '';
+  aiUrlPrompt = '';
   readonly isGeneratingAi = signal(false);
   readonly isGeneratingImage = signal(false);
   readonly generatedImagePrompt = signal('');
@@ -764,7 +1210,79 @@ export class AdminComponent {
     }
   }
 
+  editAd(ad: Ad) {
+    this.editingAdId.set(ad.id);
+    this.adFormTitle = ad.title;
+    this.adFormLink = ad.link;
+    this.adFormImageUrl = ad.imageUrl;
+    this.adFormIsActive = ad.isActive;
+    this.adFormPlacement = ad.placement || 'home-top';
+    this.isAdding.set(true);
+  }
+
+  async saveAd() {
+    if (!this.adFormTitle || !this.adFormLink || !this.adFormImageUrl) {
+      alert('Please fill all required fields');
+      return;
+    }
+    
+    const adData = {
+      title: this.adFormTitle,
+      link: this.adFormLink,
+      imageUrl: this.adFormImageUrl,
+      isActive: this.adFormIsActive,
+      placement: this.adFormPlacement
+    };
+
+    if (this.editingAdId()) {
+      await this.adService.updateAd(this.editingAdId()!, adData);
+    } else {
+      await this.adService.addAd(adData);
+    }
+    
+    this.cancelAdEdit();
+  }
+
+  cancelAdEdit() {
+    this.editingAdId.set(null);
+    this.adFormTitle = '';
+    this.adFormLink = '';
+    this.adFormImageUrl = '';
+    this.adFormIsActive = true;
+    this.adFormPlacement = 'home-top';
+    this.isAdding.set(false);
+  }
+
+  async toggleAdStatus(ad: Ad) {
+    await this.adService.updateAd(ad.id, { isActive: !ad.isActive });
+  }
+
+  async deleteAd(id: string) {
+    if (confirm('Are you sure you want to delete this ad?')) {
+      await this.adService.deleteAd(id);
+    }
+  }
+
+  onAdImageUpload(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.adFormImageUrl = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   cancelEdit() {
+    if (this.activeTab() === 'ads') {
+      this.cancelAdEdit();
+      return;
+    }
     this.isAdding.set(false);
     this.editingId.set(null);
     this.aiTopicPrompt = '';
@@ -846,6 +1364,42 @@ export class AdminComponent {
     }
   }
 
+  async generateFromUrl() {
+    if (!this.aiUrlPrompt.trim()) return;
+    this.isGeneratingAi.set(true);
+
+    try {
+      const res = await fetch('/api/generate-from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: this.aiUrlPrompt })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate');
+
+      this.formTitle = data.sinhalaTitle || '';
+      this.formSummary = data.sinhalaDescription || '';
+      this.formContent = data.sinhalaFullContent || '';
+      this.formCategory = data.suggestedCategory || 'Tech';
+      this.formReadTime = data.readTime || '4 min read';
+      this.formAuthorType = 'ai';
+      
+      if (data.visualPrompt) {
+        this.generatedImagePrompt.set(data.visualPrompt);
+        // Automatically trigger image generation
+        this.generateImageFromTitle();
+      }
+
+      alert('News Article successfully generated from the provided URL!');
+    } catch (error: any) {
+      console.error('URL generation error:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      this.isGeneratingAi.set(false);
+    }
+  }
+
   async saveArticle() {
     this.loading.set(true);
     try {
@@ -902,6 +1456,14 @@ export class AdminComponent {
             articleUrl
           });
         }
+        
+        // Auto-alert Web Push
+        await this.triggerWebPushNotification({
+          title: this.formTitle,
+          summary: this.formSummary,
+          imageUrl: this.formImageUrl,
+          articleUrl
+        });
       }
       
       this.cancelEdit();
@@ -912,11 +1474,106 @@ export class AdminComponent {
     }
   }
 
+  isArticleSelected(id: string): boolean {
+    return this.selectedArticleIds().includes(id);
+  }
+
+  toggleSelectAll() {
+    const list = this.filteredArticles();
+    if (this.isAllSelected()) {
+      const currentListIds = new Set(list.map(a => a.id));
+      this.selectedArticleIds.update(ids => ids.filter(id => !currentListIds.has(id)));
+    } else {
+      const existing = new Set(this.selectedArticleIds());
+      list.forEach(a => existing.add(a.id));
+      this.selectedArticleIds.set(Array.from(existing));
+    }
+  }
+
+  toggleSelectArticle(id: string) {
+    this.selectedArticleIds.update(ids => {
+      if (ids.includes(id)) {
+        return ids.filter(item => item !== id);
+      } else {
+        return [...ids, id];
+      }
+    });
+  }
+
+  clearSelection() {
+    this.selectedArticleIds.set([]);
+  }
+
+  getArticleById(id: string): Article | undefined {
+    return this.articleService.articles().find(a => a.id === id);
+  }
+
+  openDeleteModal(article: Article) {
+    this.articlePendingDelete.set(article);
+  }
+
+  cancelDelete() {
+    this.articlePendingDelete.set(null);
+    this.showBulkDeleteConfirm.set(false);
+  }
+
+  async confirmDeleteSingle() {
+    const art = this.articlePendingDelete();
+    if (!art) return;
+    this.isDeleting.set(true);
+    try {
+      await this.articleService.deleteArticle(art.id);
+      this.selectedArticleIds.update(ids => ids.filter(id => id !== art.id));
+      this.showToast(`"${art.title.slice(0, 30)}..." පුවත සාර්ථකව Delete කරන ලදී.`);
+      this.articlePendingDelete.set(null);
+    } catch (err) {
+      console.error('Failed to delete article:', err);
+      alert('Failed to delete article. Please check your network or permissions.');
+    } finally {
+      this.isDeleting.set(false);
+    }
+  }
+
+  openBulkDeleteModal() {
+    if (this.selectedArticleIds().length === 0) return;
+    this.showBulkDeleteConfirm.set(true);
+  }
+
+  async confirmDeleteBulk() {
+    const ids = this.selectedArticleIds();
+    if (ids.length === 0) return;
+    this.isDeleting.set(true);
+    try {
+      await this.articleService.deleteMultipleArticles(ids);
+      const count = ids.length;
+      this.selectedArticleIds.set([]);
+      this.showToast(`තෝරාගත් පුවත් ${count} ම සාර්ථකව Delete කරන ලදී.`);
+      this.showBulkDeleteConfirm.set(false);
+    } catch (err) {
+      console.error('Failed to batch delete articles:', err);
+      alert('Failed to delete selected articles.');
+    } finally {
+      this.isDeleting.set(false);
+    }
+  }
+
+  private showToast(msg: string) {
+    this.deleteToast.set(msg);
+    setTimeout(() => {
+      this.deleteToast.set(null);
+    }, 4000);
+  }
+
   async deleteArticle(id: string) {
-    if (confirm('Are you sure you want to delete this article?')) {
-      this.loading.set(true);
-      await this.articleService.deleteArticle(id);
-      this.loading.set(false);
+    const art = this.getArticleById(id);
+    if (art) {
+      this.openDeleteModal(art);
+    } else {
+      if (confirm('Are you sure you want to delete this article?')) {
+        this.loading.set(true);
+        await this.articleService.deleteArticle(id);
+        this.loading.set(false);
+      }
     }
   }
 
@@ -1216,7 +1873,38 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
+  
+  async triggerWebPushNotification(data: { title: string; summary: string; articleUrl: string; imageUrl?: string }): Promise<boolean> {
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const colRef = collection(db, 'web_push_subscriptions');
+      const snap = await getDocs(colRef);
+      const subscriptions = snap.docs.map(d => d.data());
+      
+      if (subscriptions.length === 0) return true;
+
+      const payload = {
+        title: data.title,
+        summary: data.summary,
+        articleUrl: data.articleUrl,
+        subscriptions
+      };
+
+      const res = await fetch('/api/notify/webpush', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('Web Push Dispatch Error', e);
+      return false;
+    }
+  }
+
   async triggerPhonePushNotification(data: { title: string; summary: string; articleUrl: string; imageUrl?: string }): Promise<boolean> {
+
     try {
       const cleanTopic = (this.phoneTopic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
       const safeTitle = (data.title ? `📰 ${data.title}` : '📰 MyFeed.lk: New Story').slice(0, 120);

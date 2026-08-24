@@ -8,6 +8,7 @@ import {BookmarkManager} from './bookmark';
 import {ArticleService} from './article.service';
 import {TickerService} from './ticker.service';
 import {PwaService} from './pwa.service';
+import {WebPushService} from './web-push.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +31,7 @@ export class App implements OnInit {
   readonly articleService = inject(ArticleService);
   readonly tickerService = inject(TickerService);
   readonly pwaService = inject(PwaService);
+  readonly webPushService = inject(WebPushService);
   
   showSplash = signal(true);
   splashFading = signal(false);

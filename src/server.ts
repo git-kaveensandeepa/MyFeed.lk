@@ -1,7 +1,8 @@
 import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 import { getAllowedHosts, getContext, getTrustProxyHeaders } from '@netlify/angular-runtime/app-engine.js';
 import { Buffer } from 'buffer';
-import { GoogleGenAI, Type } from '@google/genai';
+import Groq from 'groq-sdk';
+import webpush from 'web-push';
 
 // Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -206,7 +207,7 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
 }
 
 async function fetchAndTranslateNews(): Promise<TranslatedServerArticle[]> {
-  const geminiApiKey = process.env['GEMINI_API_KEY'];
+  const geminiApiKey = process.env['GROQ_API_KEY'];
 
   // Fetch from RSS Feeds
   let articles: ServerArticleItem[] = [];
@@ -246,7 +247,7 @@ async function fetchAndTranslateNews(): Promise<TranslatedServerArticle[]> {
   }
 
   // 2. Translate and enrich with Gemini
-  const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+  const ai = new Groq({ apiKey: geminiApiKey });
   const translatedArticles: TranslatedServerArticle[] = [];
 
   for (let index = 0; index < articles.length; index++) {
@@ -277,24 +278,22 @@ Source URL: ${article.url}
 CATEGORY RULE:
 Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, Claude, LLMs), 'Local' (for Sri Lanka news), or 'Tech' (for Apple, Samsung, hardware, general gadgets).`;
           
-          const modelName = attempt > 1 ? 'gemini-3.1-flash-lite' : 'gemini-3.7-flash';
-          genResponse = await ai.models.generateContent({
-            model: modelName,
-            contents: prompt,
-            config: {
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  sinhalaTitle: { type: Type.STRING },
-                  sinhalaDescription: { type: Type.STRING, description: "A short 1-2 sentence summary" },
-                  sinhalaFullContent: { type: Type.STRING, description: "The full, comprehensive news article in Sinhala formatted with HTML <p> tags. Must be at least 3 paragraphs long." },
-                  category: { type: Type.STRING, description: "One of 'AI', 'Local', or 'Tech'" }
-                },
-                required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'category']
+          
+          const groqResponse = await ai.chat.completions.create({
+            model: "qwen/qwen3.6-27b",
+            messages: [
+              {
+                role: "system",
+                content: "You are a helpful API that only returns valid JSON. The JSON must exactly match this schema: { sinhalaTitle: string, sinhalaDescription: string, sinhalaFullContent: string, category: 'AI' | 'Local' | 'Tech' }"
+              },
+              {
+                role: "user",
+                content: prompt + "\n\nPlease return JSON according to the schema."
               }
-            }
+            ],
+            response_format: { type: "json_object" }
           });
+          genResponse = { text: groqResponse.choices[0].message.content };
           break; // Success, exit retry loop
         } catch (err: unknown) {
           attempt++;
@@ -382,9 +381,98 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
       });
     }
 
+    
+    // AI Article Generation from a Given URL
+    if (url.pathname === '/api/generate-from-url' && request.method === 'POST') {
+      const geminiApiKey = process.env['GROQ_API_KEY'];
+      if (!geminiApiKey) {
+        return new Response(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on server' }), { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+
+      try {
+        const body = await request.json();
+        const articleUrl = body.url;
+        if (!articleUrl) {
+          return new Response(JSON.stringify({ error: 'No URL provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        // Fetch the raw HTML of the target article
+        console.log('Fetching URL:', articleUrl);
+        const res = await fetch(articleUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+        });
+        
+        if (!res.ok) {
+           return new Response(JSON.stringify({ error: 'Failed to fetch the provided URL' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const html = await res.text();
+        
+        // Lightly clean HTML to save tokens (remove script, style, SVG tags)
+        const cleanedHtml = html
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+          .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '')
+          .substring(0, 150000); // cap to ~150k characters just in case it's massive
+
+        const ai = new Groq({ apiKey: geminiApiKey });
+        const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading tech publication.
+I will provide you with the raw HTML source code of a news webpage. Your job is to extract the MAIN article content (ignore navbars, footers, ads, sidebars), figure out what the story is about, and then write a comprehensive, in-depth, long-form news article in fluent, professional Sinhala (දීර්ඝ පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) based on that story.
+
+RAW HTML EXTRACT:
+${cleanedHtml}
+
+REQUIREMENTS:
+1. Long-form article (at least 5-7 detailed paragraphs in Sinhala).
+2. Format the body content ('sinhalaFullContent') with clean HTML:
+   - <p class="lead">Opening engaging overview</p>
+   - <h2>ප්‍රධාන විශේෂාංග සහ තොරතුරු</h2>
+   - <p>Detailed breakdown</p>
+   - <ul><li><strong>Key Item:</strong> Explanation</li></ul>
+   - <h2>පරිශීලකයින්ට ඇතිවන බලපෑම</h2>
+   - <p>Industry impact</p>
+3. High journalistic standard in modern Sinhala.
+4. Extract the original article's title (in English or original language) and generate a 'sinhalaTitle'.
+5. Generate a 'visualPrompt' in English (20-30 words) that describes an image for this article to be used in AI image generation (e.g., 'A modern glowing 5G smartphone on a desk, cinematic lighting, 8k').
+6. Classify 'suggestedCategory' as strictly one of: 'AI', 'Local' (Sri Lanka), or 'Tech'.`;
+
+        const groqResponse = await ai.chat.completions.create({
+          model: "qwen/qwen3.6-27b",
+          messages: [
+            {
+              role: "system",
+              content: "You are an API that only returns valid JSON. Ensure the JSON follows this exact schema: { sinhalaTitle: string, sinhalaDescription: string, sinhalaFullContent: string, suggestedCategory: 'AI'|'Local'|'Tech', visualPrompt: string, readTime: string }"
+            },
+            {
+              role: "user",
+              content: prompt + "\n\nPlease return JSON according to the schema."
+            }
+          ],
+          response_format: { type: "json_object" }
+        });
+        const genResponse = { text: groqResponse.choices[0].message.content };
+
+        const result = JSON.parse(genResponse?.text || '{}');
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (genErr: unknown) {
+        const err = genErr as { message?: string };
+        console.error('Error generating AI article from URL:', genErr);
+        return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // Direct AI Long Article Generator Endpoint
     if (url.pathname === '/api/generate-ai-article' && request.method === 'POST') {
-      const geminiApiKey = process.env['GEMINI_API_KEY'];
+      const geminiApiKey = process.env['GROQ_API_KEY'];
       if (!geminiApiKey) {
         return new Response(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on server' }), { 
           status: 500, 
@@ -397,7 +485,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         const topic = body.topic || body.title || 'Latest Technology Breakthrough';
         const contextInfo = body.context || '';
 
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const ai = new Groq({ apiKey: geminiApiKey });
         const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading tech publication.
 Write a comprehensive, in-depth, long-form news article in fluent, professional Sinhala (දීර්ඝ පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) on the following topic:
 
@@ -420,24 +508,21 @@ REQUIREMENTS:
 3. High journalistic standard in modern Sinhala.
 4. Classify 'suggestedCategory' as strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, LLMs, robotics), 'Local' (for Sri Lanka tech/news), or 'Tech' (for Apple, Samsung, hardware, gadgets).`;
 
-        const genResponse = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                sinhalaTitle: { type: Type.STRING },
-                sinhalaDescription: { type: Type.STRING },
-                sinhalaFullContent: { type: Type.STRING },
-                suggestedCategory: { type: Type.STRING, description: "One of 'AI', 'Local', or 'Tech'" },
-                readTime: { type: Type.STRING }
-              },
-              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory']
+        const groqResponse = await ai.chat.completions.create({
+          model: "qwen/qwen3.6-27b",
+          messages: [
+            {
+              role: "system",
+              content: "You are an API that only returns valid JSON. Schema: { sinhalaTitle: string, sinhalaDescription: string, sinhalaFullContent: string, suggestedCategory: 'AI'|'Local'|'Tech', readTime: string }"
+            },
+            {
+              role: "user",
+              content: prompt + "\n\nPlease return JSON according to the schema."
             }
-          }
+          ],
+          response_format: { type: "json_object" }
         });
+        const genResponse = { text: groqResponse.choices[0].message.content };
 
         const result = JSON.parse(genResponse?.text || '{}');
         return new Response(JSON.stringify(result), {
@@ -456,7 +541,7 @@ REQUIREMENTS:
 
     // Dedicated AI Image Generator from Article Title
     if (url.pathname === '/api/generate-ai-image' && request.method === 'POST') {
-      const geminiApiKey = process.env['GEMINI_API_KEY'];
+      const geminiApiKey = process.env['GROQ_API_KEY'];
       try {
         const body = await request.json();
         const title = (body.title || body.topic || '').trim();
@@ -473,20 +558,27 @@ REQUIREMENTS:
 
         if (geminiApiKey) {
           try {
-            const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-            const promptRes = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
-              contents: `Translate and convert this news article title into a short, descriptive 20-30 word visual prompt for generating a photorealistic, ultra-high-quality tech editorial image.
+            const ai = new Groq({ apiKey: geminiApiKey });
+            
+            const promptRes = await ai.chat.completions.create({
+              model: "qwen/qwen3.6-27b",
+              messages: [
+                {
+                  role: "user",
+                  content: `Translate and convert this news article title into a short, descriptive 20-30 word visual prompt for generating a photorealistic, ultra-high-quality tech editorial image.
 Title: "${title}"
 Category: "${category}"
 
 Rules:
-1. Focus on the core visual subject (e.g. if it is about Apple Foldable iPhone, describe a sleek Apple foldable smartphone with titanium chassis and Apple branding).
+1. Focus on the core visual subject.
 2. Avoid text or words inside the image.
 3. Use cinematic editorial tech photography style, 8k, modern studio lighting.
-4. Output ONLY the English prompt text without quotes or preamble.`,
+4. Output ONLY the English prompt text without quotes or preamble.`
+                }
+              ]
             });
-            visualPrompt = promptRes.text?.trim().replace(/^"|"$/g, '') || '';
+            visualPrompt = promptRes.choices[0].message.content?.trim().replace(/^"|"$/g, '') || '';
+
           } catch (promptErr) {
             console.warn('Could not generate Gemini visual prompt, falling back:', promptErr);
           }
@@ -763,6 +855,40 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
 
     const context = getContext();
+    
+    // Web Push API
+    if (url.pathname === '/api/notify/webpush' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, summary, articleUrl, subscriptions } = body;
+        
+        const payload = JSON.stringify({
+          title: (title ? `📰 ${title}` : 'MyFeed.lk News').slice(0, 50),
+          body: (summary || 'A new article has just been published!').slice(0, 150),
+          url: articleUrl || '/',
+          icon: '/favicon.ico'
+        });
+
+        const results = await Promise.allSettled(
+          subscriptions.map((sub: any) => webpush.sendNotification(sub, payload))
+        );
+        
+        const failedEndpoints = results
+          .map((res, index) => res.status === 'rejected' ? subscriptions[index].endpoint : null)
+          .filter(Boolean);
+
+        return new Response(JSON.stringify({ success: true, failedEndpoints }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message || 'Web push failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     const result = await angularAppEngine.handle(request, context);
     return result || new Response('Not found', { status: 404 });
   } catch (err) {

@@ -1,11 +1,13 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked} from '@angular/core';
 import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
-import {ActivatedRoute, RouterLink} from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {map} from 'rxjs/operators';
 import {ArticleService} from './article.service';
 import {BookmarkManager} from './bookmark';
+import {auth} from './firebase';
+import {onAuthStateChanged} from 'firebase/auth';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +34,30 @@ import {BookmarkManager} from './bookmark';
 
       <main class="animate-fade-in-up pb-16 sm:pb-32 w-full max-w-full overflow-hidden">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-12 md:pt-16 pb-6 sm:pb-12">
+          
+          <!-- ADMIN QUICK CONTROLS BAR (Visible only to authorized Admin) -->
+          @if (isAdmin()) {
+            <div class="mb-6 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-blue-500/10 border border-red-200/50 dark:border-red-900/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+              <div class="flex items-center gap-2 text-xs font-bold text-[#1d1d1f] dark:text-white">
+                <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-red-600">admin_panel_settings</mat-icon>
+                <span>Admin Quick Controls (කර්තෘ පාලන පුවරුව)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <a routerLink="/admin" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white dark:bg-white/10 hover:bg-gray-50 text-[#1d1d1f] dark:text-white text-xs font-bold transition-all shadow-sm border border-black/5 dark:border-white/10">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">dashboard</mat-icon>
+                  <span>Admin Panel</span>
+                </a>
+                <button 
+                  (click)="openDeleteModal()"
+                  class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm shadow-red-600/20 cursor-pointer active:scale-95">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">delete_forever</mat-icon>
+                  <span>Delete Story (පුවත මකන්න)</span>
+                </button>
+              </div>
+            </div>
+          }
+
           <!-- Top Navigation & Action Controls -->
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-12">
             <div class="flex items-center gap-4">
@@ -386,6 +412,48 @@ import {BookmarkManager} from './bookmark';
           </div>
         </div>
       }
+
+      <!-- ARTICLE DELETE CONFIRMATION MODAL (Admin only) -->
+      @if (showDeleteConfirmModal()) {
+        <div class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div class="bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] max-w-md w-full p-6 sm:p-8 shadow-2xl border border-black/10 dark:border-white/10 animate-scale-in">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <mat-icon style="font-size: 26px; width: 26px; height: 26px;">delete_forever</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-[#1d1d1f] dark:text-white">පුවත Delete කිරීම</h3>
+                <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60">Delete this News Article</p>
+              </div>
+            </div>
+            <div class="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/30 text-red-800 dark:text-red-200 text-xs sm:text-sm font-medium mb-5 leading-relaxed">
+              <strong>අවවාදයයි:</strong> මෙම පුවත ("{{ article.title }}") database එකෙන් සහ වෙබ් අඩවියෙන් සම්පූර්ණයෙන්ම ඉවත් කිරීමට අවශ්‍ය බව තහවුරු කරන්න.
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 justify-end">
+              <button 
+                type="button" 
+                (click)="cancelDelete()" 
+                [disabled]="isDeletingArticle()"
+                class="px-5 py-3 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                (click)="confirmDeleteArticle()" 
+                [disabled]="isDeletingArticle()"
+                class="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                @if (isDeletingArticle()) {
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Deleting...</span>
+                } @else {
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete</mat-icon>
+                  <span>Delete Permanently</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     } @else {
       <div class="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center text-[#1d1d1f]/50 dark:text-white/50">
         <mat-icon class="opacity-50 mb-4" style="font-size: 48px; width: 48px; height: 48px;">error_outline</mat-icon>
@@ -402,10 +470,15 @@ import {BookmarkManager} from './bookmark';
 })
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
   private titleService = inject(Title);
   private metaService = inject(Meta);
+
+  readonly isAdmin = signal(false);
+  readonly showDeleteConfirmModal = signal(false);
+  readonly isDeletingArticle = signal(false);
 
   private articleId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')))
@@ -431,6 +504,12 @@ export class ArticleComponent implements OnDestroy {
   });
 
   constructor() {
+    if (typeof window !== 'undefined') {
+      onAuthStateChanged(auth, user => {
+        this.isAdmin.set(user?.email === 'mail.kaveensandeepa@gmail.com');
+      });
+    }
+
     // 1. SEO Tags Effect (Re-runs when article data changes, e.g. views/likes update, which is safe)
     effect(() => {
       const currentArt = this.article();
@@ -903,6 +982,33 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
       this.showToast('Article link copied to clipboard! 🔗');
       setTimeout(() => this.copySuccess.set(false), 3000);
     });
+  }
+
+  openDeleteModal() {
+    this.showDeleteConfirmModal.set(true);
+  }
+
+  cancelDelete() {
+    this.showDeleteConfirmModal.set(false);
+  }
+
+  async confirmDeleteArticle() {
+    const art = this.article();
+    if (!art) return;
+    this.isDeletingArticle.set(true);
+    try {
+      await this.articleService.deleteArticle(art.id);
+      this.showDeleteConfirmModal.set(false);
+      this.showToast('පුවත සාර්ථකව Delete කරන ලදී (Article deleted successfully)');
+      setTimeout(() => {
+        this.router.navigate(['/admin']);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to delete article:', err);
+      alert('Failed to delete article. Please try again.');
+    } finally {
+      this.isDeletingArticle.set(false);
+    }
   }
 
   ngOnDestroy() {

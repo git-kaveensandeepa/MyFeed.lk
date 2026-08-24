@@ -152,3 +152,7 @@ img {
     background-position: 200% 0;
   }
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}

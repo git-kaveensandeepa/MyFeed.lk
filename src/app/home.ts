@@ -1,15 +1,16 @@
-import {ChangeDetectionStrategy, Component, computed, signal, inject, OnInit, OnDestroy, effect} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, signal, inject, OnInit, OnDestroy} from '@angular/core';
 import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
 import {ArticleService, Article} from './article.service';
+import {AdComponent} from './ad.component';
 import {BookmarkManager} from './bookmark';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-home',
-  imports: [MatIconModule, RouterLink],
+  imports: [MatIconModule, RouterLink, AdComponent],
   host: {
     '(touchstart)': 'onTouchStart($event)',
     '(touchmove)': 'onTouchMove($event)',
@@ -45,7 +46,7 @@ import {BookmarkManager} from './bookmark';
           <span>Sri Lanka Tech Journal &bull; {{ currentDate }}</span>
         </div>
         <h1 class="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-[#1d1d1f] dark:text-white mb-2 sm:mb-4 leading-[1.05] sm:leading-[0.95]">
-          The Feed<span class="text-blue-600">.</span>lk
+          MyFeed<span class="text-blue-600">.</span>lk
         </h1>
         <p class="text-xs sm:text-base md:text-xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic max-w-2xl mx-auto px-2">
           තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත් &bull; Curated stories in Sinhala & English
@@ -272,7 +273,14 @@ import {BookmarkManager} from './bookmark';
           </div>
 
           <!-- Responsive 3-Column Modern News Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <!-- ACTIVE ADS BANNER / WIDGET -->
+      @if (!searchService.searchTerm()) {
+        <div class="mb-8 md:mb-12 animate-fade-in-up">
+          <app-ad placement="home-top"></app-ad>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             @for (article of gridArticles(); track article.id; let i = $index) {
               <article 
                 [routerLink]="['/article', article.slug || article.id]" 
@@ -442,7 +450,7 @@ import {BookmarkManager} from './bookmark';
 export class HomeComponent implements OnInit, OnDestroy {
   readonly Math = Math;
   readonly searchService = inject(SearchService);
-  readonly articleService = inject(ArticleService);
+    readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
   private titleService = inject(Title);
   private metaService = inject(Meta);
@@ -488,9 +496,9 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Set Base SEO tags for Home Page
-    this.titleService.setTitle('The Feed.lk | Sri Lanka Tech Journal');
+    this.titleService.setTitle('MyFeed.lk | Sri Lanka Tech Journal');
     this.metaService.updateTag({ name: 'description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
-    this.metaService.updateTag({ property: 'og:title', content: 'The Feed.lk | Sri Lanka Tech Journal' });
+    this.metaService.updateTag({ property: 'og:title', content: 'MyFeed.lk | Sri Lanka Tech Journal' });
     this.metaService.updateTag({ property: 'og:description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
     this.metaService.updateTag({ property: 'og:type', content: 'website' });
 
@@ -562,6 +570,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  
   readonly filteredArticles = computed(() => {
     const searchTerm = this.searchService.searchTerm().toLowerCase().trim();
     let articles = this.articleService.articles();

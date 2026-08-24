@@ -9,6 +9,11 @@ service cloud.firestore {
     }
 
     // Anyone can read and manage articles
+    match /ads/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /articles/{document} {
       allow read: if true;
       allow create, update, delete: if true;
