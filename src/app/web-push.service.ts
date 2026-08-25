@@ -1,4 +1,4 @@
-import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, signal, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
@@ -7,14 +7,13 @@ import { db } from './firebase';
   providedIn: 'root'
 })
 export class WebPushService {
-  private readonly platformId = inject(PLATFORM_ID);
   readonly VAPID_PUBLIC_KEY = 'BFz1QBsKF7a5H4_PVvapXa4gYLCjBrjBTQTp7KOB8fVzLZcUqGoPGXMUYjHO2PAYZuw1IdUwlicgOGL1B9yIeP8';
   
   isSupported = false;
   isSubscribed = signal<boolean>(false);
   isDenied = signal<boolean>(false);
   
-  constructor() {
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     if (isPlatformBrowser(this.platformId)) {
       this.isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
       if (this.isSupported && Notification.permission === 'denied') {

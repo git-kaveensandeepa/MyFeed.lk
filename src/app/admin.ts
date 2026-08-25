@@ -7,7 +7,6 @@ import {ArticleService, Article} from './article.service';
 import {SubscriberService} from './subscriber.service';
 import {AdManagerService, Ad} from './ad-manager.service';
 import {AnalyticsService} from './analytics.service';
-import {EventService, TechEvent} from './event.service';
 import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc} from 'firebase/firestore';
 import {db, auth} from './firebase';
 import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} from 'firebase/auth';
@@ -102,15 +101,15 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               <h2 class="text-2xl font-black mb-8">{{ editingAdId() ? 'Edit' : 'Create' }} Ad Campaign</h2>
               <form (ngSubmit)="saveAd()" class="flex flex-col gap-6">
                 <div>
-                  <label for="ad-brand-title" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
-                  <input id="ad-brand-title" type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
+                  <input type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
                 </div>
                 <div>
-                  <label for="ad-target-link" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
-                  <input id="ad-target-link" type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
+                  <input type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
                 </div>
                 <div>
-                  <span class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</span>
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</label>
                   <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
                     @if (adFormImageUrl) {
                       <div class="relative w-full h-32 md:h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
@@ -131,8 +130,8 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                   </div>
                 </div>
                 <div>
-                  <label for="ad-placement-select" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
-                  <select id="ad-placement-select" [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
+                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
+                  <select [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
                     <option value="home-top">Home Page - Top (Banner)</option>
                     <option value="home-bottom">Home Page - Bottom</option>
                     <option value="article-inline">Inside Article (Inline)</option>
@@ -262,18 +261,6 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             <mat-icon style="font-size: 16px; width: 16px; height: 16px;">insights</mat-icon>
             Analytics
             @if (activeTab() === 'analytics') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
-          </button>
-
-          <button 
-            (click)="activeTab.set('events')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5"
-            [class.text-blue-600]="activeTab() === 'events'"
-            [class.text-gray-400]="activeTab() !== 'events'">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">event</mat-icon>
-            Events ({{ eventService.events().length }})
-            @if (activeTab() === 'events') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
@@ -1014,216 +1001,6 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               </div>
             </div>
           </div>
-        } @else if (activeTab() === 'events') {
-          <!-- Tech Events Calendar Tab -->
-          <div class="max-w-5xl mx-auto">
-            @if (isAddingEvent()) {
-              <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16 animate-fade-in">
-                <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
-                  <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <mat-icon style="font-size: 26px; width: 26px; height: 26px;">event</mat-icon>
-                    </div>
-                    <div>
-                      <h2 class="text-2xl font-black text-gray-900">{{ editingEventId() ? 'Edit' : 'Create' }} Tech Event</h2>
-                      <p class="text-xs text-gray-500">Add upcoming tech keynotes, conferences & gaming events</p>
-                    </div>
-                  </div>
-                  <button type="button" (click)="resetEventForm()" class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-
-                <form (ngSubmit)="saveEvent()" class="flex flex-col gap-6">
-                  <!-- Event Title -->
-                  <div>
-                    <label for="eventFormTitleInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Event Title *</label>
-                    <input id="eventFormTitleInput" type="text" [(ngModel)]="eventFormTitle" name="eventTitle" required class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-base font-semibold" placeholder="e.g. Apple Special Event, Google I/O, Galaxy Unpacked">
-                  </div>
-
-                  <!-- Event Type Brand Chips -->
-                  <div>
-                    <span class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Event Category / Brand *</span>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
-                      <button type="button" (click)="eventFormType = 'apple'" [class]="eventFormType === 'apple' ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">phone_iphone</mat-icon>
-                        Apple
-                      </button>
-                      <button type="button" (click)="eventFormType = 'google'" [class]="eventFormType === 'google' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">auto_awesome</mat-icon>
-                        Google
-                      </button>
-                      <button type="button" (click)="eventFormType = 'samsung'" [class]="eventFormType === 'samsung' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">devices</mat-icon>
-                        Samsung
-                      </button>
-                      <button type="button" (click)="eventFormType = 'esports'" [class]="eventFormType === 'esports' ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">sports_esports</mat-icon>
-                        Esports
-                      </button>
-                      <button type="button" (click)="eventFormType = 'local'" [class]="eventFormType === 'local' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">place</mat-icon>
-                        Sri Lanka
-                      </button>
-                      <button type="button" (click)="eventFormType = 'other'" [class]="eventFormType === 'other' ? 'bg-slate-700 text-white border-slate-700 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'" class="p-3 rounded-2xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold">
-                        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">calendar_today</mat-icon>
-                        Other
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Date & Time Row -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label for="eventFormDateInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Event Date *</label>
-                      <input id="eventFormDateInput" type="date" [(ngModel)]="eventFormDate" name="eventDate" required class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium">
-                    </div>
-                    <div>
-                      <label for="eventFormTimeInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Time (Optional)</label>
-                      <input id="eventFormTimeInput" type="text" [(ngModel)]="eventFormTime" name="eventTime" class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" placeholder="e.g. 10:00 AM PT / 10:30 PM SLST">
-                    </div>
-                  </div>
-
-                  <!-- Location & Online Stream Row -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label for="eventFormLocationInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Location / Venue</label>
-                      <input id="eventFormLocationInput" type="text" [(ngModel)]="eventFormLocation" name="eventLocation" class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" placeholder="e.g. Apple Park, BMICH Colombo, Online">
-                    </div>
-                    <div>
-                      <label for="eventFormLinkInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Official Event Link / Stream URL</label>
-                      <input id="eventFormLinkInput" type="url" [(ngModel)]="eventFormLink" name="eventLink" class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium" placeholder="https://apple.com/events">
-                    </div>
-                  </div>
-
-                  <!-- Description -->
-                  <div>
-                    <label for="eventFormDescriptionInput" class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Description / Highlights</label>
-                    <textarea id="eventFormDescriptionInput" [(ngModel)]="eventFormDescription" name="eventDescription" rows="3" class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium leading-relaxed" placeholder="What will be unveiled? Key announcements expected..."></textarea>
-                  </div>
-
-                  <div class="flex items-center gap-3">
-                    <input type="checkbox" id="eventIsOnline" [(ngModel)]="eventFormIsOnline" name="eventIsOnline" class="w-5 h-5 text-blue-600 rounded-lg">
-                    <label for="eventIsOnline" class="text-sm font-semibold text-gray-700 cursor-pointer">Live Stream / Online Broadcast Available</label>
-                  </div>
-
-                  <!-- Action Buttons -->
-                  <div class="flex items-center gap-4 justify-end pt-4 border-t border-gray-100">
-                    <button type="button" (click)="resetEventForm()" [disabled]="isSavingEvent()" class="px-6 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider transition-colors">
-                      Cancel
-                    </button>
-                    <button type="submit" [disabled]="isSavingEvent()" class="px-8 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2">
-                      @if (isSavingEvent()) {
-                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Saving Event...</span>
-                      } @else {
-                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">save</mat-icon>
-                        <span>{{ editingEventId() ? 'Update Event' : 'Save Event' }}</span>
-                      }
-                    </button>
-                  </div>
-                </form>
-              </div>
-            } @else {
-              <!-- Events List View -->
-              <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
-                <div class="p-6 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100">
-                  <div>
-                    <h3 class="text-xl font-black text-gray-900">Upcoming Tech Events</h3>
-                    <p class="text-sm text-gray-500">Keynotes, launch events & conferences on MyFeed.lk</p>
-                  </div>
-                  <div class="flex flex-wrap items-center gap-3">
-                    <button (click)="seedDefaultEvents()" [disabled]="isSeedingEvents()" class="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold uppercase tracking-wider border border-amber-200/60 transition-all flex items-center gap-1.5 cursor-pointer">
-                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">bolt</mat-icon>
-                      <span>{{ isSeedingEvents() ? 'Loading...' : 'Load Preset Events' }}</span>
-                    </button>
-                    <button (click)="isAddingEvent.set(true)" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer">
-                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">add</mat-icon>
-                      <span>New Event</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="divide-y divide-gray-100">
-                  @for (ev of eventService.events(); track ev.id) {
-                    <div class="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-gray-50/80 transition-colors">
-                      <div class="flex items-start gap-4">
-                        <div class="w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 shadow-sm"
-                             [class.bg-gray-900]="ev.type === 'apple'" [class.text-white]="ev.type === 'apple'"
-                             [class.bg-blue-600]="ev.type === 'google'" [class.text-white]="ev.type === 'google'"
-                             [class.bg-indigo-600]="ev.type === 'samsung'" [class.text-white]="ev.type === 'samsung'"
-                             [class.bg-purple-600]="ev.type === 'esports'" [class.text-white]="ev.type === 'esports'"
-                             [class.bg-emerald-600]="ev.type === 'local'" [class.text-white]="ev.type === 'local'"
-                             [class.bg-slate-700]="ev.type === 'other'" [class.text-white]="ev.type === 'other'">
-                          <span class="text-[10px] uppercase font-bold tracking-wider opacity-80">{{ ev.type }}</span>
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">
-                            @if (ev.type === 'apple') { phone_iphone }
-                            @else if (ev.type === 'google') { auto_awesome }
-                            @else if (ev.type === 'samsung') { devices }
-                            @else if (ev.type === 'esports') { sports_esports }
-                            @else if (ev.type === 'local') { place }
-                            @else { event }
-                          </mat-icon>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <h4 class="font-bold text-base sm:text-lg text-gray-900">{{ ev.title }}</h4>
-                            @if (ev.isOnline) {
-                              <span class="px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200/60 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Live Stream
-                              </span>
-                            }
-                          </div>
-                          <p class="text-xs text-gray-600 line-clamp-2 mb-2.5 leading-relaxed">{{ ev.description }}</p>
-                          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-500">
-                            <span class="flex items-center gap-1 text-blue-600 font-bold">
-                              <mat-icon style="font-size: 14px; width: 14px; height: 14px;">calendar_month</mat-icon>
-                              {{ ev.date }}
-                            </span>
-                            @if (ev.time) {
-                              <span class="flex items-center gap-1">
-                                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">schedule</mat-icon>
-                                {{ ev.time }}
-                              </span>
-                            }
-                            @if (ev.location) {
-                              <span class="flex items-center gap-1">
-                                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">location_on</mat-icon>
-                                {{ ev.location }}
-                              </span>
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="flex items-center gap-2 self-end md:self-center shrink-0">
-                        @if (ev.link) {
-                          <a [href]="ev.link" target="_blank" rel="noopener noreferrer" class="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Visit Event Link">
-                            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">open_in_new</mat-icon>
-                          </a>
-                        }
-                        <button (click)="editEvent(ev)" class="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit Event">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">edit</mat-icon>
-                        </button>
-                        <button (click)="deleteEvent(ev.id)" class="p-2.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete Event">
-                          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
-                        </button>
-                      </div>
-                    </div>
-                  }
-                  @if (eventService.events().length === 0) {
-                    <div class="p-12 text-center text-gray-400">
-                      <mat-icon style="font-size: 40px; width: 40px; height: 40px;" class="opacity-40 mb-2">event_busy</mat-icon>
-                      <p class="text-sm font-medium">No tech events scheduled yet.</p>
-                      <button (click)="seedDefaultEvents()" class="mt-4 px-5 py-2.5 rounded-full bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md">
-                        Load Popular Tech Events
-                      </button>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-          </div>
         }
       }
 
@@ -1365,13 +1142,12 @@ export class AdminComponent {
   readonly articleService = inject(ArticleService);
   readonly subscriberService = inject(SubscriberService);
   readonly analyticsService = inject(AnalyticsService);
-  readonly eventService = inject(EventService);
   adService = inject(AdManagerService);
   
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics' | 'events'>('articles');
+  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics'>('articles');
   
   // Analytics Computed Signals
   readonly topViewedArticles = computed(() => {
@@ -1760,10 +1536,9 @@ export class AdminComponent {
       }
 
       alert('News Article successfully generated from the provided URL!');
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('URL generation error:', error);
-      const errMsg = error instanceof Error ? error.message : 'Unknown error';
-      alert('Error: ' + errMsg);
+      alert('Error: ' + error.message);
     } finally {
       this.isGeneratingAi.set(false);
     }
@@ -2367,111 +2142,5 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         this.isDeploying.set(false);
       }
     });
-  }
-
-  // ==========================================
-  // TECH EVENTS CALENDAR STATE & HANDLERS
-  // ==========================================
-  isAddingEvent = signal(false);
-  editingEventId = signal<string | null>(null);
-  isSavingEvent = signal(false);
-  isSeedingEvents = signal(false);
-
-  eventFormTitle = '';
-  eventFormDate = '';
-  eventFormTime = '';
-  eventFormLocation = '';
-  eventFormDescription = '';
-  eventFormType: 'apple' | 'google' | 'samsung' | 'esports' | 'local' | 'other' = 'apple';
-  eventFormLink = '';
-  eventFormIsOnline = true;
-
-  resetEventForm() {
-    this.isAddingEvent.set(false);
-    this.editingEventId.set(null);
-    this.eventFormTitle = '';
-    this.eventFormDate = '';
-    this.eventFormTime = '';
-    this.eventFormLocation = '';
-    this.eventFormDescription = '';
-    this.eventFormType = 'apple';
-    this.eventFormLink = '';
-    this.eventFormIsOnline = true;
-  }
-
-  editEvent(ev: TechEvent) {
-    this.editingEventId.set(ev.id);
-    this.eventFormTitle = ev.title || '';
-    this.eventFormDate = ev.date || '';
-    this.eventFormTime = ev.time || '';
-    this.eventFormLocation = ev.location || '';
-    this.eventFormDescription = ev.description || '';
-    this.eventFormType = ev.type || 'apple';
-    this.eventFormLink = ev.link || '';
-    this.eventFormIsOnline = ev.isOnline !== undefined ? ev.isOnline : true;
-    this.isAddingEvent.set(true);
-  }
-
-  async saveEvent() {
-    if (!this.eventFormTitle.trim() || !this.eventFormDate.trim()) {
-      alert('Please fill in event title and date.');
-      return;
-    }
-
-    this.isSavingEvent.set(true);
-    try {
-      const eventData = {
-        title: this.eventFormTitle.trim(),
-        date: this.eventFormDate.trim(),
-        time: this.eventFormTime.trim() || undefined,
-        location: this.eventFormLocation.trim() || undefined,
-        description: this.eventFormDescription.trim() || '',
-        type: this.eventFormType,
-        link: this.eventFormLink.trim() || undefined,
-        isOnline: this.eventFormIsOnline
-      };
-
-      if (this.editingEventId()) {
-        await this.eventService.updateEvent(this.editingEventId()!, eventData);
-        this.deleteToast.set('Tech Event updated successfully! ✅');
-      } else {
-        await this.eventService.addEvent(eventData);
-        this.deleteToast.set('Tech Event added to calendar! 📅');
-      }
-
-      this.resetEventForm();
-      setTimeout(() => this.deleteToast.set(null), 4000);
-    } catch (err) {
-      console.error('Error saving event:', err);
-      alert('Failed to save event: ' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      this.isSavingEvent.set(false);
-    }
-  }
-
-  async deleteEvent(id: string) {
-    if (!confirm('Are you sure you want to delete this event?')) return;
-    try {
-      await this.eventService.deleteEvent(id);
-      this.deleteToast.set('Event removed from calendar. 🗑️');
-      setTimeout(() => this.deleteToast.set(null), 4000);
-    } catch (err) {
-      console.error('Error deleting event:', err);
-      alert('Failed to delete event: ' + (err instanceof Error ? err.message : String(err)));
-    }
-  }
-
-  async seedDefaultEvents() {
-    this.isSeedingEvents.set(true);
-    try {
-      await this.eventService.seedPresets();
-      this.deleteToast.set('Preset Tech Events loaded! ⚡');
-      setTimeout(() => this.deleteToast.set(null), 4000);
-    } catch (err) {
-      console.error('Error seeding events:', err);
-      alert('Failed to seed events: ' + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      this.isSeedingEvents.set(false);
-    }
   }
 }

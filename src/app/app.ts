@@ -11,13 +11,11 @@ import {PwaService} from './pwa.service';
 import {WebPushService} from './web-push.service';
 
 import {AnalyticsService} from './analytics.service';
-import {ToolsService} from './tools.service';
-import {ToolsDrawerComponent} from './tools-drawer.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink, ToolsDrawerComponent],
+  imports: [MatIconModule, RouterOutlet, RouterLink],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
@@ -28,7 +26,6 @@ import {ToolsDrawerComponent} from './tools-drawer.component';
   }
 })
 export class App implements OnInit {
-  readonly toolsService = inject(ToolsService);
   readonly searchService = inject(SearchService);
   readonly subscriberService = inject(SubscriberService);
   readonly themeManager = inject(ThemeManager);

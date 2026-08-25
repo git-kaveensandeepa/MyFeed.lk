@@ -462,7 +462,7 @@ export class ArticleService implements OnDestroy {
   async updateReaction(id: string, newReaction: string, oldReaction: string | null) {
     try {
       const docRef = doc(db, 'articles', id);
-      const updates: Record<string, unknown> = {};
+      const updates: Record<string, any> = {};
       
       if (oldReaction) {
         updates[`reactions.${oldReaction}`] = increment(-1);

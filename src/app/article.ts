@@ -594,7 +594,7 @@ export class ArticleComponent implements OnDestroy {
 
     const current = this.currentReaction();
     let newReaction: string | null = reactionId;
-    const oldReaction: string | null = current;
+    let oldReaction: string | null = current;
 
     if (current === reactionId) {
       // Toggle off

@@ -4,10 +4,8 @@ import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
 import {ArticleService, Article} from './article.service';
-import {EventService, TechEvent} from './event.service';
 import {AdComponent} from './ad.component';
 import {BookmarkManager} from './bookmark';
-import {ToolsService} from './tools.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,17 +120,6 @@ import {ToolsService} from './tools.service';
               Reset
             </button>
           }
-        </div>
-
-        <!-- Quick Tech Utilities Slide Bar Trigger Strip -->
-        <div class="flex items-center justify-center mt-3.5 animate-fade-in-up">
-          <button 
-            (click)="toolsService.open()"
-            class="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 hover:from-blue-600 hover:to-indigo-600 border border-blue-600/20 hover:border-transparent text-blue-700 dark:text-blue-300 hover:text-white text-xs font-bold transition-all duration-300 shadow-xs cursor-pointer">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600 dark:text-blue-400 group-hover:text-white transition-colors">dashboard_customize</mat-icon>
-            <span>Open Tech Tools & Calculator Slide Bar</span>
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-          </button>
         </div>
       </div>
 
@@ -455,139 +442,6 @@ import {ToolsService} from './tools.service';
               </div>
             </section>
           }
-
-          <!-- ============================================== -->
-          <!-- 4. TECH EVENTS CALENDAR (ඉදිරි ටෙක් ඉසව් & KEYNOTES) -->
-          <!-- ============================================== -->
-          @if (eventService.events().length > 0) {
-            <section class="mb-14 sm:mb-20 pt-8 border-t border-black/5 dark:border-white/10 animate-fade-in-up">
-              <div class="flex items-center justify-between mb-6 sm:mb-8">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-md">
-                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">event</mat-icon>
-                  </div>
-                  <div>
-                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-[#1d1d1f] dark:text-white">
-                      ඉදිරි ටෙක් ඉසව් <span class="text-[#1d1d1f]/40 dark:text-white/40 font-serif italic text-base sm:text-lg font-normal">&bull; Tech Events Calendar</span>
-                    </h2>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/40">
-                    Live Schedule
-                  </span>
-                </div>
-              </div>
-
-              <!-- Events Cards Grid -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                @for (ev of eventService.events(); track ev.id) {
-                  <div class="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 border border-black/[0.06] dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-blue-950/5 dark:hover:shadow-blue-950/20 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden">
-                    <!-- Brand Top Bar Accent -->
-                    <div class="absolute top-0 left-0 right-0 h-1.5"
-                         [class.bg-gray-900]="ev.type === 'apple'"
-                         [class.bg-blue-600]="ev.type === 'google'"
-                         [class.bg-indigo-600]="ev.type === 'samsung'"
-                         [class.bg-purple-600]="ev.type === 'esports'"
-                         [class.bg-emerald-600]="ev.type === 'local'"
-                         [class.bg-slate-700]="ev.type === 'other'"></div>
-
-                    <div>
-                      <!-- Date & Badge Header -->
-                      <div class="flex items-start justify-between gap-3 mb-4 mt-1">
-                        <div class="flex items-center gap-3">
-                          <!-- Date Block -->
-                          <div class="w-13 h-14 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex flex-col items-center justify-center text-center shrink-0">
-                            <span class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 leading-none">
-                              {{ formatEventDisplayDate(ev.date).month }}
-                            </span>
-                            <span class="text-lg font-black text-[#1d1d1f] dark:text-white leading-none mt-0.5">
-                              {{ formatEventDisplayDate(ev.date).day }}
-                            </span>
-                          </div>
-                          
-                          <!-- Type / Brand Tag -->
-                          <div>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider text-white shadow-xs"
-                                  [class.bg-gray-900]="ev.type === 'apple'"
-                                  [class.bg-blue-600]="ev.type === 'google'"
-                                  [class.bg-indigo-600]="ev.type === 'samsung'"
-                                  [class.bg-purple-600]="ev.type === 'esports'"
-                                  [class.bg-emerald-600]="ev.type === 'local'"
-                                  [class.bg-slate-700]="ev.type === 'other'">
-                              <mat-icon style="font-size: 12px; width: 12px; height: 12px;">
-                                @if (ev.type === 'apple') { phone_iphone }
-                                @else if (ev.type === 'google') { auto_awesome }
-                                @else if (ev.type === 'samsung') { devices }
-                                @else if (ev.type === 'esports') { sports_esports }
-                                @else if (ev.type === 'local') { place }
-                                @else { event }
-                              </mat-icon>
-                              {{ ev.type }}
-                            </span>
-                            @if (ev.isOnline) {
-                              <span class="block text-[10px] font-bold text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Live Stream
-                              </span>
-                            }
-                          </div>
-                        </div>
-
-                        <!-- Days Countdown Pill -->
-                        <span class="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider text-[#1d1d1f]/70 dark:text-white/70 shrink-0">
-                          {{ getDaysUntil(ev.date) }}
-                        </span>
-                      </div>
-
-                      <!-- Event Title -->
-                      <h3 class="text-base sm:text-lg font-black text-[#1d1d1f] dark:text-white mb-2 leading-snug group-hover:text-blue-600 transition-colors">
-                        {{ ev.title }}
-                      </h3>
-
-                      <!-- Event Description -->
-                      <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 leading-relaxed mb-4">
-                        {{ ev.description }}
-                      </p>
-                    </div>
-
-                    <!-- Event Metadata & Action Links -->
-                    <div class="pt-4 border-t border-black/5 dark:border-white/10 mt-auto flex flex-col gap-3">
-                      <div class="flex flex-col gap-1 text-[11px] text-[#1d1d1f]/70 dark:text-white/70 font-medium">
-                        @if (ev.time) {
-                          <div class="flex items-center gap-1.5">
-                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">schedule</mat-icon>
-                            <span>{{ ev.time }}</span>
-                          </div>
-                        }
-                        @if (ev.location) {
-                          <div class="flex items-center gap-1.5 truncate">
-                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">location_on</mat-icon>
-                            <span class="truncate">{{ ev.location }}</span>
-                          </div>
-                        }
-                      </div>
-
-                      <div class="flex items-center justify-between gap-2 pt-1">
-                        @if (ev.link) {
-                          <a [href]="ev.link" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                            <span>Official Info</span>
-                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">open_in_new</mat-icon>
-                          </a>
-                        } @else {
-                          <span></span>
-                        }
-
-                        <a [href]="getGoogleCalendarUrl(ev)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300 text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 shadow-xs cursor-pointer">
-                          <mat-icon style="font-size: 12px; width: 12px; height: 12px;">event_available</mat-icon>
-                          <span>+ Calendar</span>
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </section>
-          }
         }
       }
     </main>
@@ -595,11 +449,9 @@ import {ToolsService} from './tools.service';
 })
 export class HomeComponent implements OnInit, OnDestroy {
   readonly Math = Math;
-  readonly toolsService = inject(ToolsService);
   readonly searchService = inject(SearchService);
-  readonly articleService = inject(ArticleService);
+    readonly articleService = inject(ArticleService);
   readonly bookmarkManager = inject(BookmarkManager);
-  readonly eventService = inject(EventService);
   private titleService = inject(Title);
   private metaService = inject(Meta);
   
@@ -783,55 +635,5 @@ export class HomeComponent implements OnInit, OnDestroy {
   getArticlesByCategory(catName: string): Article[] {
     const all = this.articleService.articles();
     return all.filter(a => a.category?.toLowerCase() === catName.toLowerCase());
-  }
-
-  // ==========================================
-  // EVENT DISPLAY HELPER METHODS
-  // ==========================================
-  formatEventDisplayDate(dateStr: string): { day: string; month: string; weekday: string } {
-    if (!dateStr) return { day: '--', month: 'TBA', weekday: '' };
-    try {
-      const d = new Date(dateStr + 'T00:00:00');
-      const day = d.getDate().toString().padStart(2, '0');
-      const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-      const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-      return { day, month, weekday };
-    } catch {
-      return { day: '--', month: 'TBA', weekday: '' };
-    }
-  }
-
-  getDaysUntil(dateStr: string): string {
-    if (!dateStr) return 'Upcoming';
-    try {
-      const eventDate = new Date(dateStr + 'T00:00:00');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const diffTime = eventDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 0) return 'Concluded';
-      if (diffDays === 0) return 'Today 🎉';
-      if (diffDays === 1) return 'Tomorrow';
-      return `In ${diffDays} Days`;
-    } catch {
-      return 'Upcoming';
-    }
-  }
-
-  getGoogleCalendarUrl(ev: TechEvent): string {
-    if (!ev || !ev.date) return '#';
-    try {
-      const cleanDate = ev.date.replace(/-/g, '');
-      const dates = `${cleanDate}/${cleanDate}`;
-      const title = encodeURIComponent(ev.title || 'Tech Event');
-      const details = encodeURIComponent(`${ev.description || ''}\n\nOfficial Link: ${ev.link || 'https://myfeed.lk'}`);
-      const location = encodeURIComponent(ev.location || 'Online / Live Stream');
-
-      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
-    } catch {
-      return '#';
-    }
   }
 }

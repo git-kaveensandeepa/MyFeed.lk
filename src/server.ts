@@ -870,7 +870,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         });
 
         const results = await Promise.allSettled(
-          subscriptions.map((sub: webpush.PushSubscription) => webpush.sendNotification(sub, payload))
+          subscriptions.map((sub: any) => webpush.sendNotification(sub, payload))
         );
         
         const failedEndpoints = results
@@ -881,9 +881,8 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : 'Web push failed';
-        return new Response(JSON.stringify({ error: errorMsg }), {
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message || 'Web push failed' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
