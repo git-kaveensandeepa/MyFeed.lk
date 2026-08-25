@@ -9,7 +9,7 @@ export interface Ad {
   link: string;
   isActive: boolean;
   placement: string; // e.g., 'home-top', 'home-bottom', 'article-inline', 'sidebar'
-  createdAt: any;
+  createdAt: unknown;
 }
 
 @Injectable({

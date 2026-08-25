@@ -41,10 +41,109 @@ export interface Article {
   reactions?: Record<string, number>;
 }
 
-function getTopicFallbackImage(title = '', category = ''): string {
-  const t = (title + ' ' + category).toLowerCase();
+function getSimpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
+// Rich, curated high-definition technology image collections (Unsplash verified)
+export const TECH_IMAGE_POOLS: Record<string, string[]> = {
+  blackberry_software: [
+    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80', // Cybersecurity & SOC data
+    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80', // Cyber code matrix
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80', // Embedded silicon processor
+    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80', // High-performance software code
+    'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80', // Software engineering architecture
+    'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=1200&q=80'  // Embedded hardware IoT
+  ],
+  apple: [
+    'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1200&q=80', // iPhone 15/16 Pro Titanium
+    'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1200&q=80', // Sleek Apple aesthetic
+    'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1200&q=80', // Apple devices on desk
+    'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80'  // MacBook Pro Retina
+  ],
+  samsung: [
+    'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80', // Samsung Galaxy Flagship
+    'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=80', // Foldable Galaxy
+    'https://images.unsplash.com/photo-1584006682522-dc17d6c0d9ac?auto=format&fit=crop&w=1200&q=80'  // Modern Android Display
+  ],
+  pixel: [
+    'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80', // Google Pixel Camera
+    'https://images.unsplash.com/photo-1567581935884-3349723552ca?auto=format&fit=crop&w=1200&q=80'  // Android Smartphone
+  ],
+  ai: [
+    'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80', // Neural network nodes
+    'https://images.unsplash.com/photo-1676299081847-824916de030a?auto=format&fit=crop&w=1200&q=80', // Digital cyber brain
+    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80', // Generative AI visual
+    'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80', // 3D AI typography
+    'https://images.unsplash.com/photo-1684369175833-4b445ad6bfb5?auto=format&fit=crop&w=1200&q=80', // Modern holographic AI
+    'https://images.unsplash.com/photo-1655720828018-edd2daec9349?auto=format&fit=crop&w=1200&q=80'  // Cyber matrix deep learning
+  ],
+  robotics: [
+    'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80', // White humanoid robot
+    'https://images.unsplash.com/photo-1535378620166-273708d44e4c?auto=format&fit=crop&w=1200&q=80', // Bionic robotic hand
+    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80', // Industrial robotic arm
+    'https://images.unsplash.com/photo-1531746790731-6c087fecd65a?auto=format&fit=crop&w=1200&q=80'  // Robot eye sensor
+  ],
+  chips_hardware: [
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80', // Microchip silicon wafer
+    'https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1200&q=80', // Glowing motherboard PCB
+    'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=1200&q=80', // GPU processor core
+    'https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=1200&q=80'  // Quantum processor
+  ],
+  cybersecurity: [
+    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80', // Green matrix security code
+    'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80', // Padlock digital shield
+    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80'  // Cybersecurity SOC
+  ],
+  gaming: [
+    'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80', // Neon gaming console
+    'https://images.unsplash.com/photo-1592478411213-6153e4ebc07d?auto=format&fit=crop&w=1200&q=80', // VR headset gaming
+    'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80'  // RGB mechanical setup
+  ],
+  space: [
+    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80', // Earth from orbit satellite
+    'https://images.unsplash.com/photo-1517976487507-5b6533d44e7c?auto=format&fit=crop&w=1200&q=80', // Rocket launch
+    'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1200&q=80'  // Space station
+  ],
+  ev_automotive: [
+    'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80', // Smart EV
+    'https://images.unsplash.com/photo-1536700503339-1e4b06520771?auto=format&fit=crop&w=1200&q=80'  // Tesla supercharger
+  ],
+  local_sl: [
+    'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?auto=format&fit=crop&w=1200&q=80', // Colombo Skyline & Lotus Tower
+    'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1200&q=80'  // Sri Lanka tech environment
+  ],
+  general_tech: [
+    'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80', // Modern laptop glowing tech
+    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80', // Coding setup
+    'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80'  // Cloud server racks
+  ]
+};
+
+export function getTopicFallbackImage(title = '', category = ''): string {
+  const t = (title + ' ' + (category || '')).toLowerCase();
+  const hash = getSimpleHash(title + (category || ''));
   
-  // 1. Apple & iPhone Ecosystem (Must be before general 'fold' or other mobile terms)
+  // 1. BlackBerry / QNX / Software / Embedded Systems
+  if (
+    t.includes('blackberry') || 
+    t.includes('qnx') || 
+    t.includes('black berry') ||
+    t.includes('බ්ලැක්බෙරි') || 
+    t.includes('iot') ||
+    t.includes('embedded') ||
+    (t.includes('මෘදුකාංග') && !t.includes('chatgpt'))
+  ) {
+    const pool = TECH_IMAGE_POOLS['blackberry_software'];
+    return pool[hash % pool.length];
+  }
+
+  // 2. Apple & iPhone Ecosystem
   if (
     t.includes('apple') || 
     t.includes('iphone') || 
@@ -58,10 +157,11 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('අයිපෑඩ්') || 
     t.includes('මැක්බුක්')
   ) {
-    return 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['apple'];
+    return pool[hash % pool.length];
   }
 
-  // 2. Samsung Galaxy
+  // 3. Samsung Galaxy
   if (
     t.includes('samsung') || 
     t.includes('galaxy') || 
@@ -72,10 +172,11 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('සැම්සුන්') || 
     t.includes('ගැලැක්සි')
   ) {
-    return 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['samsung'];
+    return pool[hash % pool.length];
   }
 
-  // 3. Google Pixel & Android
+  // 4. Google Pixel & Android
   if (
     t.includes('pixel') || 
     t.includes('android') || 
@@ -83,12 +184,8 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('ගූගල්') || 
     t.includes('ඇන්ඩ්‍රොයිඩ්')
   ) {
-    return 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80';
-  }
-
-  // 4. General Foldable / Smartphones (no specific brand mentioned)
-  if (t.includes('foldable') || t.includes('flip phone') || t.includes('නැවෙන සුළු') || t.includes('smartphone')) {
-    return 'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['pixel'];
+    return pool[hash % pool.length];
   }
 
   // 5. Artificial Intelligence & Generative AI
@@ -107,7 +204,8 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('ඒඅයි') || 
     t.includes('ජෙමිනයි')
   ) {
-    return 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['ai'];
+    return pool[hash % pool.length];
   }
 
   // 6. Robotics & Automation
@@ -118,24 +216,11 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('boston dynamics') || 
     t.includes('රොබෝ')
   ) {
-    return 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['robotics'];
+    return pool[hash % pool.length];
   }
 
-  // 7. Cybersecurity & Privacy
-  if (
-    t.includes('cyber') || 
-    t.includes('hack') || 
-    t.includes('security') || 
-    t.includes('malware') || 
-    t.includes('privacy') || 
-    t.includes('breach') || 
-    t.includes('සයිබර්') || 
-    t.includes('හැක්')
-  ) {
-    return 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80';
-  }
-
-  // 8. Semiconductor, Chips & Hardware
+  // 7. Semiconductor, Chips & Hardware
   if (
     t.includes('chip') || 
     t.includes('nvidia') || 
@@ -148,7 +233,23 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('චිප්') || 
     t.includes('ප්‍රොසෙසර්')
   ) {
-    return 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['chips_hardware'];
+    return pool[hash % pool.length];
+  }
+
+  // 8. Cybersecurity & Privacy
+  if (
+    t.includes('cyber') || 
+    t.includes('hack') || 
+    t.includes('security') || 
+    t.includes('malware') || 
+    t.includes('privacy') || 
+    t.includes('breach') || 
+    t.includes('සයිබර්') || 
+    t.includes('හැක්')
+  ) {
+    const pool = TECH_IMAGE_POOLS['cybersecurity'];
+    return pool[hash % pool.length];
   }
 
   // 9. Gaming & Consoles
@@ -162,7 +263,8 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('ගේමින්') || 
     t.includes('ප්ලේස්ටේෂන්')
   ) {
-    return 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['gaming'];
+    return pool[hash % pool.length];
   }
 
   // 10. Space, NASA & Astronomy
@@ -176,7 +278,8 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('අභ්‍යවකාශ') || 
     t.includes('නාසා')
   ) {
-    return 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['space'];
+    return pool[hash % pool.length];
   }
 
   // 11. Electric Vehicles & Tesla
@@ -189,7 +292,8 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('ටෙස්ලා') || 
     t.includes('විදුලි වාහන')
   ) {
-    return 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['ev_automotive'];
+    return pool[hash % pool.length];
   }
 
   // 12. Sri Lanka / Local
@@ -201,10 +305,54 @@ function getTopicFallbackImage(title = '', category = ''): string {
     t.includes('ලංකා') || 
     category?.toLowerCase() === 'local'
   ) {
-    return 'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?auto=format&fit=crop&w=1200&q=80';
+    const pool = TECH_IMAGE_POOLS['local_sl'];
+    return pool[hash % pool.length];
   }
   
-  return 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80';
+  const pool = TECH_IMAGE_POOLS['general_tech'];
+  return pool[hash % pool.length];
+}
+
+export function getCuratedTopicImages(title = '', category = ''): string[] {
+  const t = (title + ' ' + (category || '')).toLowerCase();
+  
+  if (t.includes('blackberry') || t.includes('qnx') || t.includes('iot') || t.includes('embedded') || t.includes('මෘදුකාංග')) {
+    return TECH_IMAGE_POOLS['blackberry_software'];
+  }
+  if (t.includes('apple') || t.includes('iphone') || t.includes('ios') || t.includes('macbook') || t.includes('ඇපල්')) {
+    return TECH_IMAGE_POOLS['apple'];
+  }
+  if (t.includes('samsung') || t.includes('galaxy') || t.includes('සැම්සුන්')) {
+    return TECH_IMAGE_POOLS['samsung'];
+  }
+  if (t.includes('pixel') || t.includes('android') || t.includes('ගූගල්')) {
+    return TECH_IMAGE_POOLS['pixel'];
+  }
+  if (t.includes('ai') || t.includes('gpt') || t.includes('claude') || t.includes('gemini') || t.includes('කෘත්‍රිම බුද්ධිය')) {
+    return TECH_IMAGE_POOLS['ai'];
+  }
+  if (t.includes('robot') || t.includes('humanoid') || t.includes('රොබෝ')) {
+    return TECH_IMAGE_POOLS['robotics'];
+  }
+  if (t.includes('chip') || t.includes('nvidia') || t.includes('intel') || t.includes('චිප්')) {
+    return TECH_IMAGE_POOLS['chips_hardware'];
+  }
+  if (t.includes('cyber') || t.includes('security') || t.includes('සයිබර්')) {
+    return TECH_IMAGE_POOLS['cybersecurity'];
+  }
+  if (t.includes('game') || t.includes('gaming') || t.includes('playstation')) {
+    return TECH_IMAGE_POOLS['gaming'];
+  }
+  if (t.includes('space') || t.includes('nasa') || t.includes('spacex')) {
+    return TECH_IMAGE_POOLS['space'];
+  }
+  if (t.includes('tesla') || t.includes('electric vehicle') || t.includes('විදුලි වාහන')) {
+    return TECH_IMAGE_POOLS['ev_automotive'];
+  }
+  if (t.includes('sri lanka') || category?.toLowerCase() === 'local' || t.includes('ලංකා')) {
+    return TECH_IMAGE_POOLS['local_sl'];
+  }
+  return [...TECH_IMAGE_POOLS['general_tech'], ...TECH_IMAGE_POOLS['ai'].slice(0, 2)];
 }
 
 function sanitizeArticleImage(rawUrl: string | undefined, title = '', category = '', originalTitle = ''): string {
@@ -444,6 +592,7 @@ export class ArticleService implements OnDestroy {
     try {
       const docRef = doc(db, 'articles', id);
       await updateDoc(docRef, { ...article, updatedAt: serverTimestamp() });
+      this._articles.update(list => list.map(a => (a.id === id || a.slug === id) ? { ...a, ...article } : a));
     } catch (error) {
       console.error('Error updating article in Firestore:', error);
       throw error;
@@ -462,7 +611,7 @@ export class ArticleService implements OnDestroy {
   async updateReaction(id: string, newReaction: string, oldReaction: string | null) {
     try {
       const docRef = doc(db, 'articles', id);
-      const updates: Record<string, any> = {};
+      const updates: Record<string, unknown> = {};
       
       if (oldReaction) {
         updates[`reactions.${oldReaction}`] = increment(-1);

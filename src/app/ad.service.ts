@@ -8,7 +8,7 @@ export interface Ad {
   imageUrl: string;
   link: string;
   isActive: boolean;
-  createdAt: any;
+  createdAt: unknown;
 }
 
 @Injectable({

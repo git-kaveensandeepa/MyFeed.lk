@@ -3,13 +3,52 @@ import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {HttpClient} from '@angular/common/http';
-import {ArticleService, Article} from './article.service';
+import {ArticleService, Article, getCuratedTopicImages} from './article.service';
 import {SubscriberService} from './subscriber.service';
 import {AdManagerService, Ad} from './ad-manager.service';
 import {AnalyticsService} from './analytics.service';
 import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc} from 'firebase/firestore';
 import {db, auth} from './firebase';
 import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} from 'firebase/auth';
+
+export interface TrendingNewsItem {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  source?: string;
+  categoryHint?: string;
+}
+
+export interface GeneratedStudioArticle {
+  sinhalaTitle: string;
+  sinhalaDescription: string;
+  sinhalaFullContent: string;
+  suggestedCategory: string;
+  keyTakeaways?: string[];
+  faqList?: { question: string; answer: string }[];
+  lkrPriceAnalysis?: string;
+  tags?: string[];
+  readTime?: string;
+  socialShareText?: string;
+  imageUrl?: string;
+  visualPrompt?: string;
+}
+
+export interface PolishedResult {
+  polishedTitle?: string;
+  polishedSummary?: string;
+  polishedContent?: string;
+  suggestedCategory?: string;
+  whatsappMessage?: string;
+  socialShareText?: string;
+  tags?: string[];
+  faqList?: { question: string; answer: string }[];
+  keyTakeaways?: string[];
+  detectedErrors?: string[];
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,179 +126,98 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="flex border-b border-gray-200 mb-8 gap-6 md:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide no-scrollbar pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
+        <div class="flex border-b border-gray-200 mb-8 gap-4 md:gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide no-scrollbar pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
           <button 
             (click)="activeTab.set('articles')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'articles'"
             [class.text-gray-400]="activeTab() !== 'articles'">
-            Articles ({{ articleService.articles().length }})
-            <!-- ADS MANAGEMENT SECTION -->
-        @if (activeTab() === 'ads') {
-          @if (isAdding()) {
-            <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
-              <h2 class="text-2xl font-black mb-8">{{ editingAdId() ? 'Edit' : 'Create' }} Ad Campaign</h2>
-              <form (ngSubmit)="saveAd()" class="flex flex-col gap-6">
-                <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
-                  <input type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
-                  <input type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</label>
-                  <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
-                    @if (adFormImageUrl) {
-                      <div class="relative w-full h-32 md:h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
-                        <img [src]="adFormImageUrl" alt="Ad Preview" class="w-full h-full object-contain">
-                        <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
-                          <button type="button" (click)="adFormImageUrl = ''" class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all">
-                            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
-                          </button>
-                        </div>
-                      </div>
-                    } @else {
-                      <div class="py-4">
-                        <mat-icon class="text-gray-400 mb-2" style="font-size: 40px; width: 40px; height: 40px;">add_photo_alternate</mat-icon>
-                        <p class="text-sm font-bold text-gray-500 mb-1">Click to upload ad banner image</p>
-                      </div>
-                    }
-                    <input type="file" accept="image/*" (change)="onAdImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!adFormImageUrl">
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
-                  <select [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
-                    <option value="home-top">Home Page - Top (Banner)</option>
-                    <option value="home-bottom">Home Page - Bottom</option>
-                    <option value="article-inline">Inside Article (Inline)</option>
-                    <option value="sidebar">Sidebar / Additional</option>
-                  </select>
-                </div>
-                <div class="flex items-center gap-3">
-                  <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
-                  <label for="adIsActive" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Ad is Active (Visible on site)</label>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-4 mt-4">
-                  <button type="submit" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all shadow-lg w-full md:w-auto">
-                    {{ editingAdId() ? 'Update' : 'Publish' }} Ad
-                  </button>
-                  <button type="button" (click)="cancelAdEdit()" class="px-8 py-4 bg-gray-100 text-gray-600 rounded-full font-bold tracking-widest uppercase hover:bg-gray-200 transition-all w-full md:w-auto">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          } @else {
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
-              <div class="p-6 md:p-8 flex justify-between items-center border-b border-gray-100">
-                <h3 class="text-xl font-black">Active & Inactive Ads</h3>
-              </div>
-              <div class="divide-y divide-gray-100">
-                @for (ad of adService.ads(); track ad.id) {
-                  <div class="p-6 flex flex-col md:flex-row items-center gap-6 hover:bg-gray-50 transition-colors">
-                    <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden shrink-0">
-                      <img [src]="ad.imageUrl" alt="Ad" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 text-center md:text-left">
-                      <h4 class="font-bold text-lg text-gray-900 mb-1">{{ ad.title }} <span class="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ ad.placement }}</span></h4>
-                      <p class="text-sm text-gray-500 mb-2 truncate max-w-xs md:max-w-md">{{ ad.link }}</p>
-                      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                           [class.bg-green-100]="ad.isActive" [class.text-green-700]="ad.isActive"
-                           [class.bg-gray-100]="!ad.isActive" [class.text-gray-500]="!ad.isActive">
-                        {{ ad.isActive ? 'Active' : 'Inactive' }}
-                      </div>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                      <button (click)="toggleAdStatus(ad)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-bold text-xs uppercase tracking-wider hover:bg-gray-200">
-                        Toggle
-                      </button>
-                      <button (click)="editAd(ad)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
-                        <mat-icon>edit</mat-icon>
-                      </button>
-                      <button (click)="deleteAd(ad.id)" class="p-2 text-red-600 hover:bg-red-50 rounded-full">
-                        <mat-icon>delete</mat-icon>
-                      </button>
-                    </div>
-                  </div>
-                }
-                @if (adService.ads().length === 0) {
-                  <div class="p-12 text-center text-gray-400 font-medium">
-                    No ads created yet. Click "New Post" (or New Ad) to add one.
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        }
-        
-
-
-        @if (activeTab() === 'articles') {
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">article</mat-icon>
+            <span>Articles ({{ articleService.articles().length }})</span>
+            @if (activeTab() === 'articles') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
+
+          <button 
+            (click)="activeTab.set('auto-studio')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
+            [class.text-indigo-600]="activeTab() === 'auto-studio'"
+            [class.text-gray-400]="activeTab() !== 'auto-studio'">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-indigo-600">auto_awesome</mat-icon>
+            <span>✨ ස්වයංක්‍රීය AI Studio</span>
+            @if (activeTab() === 'auto-studio') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"></div>
+            }
+          </button>
+
           <button 
             (click)="activeTab.set('subscribers')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative "
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'subscribers'"
             [class.text-gray-400]="activeTab() !== 'subscribers'">
-            Subscribers
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">mark_email_read</mat-icon>
+            <span>Subscribers</span>
             @if (activeTab() === 'subscribers') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
+
           <button 
             (click)="activeTab.set('ads')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'ads'"
             [class.text-gray-400]="activeTab() !== 'ads'">
-            Ads
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">campaign</mat-icon>
+            <span>Ads</span>
             @if (activeTab() === 'ads') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
+
           <button 
             (click)="activeTab.set('notify')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'notify'"
             [class.text-gray-400]="activeTab() !== 'notify'">
-            Notify
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+            <span>Notify</span>
             @if (activeTab() === 'notify') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
+
           <button 
             (click)="activeTab.set('whatsapp')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-emerald-600]="activeTab() === 'whatsapp'"
             [class.text-gray-400]="activeTab() !== 'whatsapp'">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-500">chat</mat-icon>
-            WhatsApp
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-emerald-500">chat</mat-icon>
+            <span>WhatsApp</span>
             @if (activeTab() === 'whatsapp') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full"></div>
             }
           </button>
+
           <button 
             (click)="activeTab.set('deploy')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'deploy'"
             [class.text-gray-400]="activeTab() !== 'deploy'">
-            Deploy
-                    @if (activeTab() === 'deploy') {
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">rocket_launch</mat-icon>
+            <span>Deploy</span>
+            @if (activeTab() === 'deploy') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
           </button>
           
           <button 
             (click)="activeTab.set('analytics')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'analytics'"
             [class.text-gray-400]="activeTab() !== 'analytics'">
-            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">insights</mat-icon>
-            Analytics
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">insights</mat-icon>
+            <span>Analytics</span>
             @if (activeTab() === 'analytics') {
               <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
             }
@@ -407,6 +365,32 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                   }
                   <input type="file" id="imageUpload" accept="image/*" (change)="onImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!formImageUrl">
                 </div>
+
+                <!-- Curated Suggested Images Gallery for Form -->
+                <div class="mt-3">
+                  <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center justify-between">
+                    <span class="flex items-center gap-1">
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600">auto_awesome</mat-icon>
+                      Recommended High-Definition Photos for this Story (1-Click Select):
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    @for (sug of getFormCuratedImages(); track sug) {
+                      <button type="button" (click)="formImageUrl = sug"
+                              class="relative aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all group cursor-pointer"
+                              [class.border-blue-600]="formImageUrl === sug"
+                              [class.border-transparent]="formImageUrl !== sug">
+                        <img [src]="sug" alt="Curated" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                        @if (formImageUrl === sug) {
+                          <div class="absolute inset-0 bg-blue-600/40 flex items-center justify-center">
+                            <mat-icon class="text-white drop-shadow" style="font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon>
+                          </div>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+
                 <!-- Hidden input to still bind to the form model -->
                 <input type="hidden" [(ngModel)]="formImageUrl" name="imageUrl">
               </div>
@@ -623,6 +607,10 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
                             <button (click)="openWhatsAppModal(article)" class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all hover:scale-105" title="Share to WhatsApp">
                               <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
                             </button>
+                            <!-- Quick Change Image Button -->
+                            <button (click)="openQuickImageModal(article)" class="w-9 h-9 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition-all hover:scale-105" title="Change Cover Image (පින්තූරය වෙනස් කරන්න)">
+                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">photo_camera</mat-icon>
+                            </button>
                             <!-- Edit -->
                             <button (click)="editArticle(article)" class="w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all hover:scale-105" title="Edit Story">
                               <mat-icon style="font-size: 18px; width: 18px; height: 18px;">edit</mat-icon>
@@ -644,6 +632,571 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
             </div>
           </div>
         </div>
+        } @else if (activeTab() === 'auto-studio') {
+          <!-- AUTO CONTENT GENERATION STUDIO -->
+          <div class="space-y-8 animate-fade-in pb-12">
+            <!-- Studio Hero Banner -->
+            <div class="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-[#121420] text-white relative overflow-hidden shadow-2xl border border-indigo-500/20">
+              <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+              <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+              
+              <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                  <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold uppercase tracking-wider text-indigo-300 mb-3.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_awesome</mat-icon>
+                    <span>Gemini 2.5 Pro Studio • Automated News Engine</span>
+                  </div>
+                  <h2 class="text-2xl sm:text-4xl font-black tracking-tight text-white">ස්වයංක්‍රීය Article & Content Generation</h2>
+                  <p class="text-indigo-100/80 text-xs sm:text-sm mt-2 max-w-2xl leading-relaxed">
+                    සජීවී Tech පුවත් අධ්‍යයනය කර තත්පර ගණනකින් උසස් තත්ත්වයේ සිංහල ලිපි, AI ඡායාරූප, සහ WhatsApp Channel Posts නිර්මාණය කර 1-Click එකෙන් පළ කරන්න.
+                  </p>
+                </div>
+                
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                  <button 
+                    type="button" 
+                    (click)="loadTrendingNews()" 
+                    [disabled]="isLoadingTrending()"
+                    class="px-5 py-3 rounded-2xl bg-white text-gray-900 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer disabled:opacity-50">
+                    <mat-icon [class.animate-spin]="isLoadingTrending()" style="font-size: 18px; width: 18px; height: 18px;">refresh</mat-icon>
+                    <span>{{ isLoadingTrending() ? 'Scanning Live RSS...' : 'Refresh Trends' }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Sub-Navigation Switcher -->
+              <div class="flex flex-wrap gap-2 sm:gap-3 mt-8 pt-6 border-t border-white/10">
+                <button 
+                  type="button" 
+                  (click)="autoStudioSubTab.set('trending')" 
+                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                  [class.bg-indigo-600]="autoStudioSubTab() === 'trending'"
+                  [class.text-white]="autoStudioSubTab() === 'trending'"
+                  [class.bg-white/10]="autoStudioSubTab() !== 'trending'"
+                  [class.text-gray-300]="autoStudioSubTab() !== 'trending'">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">radar</mat-icon>
+                  <span>1. Live Tech Trends ({{ trendingNews().length }})</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  (click)="autoStudioSubTab.set('topic')" 
+                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                  [class.bg-indigo-600]="autoStudioSubTab() === 'topic'"
+                  [class.text-white]="autoStudioSubTab() === 'topic'"
+                  [class.bg-white/10]="autoStudioSubTab() !== 'topic'"
+                  [class.text-gray-300]="autoStudioSubTab() !== 'topic'">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit_note</mat-icon>
+                  <span>2. Topic & Keyword Studio</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  (click)="autoStudioSubTab.set('url')" 
+                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                  [class.bg-indigo-600]="autoStudioSubTab() === 'url'"
+                  [class.text-white]="autoStudioSubTab() === 'url'"
+                  [class.bg-white/10]="autoStudioSubTab() !== 'url'"
+                  [class.text-gray-300]="autoStudioSubTab() !== 'url'">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">link</mat-icon>
+                  <span>3. News URL to Article</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  (click)="autoStudioSubTab.set('polish')" 
+                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+                  [class.bg-indigo-600]="autoStudioSubTab() === 'polish'"
+                  [class.text-white]="autoStudioSubTab() === 'polish'"
+                  [class.bg-white/10]="autoStudioSubTab() !== 'polish'"
+                  [class.text-gray-300]="autoStudioSubTab() !== 'polish'">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_fix_high</mat-icon>
+                  <span>4. Content Polisher & Formatter</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SUB-TAB 1: LIVE TECH TRENDS & 1-CLICK AUTO-PUBLISHER -->
+            @if (autoStudioSubTab() === 'trending') {
+              <div class="space-y-6">
+                <!-- Action & Controls Bar -->
+                <div class="p-6 bg-white rounded-3xl border border-black/5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <h3 class="font-black text-gray-900 text-lg flex items-center gap-2">
+                      <mat-icon class="text-indigo-600">trending_up</mat-icon>
+                      <span>Live Tech Feeds & Trends Radar</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">TechCrunch AI, The Verge, Google News AI, Wired, Daily FT පුවත් ස්වයංක්‍රීයව පරිලෝකනය වේ.</p>
+                  </div>
+
+                  <!-- Automation Options & Batch Trigger -->
+                  <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <button 
+                      type="button"
+                      (click)="toggleSelectAllTrending()"
+                      class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer">
+                      {{ selectedTrendingIds().length === trendingNews().length && trendingNews().length > 0 ? 'Deselect All' : 'Select All (' + trendingNews().length + ')' }}
+                    </button>
+
+                    <button 
+                      type="button" 
+                      (click)="batchGenerateAndPublishSelected()" 
+                      [disabled]="selectedTrendingIds().length === 0 || isBatchGenerating()"
+                      class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-40">
+                      @if (isBatchGenerating()) {
+                        <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                        <span>Publishing {{ batchProgress().current }}/{{ batchProgress().total }}...</span>
+                      } @else {
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                        <span>Batch Auto-Publish ({{ selectedTrendingIds().length }})</span>
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Batch Progress Alert -->
+                @if (isBatchGenerating()) {
+                  <div class="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl animate-pulse flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs font-bold text-indigo-900">
+                      <span>{{ batchProgress().message }}</span>
+                      <span>{{ batchProgress().current }} / {{ batchProgress().total }} Completed</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-indigo-200 rounded-full overflow-hidden">
+                      <div class="h-full bg-indigo-600 transition-all duration-300" [style.width.%]="(batchProgress().current / (batchProgress().total || 1)) * 100"></div>
+                    </div>
+                  </div>
+                }
+
+                <!-- Trending Feed Cards Grid -->
+                @if (isLoadingTrending()) {
+                  <div class="p-16 text-center bg-white rounded-3xl border border-black/5 shadow-sm space-y-4">
+                    <div class="w-12 h-12 rounded-full border-4 border-indigo-600/30 border-t-indigo-600 animate-spin mx-auto"></div>
+                    <p class="text-sm font-bold text-gray-700">Scanning top global & local tech feeds with live AI...</p>
+                  </div>
+                } @else if (trendingNews().length === 0) {
+                  <div class="p-16 text-center bg-white rounded-3xl border border-black/5 shadow-sm space-y-4">
+                    <mat-icon class="text-gray-300" style="font-size: 48px; width: 48px; height: 48px;">feed</mat-icon>
+                    <h4 class="text-base font-bold text-gray-700">No trending items loaded yet</h4>
+                    <button type="button" (click)="loadTrendingNews()" class="px-6 py-3 rounded-full bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider">
+                      Fetch Latest Tech News Feeds
+                    </button>
+                  </div>
+                } @else {
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @for (item of trendingNews(); track item.id) {
+                      <div 
+                        class="bg-white rounded-3xl border transition-all duration-200 p-5 flex flex-col justify-between group shadow-sm hover:shadow-md"
+                        [class.border-indigo-500]="isTrendingSelected(item.id)"
+                        [class.bg-indigo-50/20]="isTrendingSelected(item.id)"
+                        [class.border-black/5]="!isTrendingSelected(item.id)">
+                        <div>
+                          <!-- Card Header: Source & Selection -->
+                          <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[10px] uppercase tracking-wider">
+                              {{ item.source }}
+                            </span>
+                            
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-500 hover:text-indigo-600">
+                              <input 
+                                type="checkbox" 
+                                [checked]="isTrendingSelected(item.id)" 
+                                (change)="toggleSelectTrending(item.id)"
+                                class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
+                              <span>Select</span>
+                            </label>
+                          </div>
+
+                          <!-- Thumbnail -->
+                          @if (item.imageUrl) {
+                            <div class="w-full h-36 rounded-2xl bg-gray-100 overflow-hidden mb-3.5 border border-black/5">
+                              <img [src]="item.imageUrl" [alt]="item.title" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            </div>
+                          }
+
+                          <h4 class="font-bold text-[#1d1d1f] text-sm leading-snug line-clamp-2 mb-2 group-hover:text-indigo-600 transition-colors">
+                            {{ item.title }}
+                          </h4>
+                          
+                          <p class="text-xs text-gray-500 line-clamp-3 leading-relaxed mb-4">
+                            {{ item.description }}
+                          </p>
+                        </div>
+
+                        <!-- Card Action Buttons -->
+                        <div class="pt-3 border-t border-gray-100 space-y-2">
+                          <div class="flex gap-2">
+                            <button 
+                              type="button" 
+                              (click)="generateAndReviewTrending(item)"
+                              [disabled]="isGeneratingStudioArticle()"
+                              class="flex-1 py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 font-bold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50">
+                              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">edit_note</mat-icon>
+                              <span>Draft & Review</span>
+                            </button>
+
+                            <button 
+                              type="button" 
+                              (click)="autoPublishSingleTrending(item)"
+                              [disabled]="isGeneratingStudioArticle() || isBatchGenerating()"
+                              class="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50">
+                              <mat-icon style="font-size: 15px; width: 15px; height: 15px;">rocket_launch</mat-icon>
+                              <span>1-Click Publish</span>
+                            </button>
+                          </div>
+
+                          @if (item.url) {
+                            <a [href]="item.url" target="_blank" class="text-[10px] text-gray-400 hover:text-indigo-500 block text-center truncate">
+                              Source URL: {{ item.url }}
+                            </a>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- SUB-TAB 2: ADVANCED TOPIC & KEYWORD STUDIO -->
+            @if (autoStudioSubTab() === 'topic') {
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Topic Form Controls (5 cols) -->
+                <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-3xl border border-black/5 shadow-sm space-y-5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                      <mat-icon>psychology</mat-icon>
+                    </div>
+                    <div>
+                      <h3 class="font-black text-gray-900 text-lg">Topic & Custom Angle</h3>
+                      <p class="text-xs text-gray-500">පුවත් මාතෘකාව හෝ සටහන් ලබා දෙන්න</p>
+                    </div>
+                  </div>
+
+                  <!-- Topic Input -->
+                  <div>
+                    <label for="studioTopic" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Main Topic / News Headline *</label>
+                    <input 
+                      id="studioTopic" 
+                      type="text" 
+                      [(ngModel)]="studioTopic" 
+                      name="studioTopic" 
+                      placeholder="e.g. Starlink Internet Launches in Sri Lanka with TRCSL Approval" 
+                      class="w-full px-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-indigo-600 outline-none text-sm font-semibold text-gray-900">
+                  </div>
+
+                  <!-- Additional Background Context -->
+                  <div>
+                    <label for="studioContext" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Rough Notes / Key Specs / Context (Optional)</label>
+                    <textarea 
+                      id="studioContext" 
+                      rows="3" 
+                      [(ngModel)]="studioContext" 
+                      name="studioContext" 
+                      placeholder="e.g. Monthly subscription around Rs. 15,000, hardware kit Rs. 95,000, speeds up to 250 Mbps..." 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-indigo-600 outline-none text-xs text-gray-800 leading-relaxed"></textarea>
+                  </div>
+
+                  <!-- Options Grid -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label for="studioTone" class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1.5">Writing Tone</label>
+                      <select id="studioTone" [(ngModel)]="studioTone" name="studioTone" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-800 outline-none">
+                        <option value="journalistic">Journalistic News (මාධ්‍යවේදී පුවත්)</option>
+                        <option value="deep_review">Deep Tech Review (ගැඹුරු විශ්ලේෂණ)</option>
+                        <option value="beginner_guide">Beginner Guide (සරල පැහැදිලි කිරීමක්)</option>
+                        <option value="breaking">Breaking Alert (හදිසි පුවත්)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label for="studioLength" class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1.5">Article Length</label>
+                      <select id="studioLength" [(ngModel)]="studioLength" name="studioLength" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-800 outline-none">
+                        <option value="short">Short Flash (400-600 වචන)</option>
+                        <option value="standard">Standard News (700-1000 වචන)</option>
+                        <option value="comprehensive">Comprehensive Long Form (1200+ වචන)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label for="studioAudience" class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1.5">Target Audience</label>
+                      <select id="studioAudience" [(ngModel)]="studioAudience" name="studioAudience" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-800 outline-none">
+                        <option value="sri_lanka">Sri Lanka Tech Community (දේශීය)</option>
+                        <option value="general">General Public (සාමාන්‍ය පාඨක)</option>
+                        <option value="developers">Developers / Geeks (තාක්ෂණවේදීන්)</option>
+                      </select>
+                    </div>
+
+                    <div class="flex items-center pt-5">
+                      <label class="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                        <input type="checkbox" [(ngModel)]="studioIncludeLkr" name="studioIncludeLkr" class="w-4 h-4 rounded text-indigo-600 border-gray-300">
+                        <span>Include LKR (රුපියල්) Pricing Estimates</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Generate Button -->
+                  <button 
+                    type="button" 
+                    (click)="generateStudioTopicArticle()" 
+                    [disabled]="isGeneratingStudioArticle() || !studioTopic.trim()"
+                    class="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                    @if (isGeneratingStudioArticle()) {
+                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      <span>Generating Full Sinhala Story & AI Art...</span>
+                    } @else {
+                      <mat-icon>auto_awesome</mat-icon>
+                      <span>Generate Full News Article</span>
+                    }
+                  </button>
+                </div>
+
+                <!-- Live Generated Article Output Preview (7 cols) -->
+                <div class="lg:col-span-7">
+                  @if (generatedStudioArticle(); as art) {
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-indigo-100 shadow-xl space-y-6 animate-fade-in">
+                      <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                        <div class="flex items-center gap-2">
+                          <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider">
+                            Ready for Publishing
+                          </span>
+                          <span class="text-xs text-gray-400 font-bold">{{ art.suggestedCategory || 'Tech' }} • {{ art.readTime || '5 min' }}</span>
+                        </div>
+
+                        <div class="flex gap-2">
+                          <button (click)="regenerateStudioImage()" [disabled]="isGeneratingImage()" class="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">image</mat-icon>
+                            <span>New Art</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Title & Summary -->
+                      <div>
+                        <input 
+                          [(ngModel)]="art.sinhalaTitle" 
+                          class="w-full text-xl sm:text-2xl font-black text-gray-900 border-b border-dashed border-gray-200 focus:border-indigo-600 outline-none pb-1" />
+                        <textarea 
+                          [(ngModel)]="art.sinhalaDescription" 
+                          rows="2" 
+                          class="w-full text-xs sm:text-sm text-gray-600 mt-2 border border-gray-100 p-2.5 rounded-xl focus:ring-1 focus:ring-indigo-600 outline-none leading-relaxed"></textarea>
+                      </div>
+
+                      <!-- AI Image Preview -->
+                      @if (art.imageUrl) {
+                        <div class="relative rounded-2xl overflow-hidden bg-gray-100 max-h-64 border border-black/5">
+                          <img [src]="art.imageUrl" [alt]="art.sinhalaTitle" class="w-full h-full object-cover">
+                        </div>
+                      }
+
+                      <!-- Formatted Article Content Preview -->
+                      <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <span>Article Content (Formatted Sinhala HTML)</span>
+                          <span class="text-[10px] text-gray-400">Rendered Preview</span>
+                        </div>
+                        <div 
+                          class="max-h-72 overflow-y-auto p-4 rounded-2xl bg-gray-50 border border-gray-100 text-xs sm:text-sm text-gray-800 leading-relaxed font-sans prose prose-sm max-w-none"
+                          [innerHTML]="art.sinhalaFullContent">
+                        </div>
+                      </div>
+
+                      <!-- Social / WhatsApp Copy Box -->
+                      @if (art.socialShareText) {
+                        <div class="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-100 space-y-2">
+                          <div class="flex items-center justify-between text-emerald-900 font-bold text-xs">
+                            <span class="flex items-center gap-1.5"><mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-600">chat</mat-icon> WhatsApp / Social Media Copy</span>
+                            <button (click)="copyToClipboard(art.socialShareText, 'WhatsApp snippet copied!')" class="px-2.5 py-1 rounded bg-white text-emerald-700 text-[10px] font-black uppercase hover:bg-emerald-100 border border-emerald-200">
+                              Copy Text
+                            </button>
+                          </div>
+                          <p class="text-[11px] text-emerald-900/80 font-mono whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">{{ art.socialShareText }}</p>
+                        </div>
+                      }
+
+                      <!-- Final Action Buttons -->
+                      <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button 
+                          type="button" 
+                          (click)="publishStudioArticleDirectly()" 
+                          [disabled]="isDirectPublishing()"
+                          class="flex-1 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                          @if (isDirectPublishing()) {
+                            <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                            <span>Publishing to Live Site...</span>
+                          } @else {
+                            <mat-icon>rocket_launch</mat-icon>
+                            <span>🚀 1-Click Publish to MyFeed</span>
+                          }
+                        </button>
+
+                        <button 
+                          type="button" 
+                          (click)="loadStudioArticleIntoMainEditor()" 
+                          class="px-6 py-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer">
+                          <mat-icon>edit</mat-icon>
+                          <span>Open in Full Editor</span>
+                        </button>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="p-16 text-center bg-white rounded-3xl border border-black/5 shadow-sm space-y-4">
+                      <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                        <mat-icon style="font-size: 32px; width: 32px; height: 32px;">psychology</mat-icon>
+                      </div>
+                      <h4 class="text-base font-bold text-gray-700">Enter a topic and click "Generate Full News Article"</h4>
+                      <p class="text-xs text-gray-400 max-w-sm mx-auto">
+                        Gemini AI will automatically craft the headline, summary, deep content sections with subheadings, generate an AI image prompt, and create a ready-to-share WhatsApp snippet.
+                      </p>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- SUB-TAB 3: NEWS URL TO ARTICLE -->
+            @if (autoStudioSubTab() === 'url') {
+              <div class="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded-3xl border border-black/5 shadow-sm space-y-6">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <mat-icon style="font-size: 24px; width: 24px; height: 24px;">link</mat-icon>
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-black text-gray-900">Foreign or Local News URL to Sinhala Article</h3>
+                    <p class="text-xs text-gray-500">ඕනෑම Tech / News වෙබ් ලින්ක් එකකින් තත්පර ගණනකින් සිංහල පුවතක් සකසන්න</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="studioUrl" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Web Article URL</label>
+                  <input 
+                    id="studioUrl" 
+                    type="url" 
+                    [(ngModel)]="studioUrl" 
+                    placeholder="https://www.theverge.com/2026/... or https://techcrunch.com/..." 
+                    class="w-full px-5 py-4 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-indigo-600 outline-none text-sm font-mono text-gray-900">
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                  <button 
+                    type="button" 
+                    (click)="generateStudioUrlArticle()" 
+                    [disabled]="isGeneratingStudioArticle() || !studioUrl.trim()" 
+                    class="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                    @if (isGeneratingStudioArticle()) {
+                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                      <span>Reading URL & Transcompiling to Sinhala...</span>
+                    } @else {
+                      <mat-icon>bolt</mat-icon>
+                      <span>Fetch & Generate Sinhala Article</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- SUB-TAB 4: CONTENT POLISHER & AI FORMATTER -->
+            @if (autoStudioSubTab() === 'polish') {
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Input Box (6 cols) -->
+                <div class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-black/5 shadow-sm space-y-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                      <mat-icon>auto_fix_high</mat-icon>
+                    </div>
+                    <div>
+                      <h3 class="font-black text-gray-900 text-lg">Smart Content Polisher</h3>
+                      <p class="text-xs text-gray-500">අක්ෂර වින්‍යාසය, උපශීර්ෂ (h2), සහ WhatsApp post සැකසීම</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="polishTitle" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Article Title (Optional)</label>
+                    <input id="polishTitle" type="text" [(ngModel)]="polishTitle" placeholder="Article Title" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs font-bold text-gray-900 outline-none">
+                  </div>
+
+                  <div>
+                    <label for="polishInput" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Draft Content (Sinhala or English Notes) *</label>
+                    <textarea 
+                      id="polishInput" 
+                      rows="8" 
+                      [(ngModel)]="polishInput" 
+                      placeholder="Paste your rough text, raw news notes, or draft here..." 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-purple-600 outline-none text-xs leading-relaxed text-gray-800 font-sans"></textarea>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button 
+                      type="button" 
+                      (click)="runContentPolish('polish_all')" 
+                      [disabled]="isPolishingContent() || !polishInput.trim()"
+                      class="py-3 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">sparkles</mat-icon>
+                      <span>Full Polish & Format</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      (click)="runContentPolish('social_copy')" 
+                      [disabled]="isPolishingContent() || !polishInput.trim()"
+                      class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">chat</mat-icon>
+                      <span>WhatsApp Copy Only</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Polish Output (6 cols) -->
+                <div class="lg:col-span-6">
+                  @if (polishedContentResult(); as res) {
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-purple-100 shadow-xl space-y-5 animate-fade-in">
+                      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-black uppercase tracking-wider">
+                          Polished Output
+                        </span>
+                        <button (click)="applyPolishedToEditor()" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold uppercase hover:bg-indigo-700 transition-all flex items-center gap-1">
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">check</mat-icon>
+                          <span>Apply to Post</span>
+                        </button>
+                      </div>
+
+                      @if (res.polishedTitle) {
+                        <div>
+                          <div class="text-[10px] font-bold uppercase text-gray-400">Polished Headline</div>
+                          <div class="text-base font-black text-gray-900">{{ res.polishedTitle }}</div>
+                        </div>
+                      }
+
+                      @if (res.polishedContent) {
+                        <div>
+                          <div class="text-[10px] font-bold uppercase text-gray-400 mb-1">Formatted HTML Content</div>
+                          <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-xs text-gray-800 max-h-56 overflow-y-auto leading-relaxed" [innerHTML]="res.polishedContent"></div>
+                        </div>
+                      }
+
+                      @if (res.socialShareText) {
+                        <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 space-y-1.5">
+                          <div class="flex justify-between items-center text-xs font-bold text-emerald-900">
+                            <span>WhatsApp Channel Post</span>
+                            <button (click)="copyToClipboard(res.socialShareText, 'WhatsApp copy saved to clipboard!')" class="text-[10px] uppercase font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">Copy</button>
+                          </div>
+                          <p class="text-xs text-emerald-900 font-mono whitespace-pre-wrap">{{ res.socialShareText }}</p>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="p-16 text-center bg-white rounded-3xl border border-black/5 shadow-sm space-y-4">
+                      <mat-icon class="text-purple-300" style="font-size: 48px; width: 48px; height: 48px;">auto_fix_high</mat-icon>
+                      <h4 class="text-base font-bold text-gray-700">Paste your text & choose a polish action</h4>
+                      <p class="text-xs text-gray-400 max-w-xs mx-auto">Enhance spelling, grammar, convert raw paragraphs into structured headings, or generate WhatsApp posts.</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
         } @else if (activeTab() === 'subscribers') {
           <!-- Subscribers Tab -->
           <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
@@ -692,6 +1245,105 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
               </table>
             </div>
           </div>
+        } @else if (activeTab() === 'ads') {
+          <!-- ADS MANAGEMENT SECTION -->
+          @if (isAdding()) {
+            <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
+              <h2 class="text-2xl font-black mb-8">{{ editingAdId() ? 'Edit' : 'Create' }} Ad Campaign</h2>
+              <form (ngSubmit)="saveAd()" class="flex flex-col gap-6">
+                <div>
+                  <label for="adFormTitle" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
+                  <input id="adFormTitle" type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
+                </div>
+                <div>
+                  <label for="adFormLink" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
+                  <input id="adFormLink" type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
+                </div>
+                <div>
+                  <label for="adFormImageFile" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</label>
+                  <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
+                    @if (adFormImageUrl) {
+                      <div class="relative w-full h-32 md:h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
+                        <img [src]="adFormImageUrl" alt="Ad Preview" class="w-full h-full object-contain">
+                        <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
+                          <button type="button" (click)="adFormImageUrl = ''" class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all">
+                            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="py-4">
+                        <mat-icon class="text-gray-400 mb-2" style="font-size: 40px; width: 40px; height: 40px;">add_photo_alternate</mat-icon>
+                        <p class="text-sm font-bold text-gray-500 mb-1">Click to upload ad banner image</p>
+                      </div>
+                    }
+                    <input id="adFormImageFile" type="file" accept="image/*" (change)="onAdImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!adFormImageUrl">
+                  </div>
+                </div>
+                <div>
+                  <label for="adFormPlacement" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
+                  <select id="adFormPlacement" [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
+                    <option value="home-top">Home Page - Top (Banner)</option>
+                    <option value="home-bottom">Home Page - Bottom</option>
+                    <option value="article-inline">Inside Article (Inline)</option>
+                    <option value="sidebar">Sidebar / Additional</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                  <label for="adIsActive" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Ad is Active (Visible on site)</label>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                  <button type="submit" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all shadow-lg w-full md:w-auto">
+                    {{ editingAdId() ? 'Update' : 'Publish' }} Ad
+                  </button>
+                  <button type="button" (click)="cancelAdEdit()" class="px-8 py-4 bg-gray-100 text-gray-600 rounded-full font-bold tracking-widest uppercase hover:bg-gray-200 transition-all w-full md:w-auto">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          } @else {
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
+              <div class="p-6 md:p-8 flex justify-between items-center border-b border-gray-100">
+                <h3 class="text-xl font-black">Active & Inactive Ads</h3>
+              </div>
+              <div class="divide-y divide-gray-100">
+                @for (ad of adService.ads(); track ad.id) {
+                  <div class="p-6 flex flex-col md:flex-row items-center gap-6 hover:bg-gray-50 transition-colors">
+                    <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                      <img [src]="ad.imageUrl" alt="Ad" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                      <h4 class="font-bold text-lg text-gray-900 mb-1">{{ ad.title }} <span class="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ ad.placement }}</span></h4>
+                      <p class="text-sm text-gray-500 mb-2 truncate max-w-xs md:max-w-md">{{ ad.link }}</p>
+                      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                           [class.bg-green-100]="ad.isActive" [class.text-green-700]="ad.isActive"
+                           [class.bg-gray-100]="!ad.isActive" [class.text-gray-500]="!ad.isActive">
+                        {{ ad.isActive ? 'Active' : 'Inactive' }}
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                      <button (click)="toggleAdStatus(ad)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-bold text-xs uppercase tracking-wider hover:bg-gray-200">
+                        Toggle
+                      </button>
+                      <button (click)="editAd(ad)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button (click)="deleteAd(ad.id)" class="p-2 text-red-600 hover:bg-red-50 rounded-full">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+                @if (adService.ads().length === 0) {
+                  <div class="p-12 text-center text-gray-400 font-medium">
+                    No ads created yet. Click "New Post" (or New Ad) to add one.
+                  </div>
+                }
+              </div>
+            </div>
+          }
         } @else if (activeTab() === 'notify') {
           <!-- Notify Tab -->
           <div class="max-w-3xl mx-auto space-y-8">
@@ -1125,6 +1777,131 @@ import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} 
         </div>
       }
 
+      <!-- QUICK COVER IMAGE EDITOR MODAL -->
+      @if (quickImageArticle(); as qArticle) {
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div class="bg-white rounded-[2.5rem] max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-black/10 animate-scale-in my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-100">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 26px; width: 26px; height: 26px;">photo_camera</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <h3 class="text-lg font-black text-[#1d1d1f] truncate">Cover Image වෙනස් කරන්න</h3>
+                  <p class="text-xs text-gray-500 truncate max-w-md">{{ qArticle.title }}</p>
+                </div>
+              </div>
+              <button (click)="closeQuickImageModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-all cursor-pointer shrink-0">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Current / Selected Image Live Preview -->
+            <div class="mb-5">
+              <div class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center justify-between">
+                <span>Selected Image Preview (තෝරාගත් පින්තූරය):</span>
+                @if (quickImageUrl()) {
+                  <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">check_circle</mat-icon> Ready to save
+                  </span>
+                }
+              </div>
+              <div class="w-full aspect-[16/9] sm:aspect-[2.2/1] rounded-2xl overflow-hidden bg-gray-100 border border-black/5 relative shadow-inner">
+                @if (quickImageUrl()) {
+                  <img [src]="quickImageUrl()" [alt]="qArticle.title" referrerpolicy="no-referrer"
+                       class="w-full h-full object-cover transition-all duration-300" />
+                } @else {
+                  <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <mat-icon style="font-size: 36px; width: 36px; height: 36px;">image_not_supported</mat-icon>
+                    <span class="text-xs font-medium">පින්තූරයක් තෝරා නැත</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Curated Smart Matching Recommendations -->
+            <div class="mb-5">
+              <div class="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2 flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600">auto_awesome</mat-icon>
+                  <span>Curated High-Definition Smart Matches (ක්ලික් කර තෝරන්න):</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                @for (sug of quickImageSuggestions(); track sug) {
+                  <button type="button" (click)="quickImageUrl.set(sug)"
+                          class="relative aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all group cursor-pointer"
+                          [class.border-blue-600]="quickImageUrl() === sug"
+                          [class.border-transparent]="quickImageUrl() !== sug"
+                          [class.ring-2]="quickImageUrl() === sug"
+                          [class.ring-blue-600/30]="quickImageUrl() === sug">
+                    <img [src]="sug" alt="Curated Option" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                    @if (quickImageUrl() === sug) {
+                      <div class="absolute inset-0 bg-blue-600/40 flex items-center justify-center">
+                        <mat-icon class="text-white drop-shadow" style="font-size: 20px; width: 20px; height: 20px;">check_circle</mat-icon>
+                      </div>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Alternative Options: AI Generate or Custom URL or Local File -->
+            <div class="space-y-3 mb-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <!-- AI Generate Option -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
+                <div>
+                  <div class="text-xs font-bold text-gray-800">Generate with Gemini AI</div>
+                  <div class="text-[11px] text-gray-500">පුවතේ මාතෘකාවට අදාළව AI මඟින් නව visual එකක් සාදන්න</div>
+                </div>
+                <button type="button" (click)="generateQuickAiImage()" [disabled]="isGeneratingQuickAiImage()"
+                        class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                  @if (isGeneratingQuickAiImage()) {
+                    <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Generating...</span>
+                  } @else {
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_awesome</mat-icon>
+                    <span>🎨 AI Visual එකක් සාදන්න</span>
+                  }
+                </button>
+              </div>
+
+              <!-- Custom URL & File Upload Inputs -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label for="quickAdminDirectUrl" class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">Paste Direct Image URL</label>
+                  <input id="quickAdminDirectUrl" type="text" [value]="quickImageUrl()" (input)="quickImageUrl.set($any($event.target).value)"
+                         placeholder="https://images.unsplash.com/..." class="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-blue-600 outline-none" />
+                </div>
+                <div>
+                  <label for="quickAdminFileUpload" class="block text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">Or Upload From Device</label>
+                  <input id="quickAdminFileUpload" type="file" accept="image/*" (change)="onQuickImageFileUpload($event)" class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-end">
+              <button type="button" (click)="closeQuickImageModal()" [disabled]="isQuickImageUpdating()"
+                      class="px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">
+                Cancel (අවලංගු කරන්න)
+              </button>
+              <button type="button" (click)="saveQuickImage()" [disabled]="isQuickImageUpdating() || !quickImageUrl()"
+                      class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                @if (isQuickImageUpdating()) {
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Updating Firestore...</span>
+                } @else {
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">save</mat-icon>
+                  <span>Save & Update Cover Image</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- TOAST NOTIFICATION -->
       @if (deleteToast(); as toastMsg) {
         <div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-[#1d1d1f] text-white shadow-2xl border border-white/10 text-xs sm:text-sm font-semibold max-w-[90vw] animate-fade-in-up">
@@ -1147,7 +1924,35 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics'>('articles');
+  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics'>('articles');
+  
+  // Auto Studio signals & state
+  readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish'>('trending');
+  readonly trendingNews = signal<TrendingNewsItem[]>([]);
+  readonly isLoadingTrending = signal(false);
+  readonly selectedTrendingIds = signal<string[]>([]);
+  readonly isGeneratingStudioArticle = signal(false);
+  readonly isBatchGenerating = signal(false);
+  readonly batchProgress = signal<{ current: number; total: number; message: string }>({ current: 0, total: 0, message: '' });
+  readonly generatedStudioArticle = signal<GeneratedStudioArticle | null>(null);
+  readonly isDirectPublishing = signal(false);
+
+  // Topic Studio inputs
+  studioTopic = '';
+  studioContext = '';
+  studioTone = 'journalistic';
+  studioLength = 'standard';
+  studioAudience = 'sri_lanka';
+  studioIncludeLkr = true;
+
+  // URL Studio input
+  studioUrl = '';
+
+  // Content Polisher inputs & state
+  polishTitle = '';
+  polishInput = '';
+  readonly isPolishingContent = signal(false);
+  readonly polishedContentResult = signal<PolishedResult | null>(null);
   
   // Analytics Computed Signals
   readonly topViewedArticles = computed(() => {
@@ -1198,6 +2003,13 @@ export class AdminComponent {
   readonly showBulkDeleteConfirm = signal(false);
   readonly isDeleting = signal(false);
   readonly deleteToast = signal<string | null>(null);
+
+  // Quick Cover Image Editor Signals
+  readonly quickImageArticle = signal<Article | null>(null);
+  readonly quickImageUrl = signal<string>('');
+  readonly quickImageSuggestions = signal<string[]>([]);
+  readonly isQuickImageUpdating = signal(false);
+  readonly isGeneratingQuickAiImage = signal(false);
 
   // Deployment signals
   netlifyHookUrl = '';
@@ -1470,6 +2282,93 @@ export class AdminComponent {
     }
   }
 
+  getFormCuratedImages(): string[] {
+    return getCuratedTopicImages(this.formTitle || this.aiTopicPrompt || '', this.formCategory || 'Tech');
+  }
+
+  openQuickImageModal(article: Article) {
+    this.quickImageArticle.set(article);
+    this.quickImageUrl.set(article.imageUrl || '');
+    this.quickImageSuggestions.set(getCuratedTopicImages(article.title, article.category));
+  }
+
+  closeQuickImageModal() {
+    this.quickImageArticle.set(null);
+    this.quickImageUrl.set('');
+    this.quickImageSuggestions.set([]);
+    this.isQuickImageUpdating.set(false);
+    this.isGeneratingQuickAiImage.set(false);
+  }
+
+  onQuickImageFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2MB limit. Please upload a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          this.quickImageUrl.set(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  async generateQuickAiImage() {
+    const article = this.quickImageArticle();
+    if (!article) return;
+
+    this.isGeneratingQuickAiImage.set(true);
+    try {
+      const res = await fetch('/api/generate-ai-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: article.title,
+          category: article.category || 'Tech'
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate AI image');
+      }
+
+      const data = await res.json();
+      if (data.imageUrl) {
+        this.quickImageUrl.set(data.imageUrl);
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('AI Image Generator Error: ' + (err.message || String(e)));
+    } finally {
+      this.isGeneratingQuickAiImage.set(false);
+    }
+  }
+
+  async saveQuickImage() {
+    const article = this.quickImageArticle();
+    const newUrl = this.quickImageUrl().trim();
+    if (!article || !newUrl) return;
+
+    this.isQuickImageUpdating.set(true);
+    try {
+      await this.articleService.updateArticle(article.id, { imageUrl: newUrl });
+      this.deleteToast.set(`"${article.title.substring(0, 30)}..." Cover Image සාර්ථකව update කරන ලදී!`);
+      setTimeout(() => this.deleteToast.set(null), 4000);
+      this.closeQuickImageModal();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Failed to update article image: ' + (e.message || String(err)));
+    } finally {
+      this.isQuickImageUpdating.set(false);
+    }
+  }
+
   async generateWithAI() {
     if (!this.aiTopicPrompt.trim()) {
       alert('කරුණාකර ඔබට අවශ්‍ය පුවතේ මාතෘකාව ඇතුළත් කරන්න.');
@@ -1536,9 +2435,10 @@ export class AdminComponent {
       }
 
       alert('News Article successfully generated from the provided URL!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error('URL generation error:', error);
-      alert('Error: ' + error.message);
+      alert('Error: ' + (err.message || String(error)));
     } finally {
       this.isGeneratingAi.set(false);
     }
@@ -1857,6 +2757,25 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
+  async triggerWhatsAppDispatch(data: { id: string; title: string; summary: string; imageUrl?: string; url: string; category: string; customSnippet?: string }) {
+    try {
+      await fetch('/api/whatsapp/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          summary: data.summary,
+          imageUrl: data.imageUrl,
+          articleUrl: data.url,
+          category: data.category,
+          customMessage: data.customSnippet
+        })
+      });
+    } catch (err) {
+      console.warn('WhatsApp dispatch warning:', err);
+    }
+  }
+
   async dispatchWhatsAppPost() {
     if (!this.waCustomMessage.trim()) return;
 
@@ -2141,6 +3060,510 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         alert('Failed to trigger Netlify build. Please verify your Hook URL.');
         this.isDeploying.set(false);
       }
+    });
+  }
+
+  // ==========================================
+  // AUTO AI STUDIO AUTOMATION METHODS
+  // ==========================================
+
+  isTrendingSelected(id: string): boolean {
+    return this.selectedTrendingIds().includes(id);
+  }
+
+  toggleSelectTrending(id: string) {
+    const curr = this.selectedTrendingIds();
+    if (curr.includes(id)) {
+      this.selectedTrendingIds.set(curr.filter(x => x !== id));
+    } else {
+      this.selectedTrendingIds.set([...curr, id]);
+    }
+  }
+
+  toggleSelectAllTrending() {
+    const all = this.trendingNews().map(i => i.id);
+    if (this.selectedTrendingIds().length === all.length && all.length > 0) {
+      this.selectedTrendingIds.set([]);
+    } else {
+      this.selectedTrendingIds.set(all);
+    }
+  }
+
+  async loadTrendingNews() {
+    this.isLoadingTrending.set(true);
+    try {
+      const res = await fetch('/api/admin/trending-news');
+      if (!res.ok) {
+        throw new Error('Failed to scan live tech trends');
+      }
+      const data = await res.json();
+      this.trendingNews.set(data.items || []);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      console.error('Trending fetch error:', err);
+      alert('Error fetching live trending feeds: ' + (e.message || String(err)));
+    } finally {
+      this.isLoadingTrending.set(false);
+    }
+  }
+
+  async generateAndReviewTrending(item: TrendingNewsItem) {
+    this.isGeneratingStudioArticle.set(true);
+    this.studioTopic = item.title;
+    this.studioContext = item.description || '';
+    try {
+      const res = await fetch('/api/admin/generate-full-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'trending',
+          topic: item.title,
+          rawContent: item.description,
+          url: item.url,
+          tone: this.studioTone,
+          length: this.studioLength,
+          targetAudience: this.studioAudience,
+          includeLkr: this.studioIncludeLkr
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate article');
+      }
+
+      const generated = await res.json();
+      this.generatedStudioArticle.set(generated);
+      this.autoStudioSubTab.set('topic');
+      this.deleteToast.set('✨ Full Sinhala Article & AI Visual Generated! Review below.');
+      setTimeout(() => this.deleteToast.set(null), 5000);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Generation error: ' + (e.message || String(err)));
+    } finally {
+      this.isGeneratingStudioArticle.set(false);
+    }
+  }
+
+  async autoPublishSingleTrending(item: TrendingNewsItem) {
+    if (!confirm(`Do you want to 1-Click Generate & Publish:\n"${item.title}"?`)) return;
+
+    this.isGeneratingStudioArticle.set(true);
+    try {
+      // 1. Generate full article with Gemini
+      const genRes = await fetch('/api/admin/generate-full-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'trending',
+          topic: item.title,
+          rawContent: item.description,
+          url: item.url,
+          tone: 'journalistic',
+          length: 'standard',
+          targetAudience: 'sri_lanka',
+          includeLkr: true
+        })
+      });
+
+      if (!genRes.ok) {
+        const err = await genRes.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate content');
+      }
+
+      const generated = await genRes.json();
+      
+      // 2. Publish to Firestore
+      const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const newArticlePayload: Partial<Article> = {
+        title: generated.sinhalaTitle || item.title,
+        summary: generated.sinhalaDescription || item.description,
+        content: generated.sinhalaFullContent || `<p>${generated.sinhalaDescription}</p>`,
+        category: generated.suggestedCategory || 'Tech',
+        imageUrl: generated.imageUrl || item.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+        readTime: generated.readTime || '4 min read',
+        date: dateStr,
+        authorType: 'ai',
+        createdAt: new Date(),
+        views: 0
+      };
+
+      const docRef = await addDoc(collection(db, 'articles'), newArticlePayload);
+      const articleUrl = this.getArticleUrl(docRef.id);
+
+      // 3. Dispatch Phone Alert
+      if (this.autoAlertPhone) {
+        this.triggerPhonePushNotification({
+          title: newArticlePayload.title || '',
+          summary: newArticlePayload.summary || '',
+          imageUrl: newArticlePayload.imageUrl || '',
+          articleUrl
+        });
+      }
+
+      // 4. Dispatch WhatsApp if enabled
+      if (this.autoPostWhatsApp && this.waWebhookUrl) {
+        this.triggerWhatsAppDispatch({
+          id: docRef.id,
+          title: newArticlePayload.title || '',
+          summary: newArticlePayload.summary || '',
+          imageUrl: newArticlePayload.imageUrl || '',
+          url: articleUrl,
+          category: newArticlePayload.category || 'Tech',
+          customSnippet: generated.socialShareText
+        });
+      }
+
+      this.deleteToast.set(`🚀 Published "${newArticlePayload.title}" successfully!`);
+      setTimeout(() => this.deleteToast.set(null), 6000);
+      this.selectedTrendingIds.set(this.selectedTrendingIds().filter(id => id !== item.id));
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('1-Click Publish Error: ' + (e.message || String(err)));
+    } finally {
+      this.isGeneratingStudioArticle.set(false);
+    }
+  }
+
+  async batchGenerateAndPublishSelected() {
+    const selected = this.selectedTrendingIds();
+    if (selected.length === 0) return;
+
+    if (!confirm(`Are you sure you want to Batch Generate and 1-Click Publish ${selected.length} articles?`)) return;
+
+    this.isBatchGenerating.set(true);
+    const itemsToProcess = this.trendingNews().filter(i => selected.includes(i.id));
+    const total = itemsToProcess.length;
+    let completed = 0;
+
+    this.batchProgress.set({ current: 0, total, message: `Starting batch automation for ${total} items...` });
+
+    try {
+      for (const item of itemsToProcess) {
+        this.batchProgress.set({ 
+          current: completed, 
+          total, 
+          message: `[${completed + 1}/${total}] Generating & Publishing: ${item.title}...` 
+        });
+
+        try {
+          const genRes = await fetch('/api/admin/generate-full-article', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: 'trending',
+              topic: item.title,
+              rawContent: item.description,
+              url: item.url,
+              tone: 'journalistic',
+              length: 'standard',
+              targetAudience: 'sri_lanka',
+              includeLkr: true
+            })
+          });
+
+          if (genRes.ok) {
+            const generated = await genRes.json();
+            const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            const newArticlePayload: Partial<Article> = {
+              title: generated.sinhalaTitle || item.title,
+              summary: generated.sinhalaDescription || item.description,
+              content: generated.sinhalaFullContent || `<p>${generated.sinhalaDescription}</p>`,
+              category: generated.suggestedCategory || 'Tech',
+              imageUrl: generated.imageUrl || item.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+              readTime: generated.readTime || '4 min read',
+              date: dateStr,
+              authorType: 'ai',
+              createdAt: new Date(),
+              views: 0
+            };
+
+            const docRef = await addDoc(collection(db, 'articles'), newArticlePayload);
+            const articleUrl = this.getArticleUrl(docRef.id);
+
+            // Trigger Phone Alert
+            if (this.autoAlertPhone) {
+              this.triggerPhonePushNotification({
+                title: newArticlePayload.title || '',
+                summary: newArticlePayload.summary || '',
+                imageUrl: newArticlePayload.imageUrl || '',
+                articleUrl
+              });
+            }
+
+            // WhatsApp Webhook
+            if (this.autoPostWhatsApp && this.waWebhookUrl) {
+              this.triggerWhatsAppDispatch({
+                id: docRef.id,
+                title: newArticlePayload.title || '',
+                summary: newArticlePayload.summary || '',
+                imageUrl: newArticlePayload.imageUrl || '',
+                url: articleUrl,
+                category: newArticlePayload.category || 'Tech',
+                customSnippet: generated.socialShareText
+              });
+            }
+          }
+        } catch (itemErr) {
+          console.error('Batch item error:', itemErr);
+        }
+
+        completed++;
+        this.batchProgress.set({ 
+          current: completed, 
+          total, 
+          message: `Completed ${completed} of ${total} articles.` 
+        });
+      }
+
+      this.selectedTrendingIds.set([]);
+      this.deleteToast.set(`🎉 Batch processing complete! ${completed} articles published to MyFeed.`);
+      setTimeout(() => this.deleteToast.set(null), 8000);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Batch Generation Error: ' + (e.message || String(err)));
+    } finally {
+      this.isBatchGenerating.set(false);
+    }
+  }
+
+  async generateStudioTopicArticle() {
+    if (!this.studioTopic.trim()) {
+      alert('Please enter a topic headline.');
+      return;
+    }
+
+    this.isGeneratingStudioArticle.set(true);
+    try {
+      const res = await fetch('/api/admin/generate-full-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'topic',
+          topic: this.studioTopic,
+          rawContent: this.studioContext,
+          tone: this.studioTone,
+          length: this.studioLength,
+          targetAudience: this.studioAudience,
+          includeLkr: this.studioIncludeLkr
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate article');
+      }
+
+      const generated = await res.json();
+      this.generatedStudioArticle.set(generated);
+      this.deleteToast.set('✨ Full Sinhala Article generated successfully!');
+      setTimeout(() => this.deleteToast.set(null), 4000);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Generation error: ' + (e.message || String(err)));
+    } finally {
+      this.isGeneratingStudioArticle.set(false);
+    }
+  }
+
+  async generateStudioUrlArticle() {
+    if (!this.studioUrl.trim()) {
+      alert('Please enter a valid News URL.');
+      return;
+    }
+
+    this.isGeneratingStudioArticle.set(true);
+    try {
+      const res = await fetch('/api/admin/generate-full-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'url',
+          url: this.studioUrl,
+          tone: 'journalistic',
+          length: 'standard',
+          targetAudience: 'sri_lanka',
+          includeLkr: true
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to transcompile URL into article');
+      }
+
+      const generated = await res.json();
+      this.generatedStudioArticle.set(generated);
+      this.studioTopic = generated.sinhalaTitle || '';
+      this.autoStudioSubTab.set('topic');
+      this.deleteToast.set('✨ Transcompiled URL into full Sinhala Article!');
+      setTimeout(() => this.deleteToast.set(null), 4000);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('URL Extraction error: ' + (e.message || String(err)));
+    } finally {
+      this.isGeneratingStudioArticle.set(false);
+    }
+  }
+
+  async regenerateStudioImage() {
+    const art = this.generatedStudioArticle();
+    if (!art) return;
+
+    this.isGeneratingImage.set(true);
+    try {
+      const res = await fetch('/api/generate-ai-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: art.sinhalaTitle, prompt: art.visualPrompt })
+      });
+
+      if (!res.ok) throw new Error('Failed to generate image');
+      const data = await res.json();
+      if (data.imageUrl) {
+        this.generatedStudioArticle.set({
+          ...art,
+          imageUrl: data.imageUrl
+        });
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Image error: ' + (e.message || String(err)));
+    } finally {
+      this.isGeneratingImage.set(false);
+    }
+  }
+
+  async publishStudioArticleDirectly() {
+    const art = this.generatedStudioArticle();
+    if (!art) return;
+
+    this.isDirectPublishing.set(true);
+    try {
+      const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const newArticlePayload: Partial<Article> = {
+        title: art.sinhalaTitle,
+        summary: art.sinhalaDescription,
+        content: art.sinhalaFullContent,
+        category: art.suggestedCategory || 'Tech',
+        imageUrl: art.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+        readTime: art.readTime || '5 min read',
+        date: dateStr,
+        authorType: 'ai',
+        createdAt: new Date(),
+        views: 0
+      };
+
+      const docRef = await addDoc(collection(db, 'articles'), newArticlePayload);
+      const articleUrl = this.getArticleUrl(docRef.id);
+
+      // Trigger phone alert
+      if (this.autoAlertPhone) {
+        this.triggerPhonePushNotification({
+          title: newArticlePayload.title || '',
+          summary: newArticlePayload.summary || '',
+          imageUrl: newArticlePayload.imageUrl || '',
+          articleUrl
+        });
+      }
+
+      // Trigger WhatsApp
+      if (this.autoPostWhatsApp && this.waWebhookUrl) {
+        this.triggerWhatsAppDispatch({
+          id: docRef.id,
+          title: newArticlePayload.title || '',
+          summary: newArticlePayload.summary || '',
+          imageUrl: newArticlePayload.imageUrl || '',
+          url: articleUrl,
+          category: newArticlePayload.category || 'Tech',
+          customSnippet: art.socialShareText
+        });
+      }
+
+      this.deleteToast.set(`🚀 "${newArticlePayload.title}" Published Successfully!`);
+      setTimeout(() => this.deleteToast.set(null), 6000);
+      this.generatedStudioArticle.set(null);
+      this.studioTopic = '';
+      this.studioContext = '';
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Publish Error: ' + (e.message || String(err)));
+    } finally {
+      this.isDirectPublishing.set(false);
+    }
+  }
+
+  loadStudioArticleIntoMainEditor() {
+    const art = this.generatedStudioArticle();
+    if (!art) return;
+
+    this.formTitle = art.sinhalaTitle || '';
+    this.formSummary = art.sinhalaDescription || '';
+    this.formContent = art.sinhalaFullContent || '';
+    this.formCategory = art.suggestedCategory || 'Tech';
+    this.formImageUrl = art.imageUrl || '';
+    this.formReadTime = art.readTime || '4 min read';
+    this.formAuthorType = 'ai';
+    this.editingId.set(null);
+    this.isAdding.set(true);
+    this.activeTab.set('articles');
+  }
+
+  async runContentPolish(action: string) {
+    if (!this.polishInput.trim()) {
+      alert('Please enter or paste content to polish.');
+      return;
+    }
+
+    this.isPolishingContent.set(true);
+    try {
+      const res = await fetch('/api/admin/polish-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: this.polishInput,
+          title: this.polishTitle,
+          action
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to polish content');
+      }
+
+      const data = await res.json();
+      this.polishedContentResult.set(data);
+      this.deleteToast.set('✨ Content Polished & Formatted!');
+      setTimeout(() => this.deleteToast.set(null), 4000);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Polish error: ' + (e.message || String(err)));
+    } finally {
+      this.isPolishingContent.set(false);
+    }
+  }
+
+  applyPolishedToEditor() {
+    const pol = this.polishedContentResult();
+    if (!pol) return;
+
+    if (pol.polishedTitle) this.formTitle = pol.polishedTitle;
+    if (pol.polishedSummary) this.formSummary = pol.polishedSummary;
+    if (pol.polishedContent) this.formContent = pol.polishedContent;
+    if (pol.suggestedCategory) this.formCategory = pol.suggestedCategory;
+
+    this.isAdding.set(true);
+    this.activeTab.set('articles');
+  }
+
+  copyToClipboard(text: string, successMessage = 'Copied to clipboard!') {
+    navigator.clipboard.writeText(text).then(() => {
+      this.deleteToast.set(successMessage);
+      setTimeout(() => this.deleteToast.set(null), 3000);
+    }).catch(() => {
+      alert('Copy failed');
     });
   }
 }

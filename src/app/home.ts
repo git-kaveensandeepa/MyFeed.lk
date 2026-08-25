@@ -3,14 +3,15 @@ import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
-import {ArticleService, Article} from './article.service';
+import {ArticleService, Article, getTopicFallbackImage} from './article.service';
 import {AdComponent} from './ad.component';
 import {BookmarkManager} from './bookmark';
+import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-home',
-  imports: [MatIconModule, RouterLink, AdComponent],
+  imports: [MatIconModule, RouterLink, AdComponent, SkeletonLoaderComponent],
   host: {
     '(touchstart)': 'onTouchStart($event)',
     '(touchmove)': 'onTouchMove($event)',
@@ -137,12 +138,18 @@ import {BookmarkManager} from './bookmark';
       }
 
       @if (articleService.loading() && filteredArticles().length === 0) {
-        <!-- Skeleton Loader State -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse py-12">
-          <div class="md:col-span-3 h-80 rounded-3xl bg-gray-200 dark:bg-white/5"></div>
-          <div class="h-64 rounded-3xl bg-gray-200 dark:bg-white/5"></div>
-          <div class="h-64 rounded-3xl bg-gray-200 dark:bg-white/5"></div>
-          <div class="h-64 rounded-3xl bg-gray-200 dark:bg-white/5"></div>
+        <!-- Skeleton Loader State with Shimmer Effect -->
+        <div class="space-y-12 sm:space-y-16 py-4 animate-fade-in">
+          <!-- Featured skeleton -->
+          <div class="space-y-3">
+            <div class="h-4 w-36 rounded-full bg-slate-200 dark:bg-zinc-800 animate-pulse"></div>
+            <app-skeleton-loader type="featured"></app-skeleton-loader>
+          </div>
+          <!-- Grid skeleton -->
+          <div class="space-y-4">
+            <div class="h-4 w-44 rounded-full bg-slate-200 dark:bg-zinc-800 animate-pulse"></div>
+            <app-skeleton-loader type="grid"></app-skeleton-loader>
+          </div>
         </div>
       } @else if (filteredArticles().length === 0) {
         <div class="text-center py-16 sm:py-24 text-[#1d1d1f]/40 dark:text-white/40 animate-fade-in-up bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-black/5 dark:border-white/10 mx-auto max-w-2xl mt-4 p-8">
@@ -174,6 +181,7 @@ import {BookmarkManager} from './bookmark';
               <div class="w-full lg:w-[54%] overflow-hidden bg-gray-100 dark:bg-white/5 relative min-h-[240px] sm:min-h-[340px] lg:min-h-[420px]">
                 <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer" loading="lazy"
                      #leadImg (load)="leadImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); leadImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                     (error)="onImgError($event, featured.title, featured.category)"
                      class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-[1000ms] ease-out opacity-0 blur-xl scale-110" />
                 
                 <!-- Overlay Gradient for contrast -->
@@ -291,6 +299,7 @@ import {BookmarkManager} from './bookmark';
                 <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 shadow-inner">
                   <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="lazy"
                        #gridImg (load)="gridImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); gridImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                       (error)="onImgError($event, article.title, article.category)"
                        class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ease-out opacity-0 blur-xl scale-110" />
                   
                   <!-- Category Badge Tag -->
@@ -382,7 +391,7 @@ import {BookmarkManager} from './bookmark';
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 @for (aiArt of getArticlesByCategory('AI').slice(0, 2); track aiArt.id) {
                   <article [routerLink]="['/article', aiArt.slug || aiArt.id]" class="group bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/10 p-5 sm:p-6 rounded-3xl border border-blue-100/80 dark:border-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700/50 transition-all duration-500 cursor-pointer flex flex-col sm:flex-row gap-5 items-center">
-                    <img [src]="aiArt.imageUrl" [alt]="aiArt.title" referrerpolicy="no-referrer" class="w-full sm:w-36 h-36 rounded-2xl object-cover shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-500" />
+                    <img [src]="aiArt.imageUrl" [alt]="aiArt.title" referrerpolicy="no-referrer" (error)="onImgError($event, aiArt.title, aiArt.category)" class="w-full sm:w-36 h-36 rounded-2xl object-cover shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-500" />
                     <div class="flex-grow min-w-0">
                       <div class="flex items-center gap-2 mb-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                         <span class="bg-indigo-100/80 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full">AI Report</span>
@@ -424,7 +433,7 @@ import {BookmarkManager} from './bookmark';
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 @for (techArt of getArticlesByCategory('Tech').slice(0, 2); track techArt.id) {
                   <article [routerLink]="['/article', techArt.slug || techArt.id]" class="group bg-white dark:bg-[#1a1a1a] p-5 sm:p-6 rounded-3xl border border-black/[0.06] dark:border-white/10 hover:border-blue-600/40 hover:shadow-lg transition-all duration-500 cursor-pointer flex flex-col sm:flex-row gap-5 items-center">
-                    <img [src]="techArt.imageUrl" [alt]="techArt.title" referrerpolicy="no-referrer" class="w-full sm:w-36 h-36 rounded-2xl object-cover shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-500" />
+                    <img [src]="techArt.imageUrl" [alt]="techArt.title" referrerpolicy="no-referrer" (error)="onImgError($event, techArt.title, techArt.category)" class="w-full sm:w-36 h-36 rounded-2xl object-cover shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-500" />
                     <div class="flex-grow min-w-0">
                       <div class="flex items-center gap-2 mb-1 text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                         <span class="bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">Hardware & Tech</span>
@@ -635,5 +644,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   getArticlesByCategory(catName: string): Article[] {
     const all = this.articleService.articles();
     return all.filter(a => a.category?.toLowerCase() === catName.toLowerCase());
+  }
+
+  onImgError(event: Event, title = '', category = '') {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.src = getTopicFallbackImage(title, category);
+      target.classList.remove('opacity-0', 'blur-xl', 'scale-110');
+      target.classList.add('opacity-100', 'blur-0', 'scale-100');
+    }
   }
 }

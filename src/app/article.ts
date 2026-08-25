@@ -4,20 +4,19 @@ import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {map} from 'rxjs/operators';
-import {ArticleService} from './article.service';
+import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, Article} from './article.service';
 import {BookmarkManager} from './bookmark';
+import {SkeletonLoaderComponent} from './skeleton-loader.component';
 import {auth} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-article',
-  imports: [MatIconModule, RouterLink],
+  imports: [MatIconModule, RouterLink, SkeletonLoaderComponent],
   template: `
-    @if (articleService.loading()) {
-      <div class="flex justify-center items-center py-32 animate-pulse min-h-[calc(100vh-200px)]">
-        <div class="w-12 h-12 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
-      </div>
+    @if (articleService.loading() && !article()) {
+      <app-skeleton-loader type="article-detail"></app-skeleton-loader>
     } @else if (article(); as article) {
       <!-- Progress Bar -->
       <div class="fixed top-0 left-0 w-full h-1 z-[60] bg-transparent">
@@ -48,6 +47,12 @@ import {onAuthStateChanged} from 'firebase/auth';
                   <mat-icon style="font-size: 14px; width: 14px; height: 14px;">dashboard</mat-icon>
                   <span>Admin Panel</span>
                 </a>
+                <button 
+                  (click)="openQuickImageModal(article)"
+                  class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-sm shadow-amber-500/20 cursor-pointer active:scale-95">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">photo_camera</mat-icon>
+                  <span>Change Image (පින්තූරය වෙනස් කරන්න)</span>
+                </button>
                 <button 
                   (click)="openDeleteModal()"
                   class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm shadow-red-600/20 cursor-pointer active:scale-95">
@@ -178,7 +183,17 @@ import {onAuthStateChanged} from 'firebase/auth';
           <div class="w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2.2/1] rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative shadow-xl sm:shadow-2xl shadow-black/10">
             <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="eager"
                  #mainImg (load)="mainImg.classList.remove('opacity-0', 'blur-xl', 'scale-105'); mainImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
+                 (error)="onImgError($event, article.title, article.category)"
                  class="absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-out opacity-0 blur-xl scale-105" />
+            
+            @if (isAdmin()) {
+              <button 
+                (click)="openQuickImageModal(article)"
+                class="absolute top-4 right-4 z-20 px-4 py-2 rounded-full bg-black/75 hover:bg-black text-white text-xs font-bold backdrop-blur-md shadow-xl flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer opacity-90 hover:opacity-100">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-amber-400">photo_camera</mat-icon>
+                <span>Change Cover Photo</span>
+              </button>
+            }
           </div>
         </figure>
 
@@ -443,6 +458,131 @@ import {onAuthStateChanged} from 'firebase/auth';
         </div>
       }
 
+      <!-- QUICK COVER IMAGE EDITOR MODAL (Admin only) -->
+      @if (quickImageArticle(); as qArticle) {
+        <div class="fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div class="bg-white dark:bg-[#1a1a1a] rounded-[2.5rem] max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-black/10 dark:border-white/10 animate-scale-in my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between gap-3 mb-5 pb-4 border-b border-black/5 dark:border-white/10">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 26px; width: 26px; height: 26px;">photo_camera</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <h3 class="text-lg font-black text-[#1d1d1f] dark:text-white truncate">Cover Image වෙනස් කරන්න</h3>
+                  <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 truncate max-w-md">{{ qArticle.title }}</p>
+                </div>
+              </div>
+              <button (click)="closeQuickImageModal()" class="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white flex items-center justify-center transition-all cursor-pointer shrink-0">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Current / Selected Image Live Preview -->
+            <div class="mb-5">
+              <div class="text-xs font-bold uppercase tracking-wider text-[#1d1d1f]/60 dark:text-white/60 mb-2 flex items-center justify-between">
+                <span>Selected Image Preview (තෝරාගත් පින්තූරය):</span>
+                @if (quickImageUrl()) {
+                  <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">check_circle</mat-icon> Ready to save
+                  </span>
+                }
+              </div>
+              <div class="w-full aspect-[16/9] sm:aspect-[2.2/1] rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-black/5 dark:border-white/10 relative shadow-inner">
+                @if (quickImageUrl()) {
+                  <img [src]="quickImageUrl()" [alt]="qArticle.title" referrerpolicy="no-referrer"
+                       class="w-full h-full object-cover transition-all duration-300" />
+                } @else {
+                  <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <mat-icon style="font-size: 36px; width: 36px; height: 36px;">image_not_supported</mat-icon>
+                    <span class="text-xs font-medium">පින්තූරයක් තෝරා නැත</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Curated Smart Matching Recommendations -->
+            <div class="mb-5">
+              <div class="text-xs font-bold uppercase tracking-wider text-[#1d1d1f] dark:text-white mb-2 flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600">auto_awesome</mat-icon>
+                  <span>Curated High-Definition Smart Matches (ක්ලික් කර තෝරන්න):</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                @for (sug of quickImageSuggestions(); track sug) {
+                  <button type="button" (click)="quickImageUrl.set(sug)"
+                          class="relative aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all group cursor-pointer"
+                          [class.border-blue-600]="quickImageUrl() === sug"
+                          [class.border-transparent]="quickImageUrl() !== sug"
+                          [class.ring-2]="quickImageUrl() === sug"
+                          [class.ring-blue-600/30]="quickImageUrl() === sug">
+                    <img [src]="sug" alt="Curated Option" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                    @if (quickImageUrl() === sug) {
+                      <div class="absolute inset-0 bg-blue-600/40 flex items-center justify-center">
+                        <mat-icon class="text-white drop-shadow" style="font-size: 20px; width: 20px; height: 20px;">check_circle</mat-icon>
+                      </div>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Alternative Options: AI Generate or Custom URL or Local File -->
+            <div class="space-y-3 mb-6 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10">
+              <!-- AI Generate Option -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-black/5 dark:border-white/10">
+                <div>
+                  <div class="text-xs font-bold text-[#1d1d1f] dark:text-white">Generate with Gemini AI</div>
+                  <div class="text-[11px] text-[#1d1d1f]/60 dark:text-white/60">පුවතේ මාතෘකාවට අදාළව AI මඟින් නව visual එකක් සාදන්න</div>
+                </div>
+                <button type="button" (click)="generateQuickAiImage()" [disabled]="isGeneratingQuickAiImage()"
+                        class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                  @if (isGeneratingQuickAiImage()) {
+                    <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Generating...</span>
+                  } @else {
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_awesome</mat-icon>
+                    <span>🎨 AI Visual එකක් සාදන්න</span>
+                  }
+                </button>
+              </div>
+
+              <!-- Custom URL & File Upload Inputs -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label for="quickArticleDirectUrl" class="block text-[11px] font-bold text-[#1d1d1f]/60 dark:text-white/60 uppercase tracking-wider mb-1">Paste Direct Image URL</label>
+                  <input id="quickArticleDirectUrl" type="text" [value]="quickImageUrl()" (input)="quickImageUrl.set($any($event.target).value)"
+                         placeholder="https://images.unsplash.com/..." class="w-full px-3 py-2 bg-white dark:bg-white/10 rounded-xl border border-black/10 dark:border-white/10 text-xs text-[#1d1d1f] dark:text-white focus:ring-2 focus:ring-blue-600 outline-none" />
+                </div>
+                <div>
+                  <label for="quickArticleFileUpload" class="block text-[11px] font-bold text-[#1d1d1f]/60 dark:text-white/60 uppercase tracking-wider mb-1">Or Upload From Device</label>
+                  <input id="quickArticleFileUpload" type="file" accept="image/*" (change)="onQuickImageFileUpload($event)" class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 dark:file:bg-white/10 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 cursor-pointer" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-end">
+              <button type="button" (click)="closeQuickImageModal()" [disabled]="isQuickImageUpdating()"
+                      class="px-6 py-3.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">
+                Cancel (අවලංගු කරන්න)
+              </button>
+              <button type="button" (click)="saveQuickImage()" [disabled]="isQuickImageUpdating() || !quickImageUrl()"
+                      class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                @if (isQuickImageUpdating()) {
+                  <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Updating Firestore...</span>
+                } @else {
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">save</mat-icon>
+                  <span>Save & Update Cover Image</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- ARTICLE DELETE CONFIRMATION MODAL (Admin only) -->
       @if (showDeleteConfirmModal()) {
         <div class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
@@ -509,6 +649,13 @@ export class ArticleComponent implements OnDestroy {
   readonly isAdmin = signal(false);
   readonly showDeleteConfirmModal = signal(false);
   readonly isDeletingArticle = signal(false);
+
+  // Quick Cover Image Editor Signals
+  readonly quickImageArticle = signal<Article | null>(null);
+  readonly quickImageUrl = signal<string>('');
+  readonly quickImageSuggestions = signal<string[]>([]);
+  readonly isQuickImageUpdating = signal(false);
+  readonly isGeneratingQuickAiImage = signal(false);
 
   private articleId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')))
@@ -594,7 +741,7 @@ export class ArticleComponent implements OnDestroy {
 
     const current = this.currentReaction();
     let newReaction: string | null = reactionId;
-    let oldReaction: string | null = current;
+    const oldReaction: string | null = current;
 
     if (current === reactionId) {
       // Toggle off
@@ -1055,6 +1202,88 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     this.showDeleteConfirmModal.set(false);
   }
 
+  openQuickImageModal(article: Article) {
+    this.quickImageArticle.set(article);
+    this.quickImageUrl.set(article.imageUrl || '');
+    this.quickImageSuggestions.set(getCuratedTopicImages(article.title, article.category));
+  }
+
+  closeQuickImageModal() {
+    this.quickImageArticle.set(null);
+    this.quickImageUrl.set('');
+    this.quickImageSuggestions.set([]);
+    this.isQuickImageUpdating.set(false);
+    this.isGeneratingQuickAiImage.set(false);
+  }
+
+  onQuickImageFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2MB limit. Please upload a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          this.quickImageUrl.set(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  async generateQuickAiImage() {
+    const article = this.quickImageArticle();
+    if (!article) return;
+
+    this.isGeneratingQuickAiImage.set(true);
+    try {
+      const res = await fetch('/api/generate-ai-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: article.title,
+          category: article.category || 'Tech'
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate AI image');
+      }
+
+      const data = await res.json();
+      if (data.imageUrl) {
+        this.quickImageUrl.set(data.imageUrl);
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('AI Image Generator Error: ' + (err.message || String(e)));
+    } finally {
+      this.isGeneratingQuickAiImage.set(false);
+    }
+  }
+
+  async saveQuickImage() {
+    const article = this.quickImageArticle();
+    const newUrl = this.quickImageUrl().trim();
+    if (!article || !newUrl) return;
+
+    this.isQuickImageUpdating.set(true);
+    try {
+      await this.articleService.updateArticle(article.id, { imageUrl: newUrl });
+      this.showToast('Cover Image සාර්ථකව update කරන ලදී! 📸');
+      this.closeQuickImageModal();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Failed to update cover image: ' + (e.message || String(err)));
+    } finally {
+      this.isQuickImageUpdating.set(false);
+    }
+  }
+
   async confirmDeleteArticle() {
     const art = this.article();
     if (!art) return;
@@ -1088,6 +1317,15 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     if (scrollTotal > 0) {
       const progress = (window.scrollY / scrollTotal) * 100;
       this.scrollProgress.set(progress);
+    }
+  }
+
+  onImgError(event: Event, title = '', category = '') {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.src = getTopicFallbackImage(title, category);
+      target.classList.remove('opacity-0', 'blur-xl', 'scale-105');
+      target.classList.add('opacity-100', 'blur-0', 'scale-100');
     }
   }
 }
