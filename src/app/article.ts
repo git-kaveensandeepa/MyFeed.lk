@@ -215,6 +215,36 @@ import {onAuthStateChanged} from 'firebase/auth';
             [innerHTML]="article.content">
           </div>
 
+          <!-- Reactions -->
+          <div class="mt-8 sm:mt-12 flex flex-wrap items-center gap-3 sm:gap-4 border-t border-b border-black/5 dark:border-white/10 py-6 sm:py-8">
+            <span class="text-sm font-bold text-[#1d1d1f] dark:text-white uppercase tracking-widest mr-2">React:</span>
+            
+            <button (click)="toggleReaction('like')" [class.bg-blue-100]="currentReaction() === 'like'" [class.dark:bg-blue-900]="currentReaction() === 'like'" [class.border-blue-300]="currentReaction() === 'like'" [class.dark:border-blue-700]="currentReaction() === 'like'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
+              <mat-icon [class.text-blue-600]="currentReaction() === 'like'" [class.dark:text-blue-400]="currentReaction() === 'like'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">thumb_up</mat-icon>
+              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['like'] || 0 }}</span>
+            </button>
+            
+            <button (click)="toggleReaction('love')" [class.bg-red-100]="currentReaction() === 'love'" [class.dark:bg-red-900]="currentReaction() === 'love'" [class.border-red-300]="currentReaction() === 'love'" [class.dark:border-red-700]="currentReaction() === 'love'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
+              <mat-icon [class.text-red-600]="currentReaction() === 'love'" [class.dark:text-red-400]="currentReaction() === 'love'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">favorite</mat-icon>
+              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['love'] || 0 }}</span>
+            </button>
+            
+            <button (click)="toggleReaction('fire')" [class.bg-orange-100]="currentReaction() === 'fire'" [class.dark:bg-orange-900]="currentReaction() === 'fire'" [class.border-orange-300]="currentReaction() === 'fire'" [class.dark:border-orange-700]="currentReaction() === 'fire'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
+              <mat-icon [class.text-orange-600]="currentReaction() === 'fire'" [class.dark:text-orange-400]="currentReaction() === 'fire'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">local_fire_department</mat-icon>
+              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['fire'] || 0 }}</span>
+            </button>
+
+            <button (click)="toggleReaction('insight')" [class.bg-amber-100]="currentReaction() === 'insight'" [class.dark:bg-amber-900]="currentReaction() === 'insight'" [class.border-amber-300]="currentReaction() === 'insight'" [class.dark:border-amber-700]="currentReaction() === 'insight'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
+              <mat-icon [class.text-amber-600]="currentReaction() === 'insight'" [class.dark:text-amber-400]="currentReaction() === 'insight'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">lightbulb</mat-icon>
+              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['insight'] || 0 }}</span>
+            </button>
+            
+            <button (click)="toggleReaction('rocket')" [class.bg-purple-100]="currentReaction() === 'rocket'" [class.dark:bg-purple-900]="currentReaction() === 'rocket'" [class.border-purple-300]="currentReaction() === 'rocket'" [class.dark:border-purple-700]="currentReaction() === 'rocket'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
+              <mat-icon [class.text-purple-600]="currentReaction() === 'rocket'" [class.dark:text-purple-400]="currentReaction() === 'rocket'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">rocket_launch</mat-icon>
+              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['rocket'] || 0 }}</span>
+            </button>
+          </div>
+
           <!-- Bottom Action & Sharing Bar for Readers -->
           <div class="mt-8 sm:mt-12 p-6 sm:p-8 rounded-3xl bg-gray-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -541,6 +571,11 @@ export class ArticleComponent implements OnDestroy {
           // Smoothly scroll to the top whenever navigating to a new article
           window.scrollTo({ top: 0, behavior: 'smooth' });
           
+          if (typeof localStorage !== 'undefined') {
+            const storedReaction = localStorage.getItem(`myfeed_reaction_${id}`);
+            this.currentReaction.set(storedReaction);
+          }
+
           // Record view increment dynamically after a short delay
           setTimeout(() => {
             const art = this.article();
@@ -553,10 +588,38 @@ export class ArticleComponent implements OnDestroy {
     });
   }
 
+  async toggleReaction(reactionId: string) {
+    const art = this.article();
+    if (!art) return;
+
+    const current = this.currentReaction();
+    let newReaction: string | null = reactionId;
+    const oldReaction: string | null = current;
+
+    if (current === reactionId) {
+      // Toggle off
+      newReaction = null;
+      this.currentReaction.set(null);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`myfeed_reaction_${art.id}`);
+      }
+    } else {
+      // Set new
+      this.currentReaction.set(reactionId);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`myfeed_reaction_${art.id}`, reactionId);
+      }
+    }
+
+    // Backend update
+    await this.articleService.updateReaction(art.id, newReaction || '', oldReaction || '');
+  }
+
   readonly scrollProgress = signal(0);
   readonly copySuccess = signal(false);
   readonly isSharing = signal(false);
   readonly toastMessage = signal<string | null>(null);
+  readonly currentReaction = signal<string | null>(null);
 
   // Social Media Story / Poster Generator (HTML5 Canvas)
   readonly showPosterModal = signal(false);

@@ -10,10 +10,14 @@ import {TickerService} from './ticker.service';
 import {PwaService} from './pwa.service';
 import {WebPushService} from './web-push.service';
 
+import {AnalyticsService} from './analytics.service';
+import {ToolsService} from './tools.service';
+import {ToolsDrawerComponent} from './tools-drawer.component';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink],
+  imports: [MatIconModule, RouterOutlet, RouterLink, ToolsDrawerComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
@@ -24,6 +28,7 @@ import {WebPushService} from './web-push.service';
   }
 })
 export class App implements OnInit {
+  readonly toolsService = inject(ToolsService);
   readonly searchService = inject(SearchService);
   readonly subscriberService = inject(SubscriberService);
   readonly themeManager = inject(ThemeManager);
@@ -32,6 +37,7 @@ export class App implements OnInit {
   readonly tickerService = inject(TickerService);
   readonly pwaService = inject(PwaService);
   readonly webPushService = inject(WebPushService);
+  readonly analyticsService = inject(AnalyticsService);
   
   showSplash = signal(true);
   splashFading = signal(false);
@@ -79,6 +85,8 @@ export class App implements OnInit {
   }
 
   ngOnInit() {
+    this.analyticsService.trackDeviceVisit();
+    
     if (typeof window !== 'undefined') {
       setTimeout(() => {
         this.splashFading.set(true);

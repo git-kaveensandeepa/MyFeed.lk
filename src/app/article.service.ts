@@ -38,7 +38,7 @@ export interface Article {
   uploadTimeStr?: string;
   timestamp?: number;
   views?: number;
-  likes?: number;
+  reactions?: Record<string, number>;
 }
 
 function getTopicFallbackImage(title = '', category = ''): string {
@@ -208,7 +208,7 @@ function getTopicFallbackImage(title = '', category = ''): string {
 }
 
 function sanitizeArticleImage(rawUrl: string | undefined, title = '', category = '', originalTitle = ''): string {
-  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.startsWith('http')) {
+  if (!rawUrl || typeof rawUrl !== 'string' || (!rawUrl.startsWith('http') && !rawUrl.startsWith('data:image'))) {
     return getTopicFallbackImage(title || originalTitle, category);
   }
 
@@ -456,6 +456,24 @@ export class ArticleService implements OnDestroy {
       await updateDoc(docRef, { views: increment(1) });
     } catch (error) {
       console.error('Error incrementing views in Firestore:', error);
+    }
+  }
+
+  async updateReaction(id: string, newReaction: string, oldReaction: string | null) {
+    try {
+      const docRef = doc(db, 'articles', id);
+      const updates: Record<string, unknown> = {};
+      
+      if (oldReaction) {
+        updates[`reactions.${oldReaction}`] = increment(-1);
+      }
+      if (newReaction) {
+        updates[`reactions.${newReaction}`] = increment(1);
+      }
+      
+      await updateDoc(docRef, updates);
+    } catch (error) {
+      console.error('Error updating reaction in Firestore:', error);
     }
   }
 

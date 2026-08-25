@@ -19,6 +19,11 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
     
+    match /analytics/{document} {
+      allow create, update: if true;
+      allow read: if isAdmin();
+    }
+    
     match /subscribers/{document} {
       allow create: if request.resource.data.email is string 
                     && request.resource.data.email.size() <= 200 
@@ -30,6 +35,11 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    match /events/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
     match /settings/{document} {
       allow read, write: if isAdmin();
     }

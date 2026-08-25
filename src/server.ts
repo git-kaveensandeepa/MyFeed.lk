@@ -138,7 +138,7 @@ function getServerTopicImage(title = ''): string {
 }
 
 function isValidServerImage(url: string): boolean {
-  if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
+  if (!url || typeof url !== 'string' || (!url.startsWith('http') && !url.startsWith('data:image'))) return false;
   const lower = url.toLowerCase();
   if (
     lower.includes('googleusercontent.com') ||
@@ -870,7 +870,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         });
 
         const results = await Promise.allSettled(
-          subscriptions.map((sub: any) => webpush.sendNotification(sub, payload))
+          subscriptions.map((sub: webpush.PushSubscription) => webpush.sendNotification(sub, payload))
         );
         
         const failedEndpoints = results
@@ -881,8 +881,9 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (err: any) {
-        return new Response(JSON.stringify({ error: err.message || 'Web push failed' }), {
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Web push failed';
+        return new Response(JSON.stringify({ error: errorMsg }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
