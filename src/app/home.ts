@@ -3,7 +3,7 @@ import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {SearchService} from './search.service';
-import {ArticleService, Article, getTopicFallbackImage} from './article.service';
+import {ArticleService, Article, getTopicFallbackImage, getArticleFactCheck} from './article.service';
 import {AdComponent} from './ad.component';
 import {BookmarkManager} from './bookmark';
 import {SkeletonLoaderComponent} from './skeleton-loader.component';
@@ -49,7 +49,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
         <h1 class="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-[#1d1d1f] dark:text-white mb-2 sm:mb-4 leading-[1.05] sm:leading-[0.95]">
           MyFeed<span class="text-blue-600">.</span>lk
         </h1>
-        <p class="text-xs sm:text-base md:text-xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic max-w-2xl mx-auto px-2">
+        <p class="text-xs sm:text-base md:text-xl text-[#1d1d1f]/60 dark:text-white/60 font-sans max-w-2xl mx-auto px-2 leading-relaxed">
           තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත් &bull; Curated stories in Sinhala & English
         </p>
       </header>
@@ -188,16 +188,29 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 lg:hidden"></div>
 
                 <!-- Top Badges -->
-                <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
+                <div class="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2">
                   <span class="px-3 py-1 rounded-full bg-blue-600 text-white font-extrabold text-[10px] sm:text-xs uppercase tracking-wider shadow-md">
                     {{ featured.category }}
                   </span>
                   <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white font-bold text-[10px] sm:text-xs tracking-wider shadow-md">
                     <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon> {{ featured.views || 0 }} Views
                   </span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full backdrop-blur-md text-white font-bold text-[10px] sm:text-xs tracking-wider shadow-md"
+                        [class.bg-emerald-600/90]="getFactCheck(featured).score >= 95"
+                        [class.bg-amber-600/90]="getFactCheck(featured).score < 95">
+                    <mat-icon style="font-size: 12px; width: 12px; height: 12px;">verified</mat-icon> {{ getFactCheck(featured).score }}% Fact-Checked
+                  </span>
                   @if (featured.authorType !== 'human') {
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-600/90 backdrop-blur-md text-white font-bold text-[10px] tracking-wide shadow-md">
                       <mat-icon style="font-size: 12px; width: 12px; height: 12px;">auto_awesome</mat-icon> AI Intelligence
+                    </span>
+                  }
+                  @if (getFactCheck(featured); as fc) {
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full backdrop-blur-md font-bold text-[10px] tracking-wide shadow-md text-white"
+                          [class.bg-emerald-600/90]="fc.score >= 95"
+                          [class.bg-amber-600/90]="fc.score < 95">
+                      <mat-icon style="font-size: 12px; width: 12px; height: 12px;">verified_user</mat-icon>
+                      <span>{{ fc.score }}% {{ fc.score === 100 ? 'Verified' : 'Fact-Checked' }}</span>
                     </span>
                   }
                 </div>
@@ -232,7 +245,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                     {{ featured.title }}
                   </h2>
                   
-                  <p class="text-xs sm:text-base text-[#1d1d1f]/70 dark:text-white/70 font-serif italic mb-6 leading-relaxed line-clamp-3 sm:line-clamp-4">
+                  <p class="text-xs sm:text-base text-[#1d1d1f]/70 dark:text-white/70 font-sans mb-6 leading-relaxed line-clamp-3 sm:line-clamp-4 font-normal">
                     {{ featured.summary }}
                   </p>
                 </div>
@@ -280,20 +293,20 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
             </span>
           </div>
 
-          <!-- Responsive 3-Column Modern News Grid -->
           <!-- ACTIVE ADS BANNER / WIDGET -->
-      @if (!searchService.searchTerm()) {
-        <div class="mb-8 md:mb-12 animate-fade-in-up">
-          <app-ad placement="home-top"></app-ad>
-        </div>
-      }
+          @if (!searchService.searchTerm()) {
+            <div class="mb-8 md:mb-12 animate-fade-in-up">
+              <app-ad placement="home-top"></app-ad>
+            </div>
+          }
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            @for (article of gridArticles(); track article.id; let i = $index) {
+          <!-- Responsive 3-Column Modern News Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            @for (article of visibleGridArticles(); track article.id; let i = $index) {
               <article 
                 [routerLink]="['/article', article.slug || article.id]" 
                 class="animate-fade-in-up group bg-white dark:bg-[#1a1a1a] p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-blue-950/20 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer flex flex-col h-full border border-black/[0.06] dark:border-white/10 relative overflow-hidden" 
-                [style.animation-delay]="(0.1 + (i * 0.06)) + 's'">
+                [style.animation-delay]="(0.05 + ((i % 8) * 0.05)) + 's'">
                 
                 <!-- Card Cover Image -->
                 <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 shadow-inner">
@@ -303,12 +316,14 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                        class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ease-out opacity-0 blur-xl scale-110" />
                   
                   <!-- Category Badge Tag -->
-                  <div class="absolute top-3 left-3 z-20 flex items-center gap-1.5">
+                  <div class="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5">
                     <span class="px-2.5 py-0.5 rounded-full bg-blue-600/95 text-white font-extrabold text-[9px] sm:text-[10px] uppercase tracking-wider shadow-sm">
                       {{ article.category }}
                     </span>
-                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white font-bold text-[9px] sm:text-[10px] uppercase shadow-sm">
-                      <mat-icon style="font-size: 11px; width: 11px; height: 11px;">visibility</mat-icon> {{ article.views || 0 }}
+                    <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full backdrop-blur-md text-white font-bold text-[9px] shadow-sm"
+                          [class.bg-emerald-600/90]="getFactCheck(article).score >= 95"
+                          [class.bg-amber-600/90]="getFactCheck(article).score < 95">
+                      <mat-icon style="font-size: 10px; width: 10px; height: 10px;">verified</mat-icon> {{ getFactCheck(article).score }}%
                     </span>
                     @if (article.authorType !== 'human') {
                       <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-indigo-300 font-bold text-[9px]">
@@ -342,7 +357,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                     {{ article.title }}
                   </h3>
 
-                  <p class="text-xs sm:text-sm text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 sm:line-clamp-3 mb-4 flex-grow leading-relaxed">
+                  <p class="text-xs sm:text-sm text-[#1d1d1f]/70 dark:text-white/70 font-sans line-clamp-2 sm:line-clamp-3 mb-4 flex-grow leading-relaxed font-normal">
                     {{ article.summary }}
                   </p>
 
@@ -361,6 +376,32 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
               </article>
             }
           </div>
+
+          <!-- MORE NEWS / PAGINATION LOAD BUTTON -->
+          @if (hasMoreArticles()) {
+            <div class="mt-10 sm:mt-14 text-center animate-fade-in-up flex flex-col items-center">
+              <button 
+                (click)="loadMore()" 
+                class="group relative inline-flex items-center gap-3 px-8 sm:px-10 py-4 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] font-extrabold text-xs sm:text-sm uppercase tracking-wider hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all duration-300 shadow-xl shadow-black/10 hover:shadow-blue-600/25 active:scale-95 cursor-pointer">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-400 dark:text-blue-600 group-hover:text-white group-hover:translate-y-0.5 transition-all">expand_more</mat-icon>
+                <span>තවත් පුවත් බලන්න (More News)</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-white/20 dark:bg-black/10 text-[10px] font-black tracking-normal">
+                  +{{ Math.min(PAGE_SIZE, remainingArticlesCount()) }}
+                </span>
+              </button>
+              
+              <p class="text-xs text-[#1d1d1f]/50 dark:text-white/50 mt-3 font-medium">
+                ලිපි {{ visibleGridArticles().length }} / {{ gridArticles().length }} ක් පෙන්වයි &bull; තවත් {{ remainingArticlesCount() }} ක් ඉතිරියි
+              </p>
+            </div>
+          } @else if (gridArticles().length > PAGE_SIZE) {
+            <div class="mt-10 sm:mt-14 text-center py-4 border-t border-black/5 dark:border-white/10 animate-fade-in">
+              <p class="text-xs text-[#1d1d1f]/50 dark:text-white/50 font-bold flex items-center justify-center gap-1.5">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-500">check_circle</mat-icon>
+                සියලුම පුවත් {{ gridArticles().length }} පෙන්වා ඇත (All Stories Loaded)
+              </p>
+            </div>
+          }
         </section>
 
         <!-- ============================================== -->
@@ -400,7 +441,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                       <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-2 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
                         {{ aiArt.title }}
                       </h3>
-                      <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 leading-relaxed">
+                      <p class="text-xs text-[#1d1d1f]/70 dark:text-white/70 font-sans line-clamp-2 leading-relaxed font-normal">
                         {{ aiArt.summary }}
                       </p>
                     </div>
@@ -442,7 +483,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                       <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-2 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
                         {{ techArt.title }}
                       </h3>
-                      <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 leading-relaxed">
+                      <p class="text-xs text-[#1d1d1f]/70 dark:text-white/70 font-sans line-clamp-2 leading-relaxed font-normal">
                         {{ techArt.summary }}
                       </p>
                     </div>
@@ -463,6 +504,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly bookmarkManager = inject(BookmarkManager);
   private titleService = inject(Title);
   private metaService = inject(Meta);
+  readonly getFactCheck = getArticleFactCheck;
   
   pullDistance = signal(0);
   isRefreshing = signal(false);
@@ -529,10 +571,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   onSearchInput(event: Event) {
     const input = event.target as HTMLInputElement;
     this.searchService.setSearchTerm(input.value);
+    this.visibleCount.set(this.PAGE_SIZE);
   }
 
   clearSearch() {
     this.searchService.setSearchTerm('');
+    this.visibleCount.set(this.PAGE_SIZE);
   }
 
   applyTrendingTag(tag: string) {
@@ -541,6 +585,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     } else {
       this.searchService.setSearchTerm(tag);
     }
+    this.visibleCount.set(this.PAGE_SIZE);
   }
 
   onTouchStart(event: TouchEvent) {
@@ -580,6 +625,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   
+  readonly PAGE_SIZE = 8;
+  visibleCount = signal<number>(8);
+
   readonly filteredArticles = computed(() => {
     const searchTerm = this.searchService.searchTerm().toLowerCase().trim();
     let articles = this.articleService.articles();
@@ -640,6 +688,22 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     return articles;
   });
+
+  readonly visibleGridArticles = computed(() => {
+    return this.gridArticles().slice(0, this.visibleCount());
+  });
+
+  readonly hasMoreArticles = computed(() => {
+    return this.gridArticles().length > this.visibleCount();
+  });
+
+  readonly remainingArticlesCount = computed(() => {
+    return Math.max(0, this.gridArticles().length - this.visibleCount());
+  });
+
+  loadMore() {
+    this.visibleCount.update(count => count + this.PAGE_SIZE);
+  }
 
   getArticlesByCategory(catName: string): Article[] {
     const all = this.articleService.articles();

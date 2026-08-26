@@ -4,7 +4,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {map} from 'rxjs/operators';
-import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, Article} from './article.service';
+import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, getArticleFactCheck, Article} from './article.service';
 import {BookmarkManager} from './bookmark';
 import {SkeletonLoaderComponent} from './skeleton-loader.component';
 import {auth} from './firebase';
@@ -172,7 +172,7 @@ import {onAuthStateChanged} from 'firebase/auth';
               {{ article.title }}
             </h1>
             
-            <p class="text-sm sm:text-lg md:text-2xl text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed max-w-3xl mx-auto break-words">
+            <p class="text-sm sm:text-lg md:text-xl text-[#1d1d1f]/70 dark:text-white/70 font-sans leading-relaxed max-w-3xl mx-auto break-words font-normal">
               {{ article.summary }}
             </p>
           </header>
@@ -199,7 +199,7 @@ import {onAuthStateChanged} from 'firebase/auth';
 
         <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 max-w-full overflow-hidden">
           <!-- Author / Byline Block with AI Transparency Compliance -->
-          <div class="flex items-center gap-3 sm:gap-5 mb-8 sm:mb-12 pb-6 sm:pb-8 border-b border-black/5 dark:border-white/10">
+          <div class="flex items-center gap-3 sm:gap-5 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-black/5 dark:border-white/10">
             @if (article.authorType === 'human') {
               <img src="/kaveen.jpg" alt="Kaveen Sandeepa" referrerpolicy="no-referrer" class="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover bg-gray-100 dark:bg-white/10 shadow-sm shrink-0" />
               <div class="min-w-0 flex-1">
@@ -224,11 +224,219 @@ import {onAuthStateChanged} from 'firebase/auth';
             }
           </div>
 
+          <!-- Quick Fact-Check & Credibility Status Ribbon -->
+          @if (factCheck(); as fc) {
+            <div class="mb-8 p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0"
+                     [class.bg-emerald-600]="fc.score >= 95"
+                     [class.bg-amber-600]="fc.score < 95">
+                  {{ fc.score }}%
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;" [class.text-emerald-500]="fc.score >= 95" [class.text-amber-500]="fc.score < 95">verified_user</mat-icon>
+                    <span>{{ fc.score === 100 ? '100% සත්‍යාපිත මූලාශ්‍රයකි' : fc.statusBadge }}</span>
+                  </div>
+                  <div class="text-[11px] text-[#1d1d1f]/60 dark:text-white/60">
+                    @if (fc.sources[0]?.name) {
+                      මූලාශ්‍රය (Source): <span class="font-bold text-blue-600 dark:text-blue-400">{{ fc.sources[0]?.name }}</span>
+                    } @else {
+                      MyFeed AI & Editor Verified
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                @if (fc.sources[0]?.url) {
+                  <a [href]="fc.sources[0]?.url" target="_blank" rel="noopener noreferrer"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors border border-blue-200/50 dark:border-blue-800/40"
+                     title="Open original primary source in new tab">
+                    <span>Source Link</span>
+                    <mat-icon style="font-size: 13px; width: 13px; height: 13px;">open_in_new</mat-icon>
+                  </a>
+                }
+                <button (click)="scrollToFactCheck()" 
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white text-xs font-bold transition-colors cursor-pointer">
+                  <span>Fact Check Report</span>
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">arrow_downward</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
           <!-- Article Body Content -->
           <div 
             class="prose prose-base sm:prose-xl max-w-none text-[#1d1d1f]/80 dark:text-gray-300 leading-[1.8] sm:leading-[1.9] font-serif break-words overflow-hidden [&_h2]:text-xl [&_h2]:sm:text-2xl [&_h2]:font-bold [&_h2]:text-[#1d1d1f] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-5 [&_li]:mb-2.5 [&_strong]:font-bold [&_strong]:text-[#1d1d1f] [&_strong]:dark:text-white"
             [innerHTML]="article.content">
           </div>
+
+          <!-- ======================================================== -->
+          <!-- FACT-CHECK & CREDIBILITY METER (සත්‍යතාව & මූලාශ්‍ර වාර්තාව) -->
+          <!-- ======================================================== -->
+          @if (factCheck(); as fc) {
+            <section id="factCheckSection" class="mt-10 sm:mt-14 rounded-3xl bg-slate-50 dark:bg-[#1e1e1e] border border-black/[0.08] dark:border-white/10 p-6 sm:p-8 shadow-sm relative overflow-hidden">
+              
+              <!-- Top Header & Score -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0"
+                       [class.bg-emerald-500]="fc.score >= 95"
+                       [class.text-white]="fc.score >= 95"
+                       [class.shadow-emerald-500/20]="fc.score >= 95"
+                       [class.bg-amber-500]="fc.score < 95"
+                       [class.text-white]="fc.score < 95"
+                       [class.shadow-amber-500/20]="fc.score < 95">
+                    <mat-icon style="font-size: 24px; width: 24px; height: 24px;">verified_user</mat-icon>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white">
+                        Fact Check &amp; Credibility Meter
+                      </h3>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-black/5 dark:bg-white/10 text-[#1d1d1f]/70 dark:text-white/70">
+                        AI &amp; Editor Verified
+                      </span>
+                    </div>
+                    <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-medium">
+                      පුවතේ සත්‍යතාව, මූලාශ්‍ර විනිවිදභාවය සහ විශ්වසනීයත්ව වාර්තාව
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Score Badge -->
+                <div class="flex items-center gap-3 self-start sm:self-auto bg-white dark:bg-white/[0.05] p-2 pr-4 rounded-2xl border border-black/5 dark:border-white/10 shadow-xs">
+                  <div class="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-xs"
+                       [class.bg-emerald-600]="fc.score >= 95"
+                       [class.bg-amber-600]="fc.score < 95">
+                    {{ fc.score }}%
+                  </div>
+                  <div class="text-left">
+                    <div class="text-[11px] font-black uppercase tracking-wider"
+                         [class.text-emerald-600]="fc.score >= 95"
+                         [class.dark:text-emerald-400]="fc.score >= 95"
+                         [class.text-amber-600]="fc.score < 95"
+                         [class.dark:text-amber-400]="fc.score < 95">
+                      {{ fc.statusBadge }}
+                    </div>
+                    <div class="text-[10px] text-[#1d1d1f]/50 dark:text-white/50 font-semibold">
+                      Credibility Trust Score
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reason & Transparency Box (Highlighting 100% or Why not 100%) -->
+              <div class="py-5">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-[#1d1d1f]/50 dark:text-white/50 mb-2 flex items-center gap-1.5">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">info</mat-icon>
+                  <span>විශ්ලේෂණය සහ හේතුව (Verification Status &amp; Reason):</span>
+                </div>
+
+                <div class="p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed font-sans font-medium"
+                     [class.bg-emerald-500/[0.06]]="fc.score >= 95"
+                     [class.border-emerald-500/20]="fc.score >= 95"
+                     [class.text-emerald-950]="fc.score >= 95"
+                     [class.dark:text-emerald-200]="fc.score >= 95"
+                     [class.bg-amber-500/[0.06]]="fc.score < 95"
+                     [class.border-amber-500/20]="fc.score < 95"
+                     [class.text-amber-950]="fc.score < 95"
+                     [class.dark:text-amber-200]="fc.score < 95">
+                  @if (fc.score === 100) {
+                    <div class="flex items-start gap-2">
+                      <span class="text-emerald-600 dark:text-emerald-400 font-black shrink-0">✓ 100% තහවුරුයි:</span>
+                      <span>{{ fc.reason }}</span>
+                    </div>
+                  } @else {
+                    <div class="flex flex-col gap-1.5">
+                      <div class="flex items-start gap-2">
+                        <span class="text-amber-600 dark:text-amber-400 font-black shrink-0">⚠ 100% නොවීමට හේතුව:</span>
+                        <span>{{ fc.reason }}</span>
+                      </div>
+                      <div class="text-[11px] opacity-80 pl-5">
+                        (නිෂ්පාදන සමාගමේ නිල ප්‍රකාශයක් හෝ අමතර පාර්ශ්වයන්ගේ සනාථ කිරීම් ලද වහාම මෙම ලකුණ 100% දක්වා යාවත්කාලීන කරනු ලැබේ).
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Verified Source Links -->
+              <div class="pt-2 pb-5 border-t border-black/5 dark:border-white/10">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-[#1d1d1f]/50 dark:text-white/50 mb-3 flex items-center gap-1.5">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">link</mat-icon>
+                  <span>මූලාශ්‍ර සබැඳි (Verified Source Citations):</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2.5">
+                  @for (src of fc.sources; track src.name) {
+                    @if (src.url) {
+                      <a [href]="src.url" 
+                         target="_blank" 
+                         rel="noopener noreferrer"
+                         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-600 dark:text-blue-400 font-bold text-xs border border-black/10 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-700 transition-all shadow-xs group">
+                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-blue-500">public</mat-icon>
+                        <span>{{ src.name }}</span>
+                        @if (src.isPrimary) {
+                          <span class="px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-[9px] font-extrabold uppercase">Primary</span>
+                        }
+                        <mat-icon style="font-size: 13px; width: 13px; height: 13px;" class="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-[#1d1d1f]/40 dark:text-white/40">open_in_new</mat-icon>
+                      </a>
+                    } @else {
+                      <div class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] text-[#1d1d1f]/70 dark:text-white/70 font-semibold text-xs border border-black/5 dark:border-white/10">
+                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-gray-400">newspaper</mat-icon>
+                        <span>{{ src.name }}</span>
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+
+              <!-- 3-Pillar Breakdown Bars & Report Correction Button -->
+              <div class="pt-4 border-t border-black/5 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs flex-1">
+                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
+                      <span>මූලාශ්‍ර විශ්වසනීයත්වය</span>
+                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.sourceReliability }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                      <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="fc.metrics.sourceReliability"></div>
+                    </div>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
+                      <span>තොරතුරු නිරවද්‍යතාව</span>
+                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.factualAccuracy }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                      <div class="h-full bg-blue-500 rounded-full" [style.width.%]="fc.metrics.factualAccuracy"></div>
+                    </div>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
+                      <span>සංස්කාරක අධීක්ෂණය</span>
+                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.editorialReview }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                      <div class="h-full bg-indigo-500 rounded-full" [style.width.%]="fc.metrics.editorialReview"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Report Inaccuracy button -->
+                <button (click)="reportInaccuracy()"
+                        class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#1d1d1f]/70 dark:text-white/70 hover:text-black dark:hover:text-white text-xs font-bold transition-colors cursor-pointer shrink-0">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">flag</mat-icon>
+                  <span>නිවැරදි කිරීමක් යෝජනා කරන්න (Report/Suggest)</span>
+                </button>
+              </div>
+
+            </section>
+          }
 
           <!-- Reactions -->
           <div class="mt-8 sm:mt-12 flex flex-wrap items-center gap-3 sm:gap-4 border-t border-b border-black/5 dark:border-white/10 py-6 sm:py-8">
@@ -364,7 +572,7 @@ import {onAuthStateChanged} from 'firebase/auth';
                         {{ rel.title }}
                       </h3>
 
-                      <p class="text-xs sm:text-sm text-[#1d1d1f]/60 dark:text-white/60 font-serif italic line-clamp-2 mb-4 flex-grow leading-relaxed">
+                      <p class="text-xs sm:text-sm text-[#1d1d1f]/70 dark:text-white/70 font-sans line-clamp-2 mb-4 flex-grow leading-relaxed font-normal">
                         {{ rel.summary }}
                       </p>
 
@@ -528,8 +736,31 @@ import {onAuthStateChanged} from 'firebase/auth';
               </div>
             </div>
 
-            <!-- Alternative Options: AI Generate or Custom URL or Local File -->
+            <!-- Alternative Options: AI Generate or Custom URL or Local File or Source Website -->
             <div class="space-y-3 mb-6 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10">
+              <!-- Original Web Source Image Extraction Option -->
+              @if (qArticle.sourceUrl) {
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-black/5 dark:border-white/10">
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-600 dark:text-emerald-400">travel_explore</mat-icon>
+                      <span>Original Source Website එකෙන් Image එක ගන්න</span>
+                    </div>
+                    <div class="text-[11px] text-[#1d1d1f]/60 dark:text-white/60 truncate max-w-sm">{{ qArticle.sourceUrl }}</div>
+                  </div>
+                  <button type="button" (click)="extractQuickSourceImage()" [disabled]="isExtractingQuickSourceImage()"
+                          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0">
+                    @if (isExtractingQuickSourceImage()) {
+                      <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Extracting...</span>
+                    } @else {
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">image_search</mat-icon>
+                      <span>🌐 Fetch Original Photo</span>
+                    }
+                  </button>
+                </div>
+              }
+
               <!-- AI Generate Option -->
               <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-black/5 dark:border-white/10">
                 <div>
@@ -656,6 +887,7 @@ export class ArticleComponent implements OnDestroy {
   readonly quickImageSuggestions = signal<string[]>([]);
   readonly isQuickImageUpdating = signal(false);
   readonly isGeneratingQuickAiImage = signal(false);
+  readonly isExtractingQuickSourceImage = signal(false);
 
   private articleId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')))
@@ -665,6 +897,11 @@ export class ArticleComponent implements OnDestroy {
     const id = this.articleId();
     if (!id) return null;
     return this.articleService.articles().find(a => a.slug === id || a.id === id) || null;
+  });
+
+  readonly factCheck = computed(() => {
+    const current = this.article();
+    return current ? getArticleFactCheck(current) : null;
   });
 
   readonly relatedArticles = computed(() => {
@@ -1047,6 +1284,24 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
+  scrollToFactCheck() {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('factCheckSection');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  reportInaccuracy() {
+    if (typeof window === 'undefined') return;
+    const current = this.article();
+    const title = current?.title || 'Story';
+    const link = window.location.href;
+    const msg = `*MyFeed.lk Fact-Check Update Request*\n\n📌 *ලිපිය (Article):* ${title}\n🔗 *සබැඳිය (Link):* ${link}\n\n📝 *නිවැරදි කිරීම / අදහස (Correction / Details):* `;
+    const waUrl = `https://wa.me/94775467475?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+  }
+
   async toggleSpeech(article: { title: string; summary: string; content: string }) {
     if (typeof window === 'undefined') return;
 
@@ -1263,6 +1518,43 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
       alert('AI Image Generator Error: ' + (err.message || String(e)));
     } finally {
       this.isGeneratingQuickAiImage.set(false);
+    }
+  }
+
+  async extractQuickSourceImage() {
+    const article = this.quickImageArticle();
+    const sourceUrl = article?.sourceUrl || '';
+    if (!sourceUrl || !sourceUrl.startsWith('http')) {
+      alert('Source URL එකක් හමු නොවීය.');
+      return;
+    }
+
+    this.isExtractingQuickSourceImage.set(true);
+    try {
+      const res = await fetch('/api/extract-source-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: sourceUrl })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to extract image from source website');
+      }
+
+      const data = await res.json();
+      if (data.originalImageUrl) {
+        this.quickImageUrl.set(data.originalImageUrl);
+      } else if (data.imageUrl) {
+        this.quickImageUrl.set(data.imageUrl);
+      } else {
+        alert('මෙම Source Website එකෙන් Original Image එකක් හඳුනාගත නොහැකි විය.');
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Source Image Extraction Error: ' + (e.message || String(err)));
+    } finally {
+      this.isExtractingQuickSourceImage.set(false);
     }
   }
 

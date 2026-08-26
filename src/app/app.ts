@@ -43,6 +43,9 @@ export class App implements OnInit {
   subscribeSuccess = signal(false);
   subscribeError = signal<string | null>(null);
   showReadingList = signal(false);
+  showFeedbackModal = signal(false);
+  feedbackCategory = signal<'issue' | 'recommendation' | 'content' | 'general'>('issue');
+  feedbackMessage = signal('');
 
   readonly bookmarkedArticles = computed(() => {
     const ids = this.bookmarkManager.bookmarkedIds();
@@ -140,5 +143,43 @@ export class App implements OnInit {
     } finally {
       this.subscribing.set(false);
     }
+  }
+
+  toggleFeedbackModal() {
+    this.showFeedbackModal.update(v => !v);
+  }
+
+  setFeedbackCategory(category: 'issue' | 'recommendation' | 'content' | 'general') {
+    this.feedbackCategory.set(category);
+  }
+
+  updateFeedbackMessage(event: Event) {
+    const target = event.target as HTMLTextAreaElement;
+    this.feedbackMessage.set(target.value);
+  }
+
+  sendFeedbackViaWhatsApp() {
+    const categoryLabels: Record<string, string> = {
+      issue: '🐞 Website Issue / Bug Report (වෙබ් අඩවියේ ගැටලුවක්)',
+      recommendation: '💡 Recommendation / Feature Suggestion (යෝජනාවක් / අදහසක්)',
+      content: '📰 News / Content Feedback (පුවත් පිළිබඳව)',
+      general: '💬 General Feedback / Inquiry (වෙනත්)'
+    };
+
+    const category = categoryLabels[this.feedbackCategory()] || 'Feedback';
+    const message = this.feedbackMessage().trim() || 'No additional comment provided.';
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://myfeed.lk';
+
+    const text = `*MyFeed.lk Feedback & Support*\n\n📌 *Category:* ${category}\n💬 *Message:* ${message}\n🔗 *Page URL:* ${currentUrl}\n\n_Sent via MyFeed.lk Support Portal_`;
+
+    const encodedText = encodeURIComponent(text);
+    const whatsappUrl = `https://wa.me/94710947871?text=${encodedText}`;
+
+    if (typeof window !== 'undefined') {
+      window.open(whatsappUrl, '_blank');
+    }
+
+    this.showFeedbackModal.set(false);
+    this.feedbackMessage.set('');
   }
 }

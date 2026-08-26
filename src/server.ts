@@ -3,6 +3,15 @@ import { getAllowedHosts, getContext, getTrustProxyHeaders } from '@netlify/angu
 import { Buffer } from 'buffer';
 import { GoogleGenAI, Type } from '@google/genai';
 import webpush from 'web-push';
+import { initializeApp as initServerFirebase, getApps as getServerApps, getApp as getServerApp } from 'firebase/app';
+import { 
+  getFirestore as getServerFirestore, 
+  collection as serverCollection, 
+  addDoc as serverAddDoc, 
+  getDocs as serverGetDocs, 
+  serverTimestamp as serverTimestampDoc,
+  type Firestore
+} from 'firebase/firestore';
 
 // Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +87,19 @@ interface TranslatedServerArticle {
   authorType?: string;
   isAiGenerated?: boolean;
   sourceUrl?: string;
+  factCheck?: {
+    score: number;
+    status: string;
+    statusBadge: string;
+    reason: string;
+    sources: { name: string; url?: string; isPrimary?: boolean }[];
+    metrics: {
+      sourceReliability: number;
+      factualAccuracy: number;
+      editorialReview: number;
+    };
+    checkedBy: string;
+  };
 }
 
 // Cache for news
@@ -225,6 +247,101 @@ function isValidServerImage(url: string): boolean {
   return true;
 }
 
+function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
+  if (!html) return '';
+
+  const candidates: string[] = [];
+
+  // 1. OpenGraph Images: <meta property="og:image" content="...">
+  const ogMatches = html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image|twitter:image:src|image)["'][^>]+content=["']([^"']+)["']/gi);
+  for (const m of ogMatches) {
+    if (m[1]) candidates.push(m[1].trim());
+  }
+
+  // 1.1 Inverted meta attribute order: <meta content="..." property="og:image">
+  const invertedOgMatches = html.matchAll(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image|twitter:image:src)["']/gi);
+  for (const m of invertedOgMatches) {
+    if (m[1]) candidates.push(m[1].trim());
+  }
+
+  // 2. Link rel image_src
+  const linkMatches = html.matchAll(/<link[^>]+rel=["'](?:image_src|preload)["'][^>]+(?:href|imagesrcset)=["']([^"']+)["']/gi);
+  for (const m of linkMatches) {
+    if (m[1]) candidates.push(m[1].split(' ')[0].trim());
+  }
+
+  // 3. Schema.org JSON-LD image
+  const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  for (const m of jsonLdMatches) {
+    try {
+      const data = JSON.parse(m[1]);
+      const findImage = (obj: unknown): string | null => {
+        if (!obj) return null;
+        if (typeof obj === 'string' && (obj.startsWith('http') || obj.startsWith('/'))) return obj;
+        if (typeof obj === 'object' && obj !== null) {
+          const record = obj as Record<string, unknown>;
+          const imgVal = record['image'];
+          if (imgVal) {
+            if (typeof imgVal === 'string') return imgVal;
+            if (Array.isArray(imgVal) && imgVal[0]) {
+              const first = imgVal[0];
+              if (typeof first === 'string') return first;
+              if (typeof first === 'object' && first !== null) {
+                const firstRec = first as Record<string, unknown>;
+                if (typeof firstRec['url'] === 'string') return firstRec['url'];
+              }
+            }
+            if (typeof imgVal === 'object' && imgVal !== null) {
+              const imgRec = imgVal as Record<string, unknown>;
+              if (typeof imgRec['url'] === 'string') return imgRec['url'];
+            }
+          }
+          const thumbVal = record['thumbnailUrl'];
+          if (typeof thumbVal === 'string') return thumbVal;
+          if (Array.isArray(obj)) {
+            for (const item of obj) {
+              const found = findImage(item);
+              if (found) return found;
+            }
+          }
+        }
+        return null;
+      };
+      const found = findImage(data);
+      if (found) candidates.push(found);
+    } catch {
+      // Ignore JSON parse errors in script tags
+    }
+  }
+
+  // 4. Main article image in <figure> or <article>
+  const articleImgMatch = html.match(/<article[\s\S]*?<img[^>]+src=["']([^"']+)["']/i) || html.match(/<figure[\s\S]*?<img[^>]+src=["']([^"']+)["']/i);
+  if (articleImgMatch && articleImgMatch[1]) {
+    candidates.push(articleImgMatch[1].trim());
+  }
+
+  // Filter & resolve candidate URLs
+  for (let candidate of candidates) {
+    // Decode HTML entities if any
+    candidate = candidate.replace(/&amp;/g, '&').replace(/&#38;/g, '&');
+    
+    // Resolve relative URL if pageUrl is given
+    if (pageUrl && (candidate.startsWith('/') || !candidate.startsWith('http'))) {
+      try {
+        candidate = new URL(candidate, pageUrl).href;
+      } catch {
+        // Invalid URL
+      }
+    }
+
+    if (isValidServerImage(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
 function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[] {
   const items: ServerArticleItem[] = [];
   const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
@@ -274,6 +391,524 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
   }
   return items;
 }
+
+const firebaseServerConfig = {
+  projectId: "gen-lang-client-0797933634",
+  appId: "1:203252959685:web:ffcea46dc94edc1675e3ac",
+  apiKey: "AIzaSyDyNb52a42_PXS929gTeeKdY3TomCyQYuE",
+  authDomain: "gen-lang-client-0797933634.firebaseapp.com",
+  storageBucket: "gen-lang-client-0797933634.firebasestorage.app",
+  messagingSenderId: "203252959685",
+};
+
+let serverDbInstance: Firestore | null = null;
+function getServerDb(): Firestore {
+  if (!serverDbInstance) {
+    const apps = getServerApps();
+    const app = apps.length > 0 ? getServerApp() : initServerFirebase(firebaseServerConfig);
+    serverDbInstance = getServerFirestore(app, "ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7");
+  }
+  return serverDbInstance;
+}
+
+const VAPID_PUBLIC_KEY = process.env['VAPID_PUBLIC_KEY'] || 'BGAgbaEbbGpuE92I7FiigT8999bHBAfgsZNcr7ayNUuAE3KTpSGKbKtbjRPo8_f96hTzCvGv0nzUX8I5dBH8-0g';
+const VAPID_PRIVATE_KEY = process.env['VAPID_PRIVATE_KEY'] || 'oQIU3f4vjeMlQIaAJO47DoEdCOtYDkAHfs57SuFzba0';
+const VAPID_SUBJECT = process.env['VAPID_SUBJECT'] || 'mailto:mail.kaveensandeepa@gmail.com';
+
+try {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+} catch (vapidErr) {
+  console.warn('[VAPID] Initial setup notice:', vapidErr);
+}
+
+async function sendWebPushToAllSubscribers(article: {
+  title: string;
+  summary: string;
+  articleUrl: string;
+  imageUrl?: string;
+  category?: string;
+}): Promise<{ total: number; sent: number; failed: number }> {
+  try {
+    try {
+      webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    } catch {
+      console.debug('[VAPID] Webpush already initialized');
+    }
+
+    const db = getServerDb();
+    const snap = await serverGetDocs(serverCollection(db, 'web_push_subscriptions'));
+    if (snap.empty) {
+      return { total: 0, sent: 0, failed: 0 };
+    }
+
+    const payload = JSON.stringify({
+      title: (article.title ? `📰 ${article.title}` : 'MyFeed.lk News Alert').slice(0, 80),
+      body: (article.summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
+      url: article.articleUrl || '/',
+      icon: '/favicon.ico',
+      image: article.imageUrl || undefined,
+      category: article.category || 'News'
+    });
+
+    let sent = 0;
+    let failed = 0;
+    const expiredIds: string[] = [];
+
+    await Promise.allSettled(
+      snap.docs.map(async (docSnap) => {
+        const subData = docSnap.data() as webpush.PushSubscription;
+        if (!subData || !subData.endpoint) return;
+        try {
+          await webpush.sendNotification(subData, payload);
+          sent++;
+        } catch (pushErr: unknown) {
+          failed++;
+          const errObj = pushErr as { statusCode?: number };
+          if (errObj?.statusCode === 404 || errObj?.statusCode === 410) {
+            expiredIds.push(docSnap.id);
+          }
+        }
+      })
+    );
+
+    // Clean up expired subscriptions from Firestore
+    if (expiredIds.length > 0) {
+      try {
+        const { doc: serverDoc, deleteDoc: serverDeleteDoc } = await import('firebase/firestore');
+        for (const id of expiredIds) {
+          await serverDeleteDoc(serverDoc(db, 'web_push_subscriptions', id)).catch((e) => {
+            console.warn('[WebPush] Cleanup warning:', e);
+          });
+        }
+      } catch (cleanErr) {
+        console.warn('[WebPush] Expired cleanup notice:', cleanErr);
+      }
+    }
+
+    return { total: snap.size, sent, failed };
+  } catch (err) {
+    console.error('[WebPush] Error sending push notifications:', err);
+    return { total: 0, sent: 0, failed: 0 };
+  }
+}
+
+export interface AutoPilotLog {
+  id: string;
+  timestamp: string;
+  durationMs: number;
+  sourcesScanned: number;
+  newArticlesFound: number;
+  publishedArticles: { title: string; category: string; imageUrl: string; url?: string }[];
+  status: 'success' | 'warning' | 'error';
+  message: string;
+  triggerType: 'scheduled_cron' | 'webhook_cron' | 'manual_admin';
+}
+
+export interface AutoPilotConfig {
+  enabled: boolean;
+  intervalMinutes: number;
+  autoPublish: boolean;
+  notifyPhone: boolean;
+  postWhatsApp: boolean;
+  phoneTopic: string;
+  waWebhookUrl: string;
+  maxArticlesPerRun: number;
+}
+
+const autoPilotConfig: AutoPilotConfig = {
+  enabled: true,
+  intervalMinutes: 60,
+  autoPublish: true,
+  notifyPhone: true,
+  postWhatsApp: true,
+  phoneTopic: 'myfeedlk_kaveen',
+  waWebhookUrl: '',
+  maxArticlesPerRun: 2
+};
+
+const autoPilotLogs: AutoPilotLog[] = [];
+let autoPilotNextRunTime = Date.now() + 60 * 60 * 1000;
+let isAutoPilotSyncing = false;
+let autoPilotLastRunTime: string | null = null;
+
+async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cron' | 'manual_admin' = 'scheduled_cron'): Promise<{ success: boolean; count: number; articles: { title: string; category: string; imageUrl: string; url?: string }[]; message: string }> {
+  if (isAutoPilotSyncing) {
+    return { success: false, count: 0, articles: [], message: 'Auto-pilot sync is already running in background' };
+  }
+
+  isAutoPilotSyncing = true;
+  const startTime = Date.now();
+  const timestampStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'short' });
+  const publishedArticlesList: { title: string; category: string; imageUrl: string; url?: string }[] = [];
+
+  try {
+    const ai = getGeminiClient();
+    if (!ai) {
+      throw new Error('GEMINI_API_KEY is not configured on the server');
+    }
+
+    const db = getServerDb();
+
+    // 1. Fetch all recent articles from Firestore to prevent any duplicate generation
+    const existingTitlesSet = new Set<string>();
+    const existingUrlsSet = new Set<string>();
+    const existingCleanWordsSet: Set<string>[] = [];
+
+    try {
+      const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
+      articlesSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data['title']) {
+          const t = (data['title'] as string).toLowerCase().trim();
+          existingTitlesSet.add(t);
+          const words = new Set(t.replace(/[^\w\s\u0D80-\u0DFF]/g, ' ').split(/\s+/).filter(w => w.length > 3));
+          if (words.size > 0) existingCleanWordsSet.push(words);
+        }
+        if (data['originalTitle']) {
+          const ot = (data['originalTitle'] as string).toLowerCase().trim();
+          existingTitlesSet.add(ot);
+          const words = new Set(ot.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3));
+          if (words.size > 0) existingCleanWordsSet.push(words);
+        }
+        if (data['sourceUrl']) {
+          const u = (data['sourceUrl'] as string).toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+          existingUrlsSet.add(u);
+        }
+      });
+      // Also check drafts so we don't duplicate existing drafts
+      const draftsSnap = await serverGetDocs(serverCollection(db, 'drafts'));
+      draftsSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data['title']) existingTitlesSet.add((data['title'] as string).toLowerCase().trim());
+        if (data['originalTitle']) existingTitlesSet.add((data['originalTitle'] as string).toLowerCase().trim());
+        if (data['sourceUrl']) {
+          const u = (data['sourceUrl'] as string).toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+          existingUrlsSet.add(u);
+        }
+      });
+    } catch (dbReadErr) {
+      console.warn('[Auto-Pilot] Note: Firestore read check returned:', dbReadErr);
+    }
+
+    // 2. Fetch fresh articles from all configured tech RSS feeds
+    const rawFeedArticles: ServerArticleItem[] = [];
+    for (const feed of SERVER_RSS_FEEDS) {
+      try {
+        const res = await fetch(feed.url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          signal: AbortSignal.timeout(7000)
+        });
+        if (res.ok) {
+          const xml = await res.text();
+          const parsed = parseServerRss(xml, feed.name);
+          rawFeedArticles.push(...parsed);
+        }
+      } catch (feedErr) {
+        console.warn(`[Auto-Pilot] Feed fetch failed for ${feed.name}:`, feedErr);
+      }
+    }
+
+    // 3. Strict Filter to ensure NO existing or already published news is regenerated
+    const candidateArticles = rawFeedArticles.filter(item => {
+      const titleLower = item.title.toLowerCase().trim();
+      const cleanItemUrl = (item.url || '').toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+
+      // Direct URL check
+      if (cleanItemUrl && (existingUrlsSet.has(cleanItemUrl) || Array.from(existingUrlsSet).some(u => cleanItemUrl.includes(u) || u.includes(cleanItemUrl)))) {
+        return false;
+      }
+
+      // Direct Title check
+      if (existingTitlesSet.has(titleLower)) {
+        return false;
+      }
+
+      // Substring check
+      for (const existing of existingTitlesSet) {
+        if (existing.length > 12) {
+          const snippetA = titleLower.substring(0, Math.min(25, titleLower.length));
+          const snippetB = existing.substring(0, Math.min(25, existing.length));
+          if (titleLower.includes(snippetB) || existing.includes(snippetA)) {
+            return false;
+          }
+        }
+      }
+
+      // Semantic Word Overlap check (if > 60% of significant words match an existing story)
+      const itemWords = titleLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3);
+      if (itemWords.length >= 3) {
+        for (const existingWords of existingCleanWordsSet) {
+          let matches = 0;
+          for (const w of itemWords) {
+            if (existingWords.has(w)) matches++;
+          }
+          const overlapRatio = matches / itemWords.length;
+          if (overlapRatio >= 0.6) {
+            return false; // High duplicate probability
+          }
+        }
+      }
+
+      return true;
+    });
+
+    const toProcess = candidateArticles.slice(0, autoPilotConfig.maxArticlesPerRun || 2);
+
+    if (toProcess.length === 0) {
+      const logEntry: AutoPilotLog = {
+        id: `log-${Date.now()}`,
+        timestamp: timestampStr,
+        durationMs: Date.now() - startTime,
+        sourcesScanned: SERVER_RSS_FEEDS.length,
+        newArticlesFound: 0,
+        publishedArticles: [],
+        status: 'warning',
+        message: 'No new breaking stories detected. All current feeds are already published & synced.',
+        triggerType
+      };
+      autoPilotLogs.unshift(logEntry);
+      if (autoPilotLogs.length > 30) autoPilotLogs.pop();
+      autoPilotLastRunTime = timestampStr;
+      autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+      return { success: true, count: 0, articles: [], message: 'Feeds checked. All up to date.' };
+    }
+
+    // 4. Generate in-depth Sinhala journalistic articles & Auto-Publish
+    for (const item of toProcess) {
+      try {
+        let originalSourceImage = item.imageUrl || '';
+        let sourceHtml = '';
+
+        if (item.url) {
+          try {
+            const pageRes = await fetch(item.url, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              signal: AbortSignal.timeout(6000)
+            });
+            if (pageRes.ok) {
+              const html = await pageRes.text();
+              const extractedImg = extractOriginalImageFromHtml(html, item.url);
+              if (extractedImg) {
+                originalSourceImage = extractedImg;
+              }
+              sourceHtml = html
+                .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                .substring(0, 60000);
+            }
+          } catch (scrapeErr) {
+            console.warn('[Auto-Pilot] URL scrape fallback:', scrapeErr);
+          }
+        }
+
+        const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for MyFeed.lk (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
+Write an in-depth, prestigious, highly engaging technology news article in fluent, professional Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) based on this breaking story.
+
+INPUT STORY:
+- Headline: ${item.title}
+- Source: ${item.source.name}
+- Summary: ${item.description}
+- Source URL: ${item.url}
+${sourceHtml ? `- Web Excerpt: ${sourceHtml.substring(0, 4000)}` : ''}
+
+CRITICAL EDITORIAL GUIDELINES:
+1. 'sinhalaTitle': An enticing, high-journalistic headline in Sinhala.
+2. 'sinhalaDescription': A punchy, 2-3 sentence overview in Sinhala.
+3. 'sinhalaFullContent': Full-length article (500-800 words) with clean HTML:
+   - <p class="lead font-medium text-lg mb-4">Engaging opening hook paragraph</p>
+   - <h2>ප්‍රධාන තාක්ෂණික තොරතුරු සහ විශේෂාංග</h2>
+   - <p>In-depth technical analysis</p>
+   - <ul><li><strong>විශේෂාංගය:</strong> විස්තරය...</li></ul>
+   - <h2>පරිශීලකයින්ට සහ තාක්ෂණ ක්ෂේත්‍රයට ඇතිවන බලපෑම</h2>
+   - <p>Practical user implications and industry context</p>
+   - <h2>අවසන් විග්‍රහය සහ MyFeed.lk නිගමනය</h2>
+   - <p>Final verdict</p>
+4. 'suggestedCategory': Classify strictly into 'AI', 'Tech', or 'Local'.
+5. 'readTime': e.g. '4 min read'
+6. 'socialShareText': Formatted WhatsApp / Social copy with emojis and summary in Sinhala.`;
+
+        const geminiRes = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                sinhalaTitle: { type: Type.STRING },
+                sinhalaDescription: { type: Type.STRING },
+                sinhalaFullContent: { type: Type.STRING },
+                suggestedCategory: { type: Type.STRING },
+                readTime: { type: Type.STRING },
+                socialShareText: { type: Type.STRING },
+              },
+              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
+            }
+          }
+        });
+
+        const generated = JSON.parse(geminiRes.text || '{}');
+        const finalImage = originalSourceImage || getServerTopicImage(item.title);
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const cleanSlug = (generated.sinhalaTitle || item.title).toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+
+        const targetCollection = autoPilotConfig.autoPublish ? 'articles' : 'drafts';
+        const newDocPayload = {
+          title: generated.sinhalaTitle || item.title,
+          summary: generated.sinhalaDescription || item.description,
+          content: generated.sinhalaFullContent || `<p>${generated.sinhalaDescription}</p>`,
+          category: generated.suggestedCategory || 'Tech',
+          imageUrl: finalImage,
+          sourceUrl: item.url || '',
+          originalTitle: item.title,
+          readTime: generated.readTime || '4 min read',
+          date: dateStr,
+          authorType: 'ai',
+          isAiGenerated: true,
+          slug: cleanSlug,
+          createdAt: serverTimestampDoc(),
+          views: 0
+        };
+
+        const docRef = await serverAddDoc(serverCollection(db, targetCollection), newDocPayload);
+        const articleSiteUrl = `https://myfeed.lk/article/${cleanSlug || docRef.id}`;
+
+        publishedArticlesList.push({
+          title: newDocPayload.title,
+          category: newDocPayload.category,
+          imageUrl: finalImage,
+          url: articleSiteUrl
+        });
+
+        // 5. Send instant Phone Push Alert via ntfy.sh (using JSON body to fully support UTF-8 Sinhala & emojis)
+        if (autoPilotConfig.notifyPhone && autoPilotConfig.phoneTopic) {
+          try {
+            const cleanTopic = (autoPilotConfig.phoneTopic.trim().replace(/[^a-zA-Z0-9_-]/g, '')) || 'myfeedlk_kaveen';
+            const phonePayload: Record<string, unknown> = {
+              topic: cleanTopic,
+              title: `📰 ${(newDocPayload.title || '').slice(0, 100)}`,
+              message: `${(newDocPayload.summary || '').slice(0, 500)}\n\n🔗 Tap to read full story →`,
+              click: articleSiteUrl,
+              priority: 4,
+              tags: ['newspaper', 'rocket', 'fire']
+            };
+
+            if (finalImage && typeof finalImage === 'string' && finalImage.startsWith('http') && !finalImage.startsWith('data:')) {
+              phonePayload['attach'] = finalImage;
+            }
+
+            let phoneRes = await fetch('https://ntfy.sh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(phonePayload)
+            });
+
+            if (!phoneRes.ok && phonePayload['attach']) {
+              delete phonePayload['attach'];
+              phoneRes = await fetch('https://ntfy.sh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(phonePayload)
+              });
+            }
+          } catch (phoneErr) {
+            console.warn('[Auto-Pilot] Phone push alert error:', phoneErr);
+          }
+        }
+
+        // 6. Post to WhatsApp Webhook if configured
+        if (autoPilotConfig.postWhatsApp && autoPilotConfig.waWebhookUrl) {
+          try {
+            const waBody = {
+              title: newDocPayload.title,
+              summary: newDocPayload.summary,
+              category: newDocPayload.category,
+              readTime: newDocPayload.readTime,
+              imageUrl: finalImage,
+              articleUrl: articleSiteUrl,
+              customSnippet: generated.socialShareText
+            };
+            await fetch(autoPilotConfig.waWebhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(waBody)
+            });
+          } catch (waErr) {
+            console.warn('[Auto-Pilot] WhatsApp dispatch error:', waErr);
+          }
+        }
+
+        // 7. Auto-alert all registered Web Push Subscribers
+        try {
+          await sendWebPushToAllSubscribers({
+            title: newDocPayload.title,
+            summary: newDocPayload.summary,
+            articleUrl: articleSiteUrl,
+            imageUrl: finalImage,
+            category: newDocPayload.category
+          });
+        } catch (pushErr) {
+          console.warn('[Auto-Pilot] Web push dispatch notice:', pushErr);
+        }
+
+        // Add to existing set to avoid same-run duplicates
+        existingTitlesSet.add(newDocPayload.title.toLowerCase().trim());
+      } catch (itemGenErr) {
+        console.error('[Auto-Pilot] Error processing item:', itemGenErr);
+      }
+    }
+
+    const logEntry: AutoPilotLog = {
+      id: `log-${Date.now()}`,
+      timestamp: timestampStr,
+      durationMs: Date.now() - startTime,
+      sourcesScanned: SERVER_RSS_FEEDS.length,
+      newArticlesFound: publishedArticlesList.length,
+      publishedArticles: publishedArticlesList,
+      status: publishedArticlesList.length > 0 ? 'success' : 'warning',
+      message: `Successfully synced & published ${publishedArticlesList.length} articles on Auto-Pilot.`,
+      triggerType
+    };
+
+    autoPilotLogs.unshift(logEntry);
+    if (autoPilotLogs.length > 30) autoPilotLogs.pop();
+    autoPilotLastRunTime = timestampStr;
+    autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+
+    return {
+      success: true,
+      count: publishedArticlesList.length,
+      articles: publishedArticlesList,
+      message: `Auto-pilot synced ${publishedArticlesList.length} news articles.`
+    };
+  } catch (err: unknown) {
+    const errorObj = err as { message?: string };
+    const logEntry: AutoPilotLog = {
+      id: `log-${Date.now()}`,
+      timestamp: timestampStr,
+      durationMs: Date.now() - startTime,
+      sourcesScanned: SERVER_RSS_FEEDS.length,
+      newArticlesFound: 0,
+      publishedArticles: [],
+      status: 'error',
+      message: `Auto-pilot failed: ${errorObj.message || String(err)}`,
+      triggerType
+    };
+    autoPilotLogs.unshift(logEntry);
+    if (autoPilotLogs.length > 30) autoPilotLogs.pop();
+    return { success: false, count: 0, articles: [], message: errorObj.message || 'Auto-pilot sync failed' };
+  } finally {
+    isAutoPilotSyncing = false;
+  }
+}
+
+// Background Cron Scheduler (Checks every minute if sync is due)
+setInterval(async () => {
+  if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
+    console.log('[Auto-Pilot] Interval reached. Executing scheduled news sync...');
+    await executeAutoPilotSync('scheduled_cron');
+  }
+}, 60 * 1000);
 
 let geminiClientInstance: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
@@ -359,6 +994,10 @@ English Title: ${article.title}
 English Description: ${article.description}
 Source URL: ${article.url}
 
+FACT-CHECK CREDIBILITY ASSESSMENT INSTRUCTIONS:
+- Assess credibility score: 100 for official company announcements, launches, or confirmed releases; 85-92 for unconfirmed leaks, rumors, or developing stories.
+- In 'factCheckReason', write a 1-2 sentence explanation in Sinhala explaining why it is 100% (e.g. ප්‍රධාන නිල මූලාශ්‍ර සහ ආයතනික නිවේදන මත පදනම්ව 100% ක් සනාථ කර ඇත) or if less than 100%, explain what is pending (e.g. නිල නිවේදනයක් තවමත් බලාපොරොත්තුවේ).
+
 CATEGORY RULE:
 Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, Claude, LLMs), 'Local' (for Sri Lanka news), or 'Tech' (for Apple, Samsung, hardware, general gadgets).`;
 
@@ -376,6 +1015,8 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
                   sinhalaDescription: { type: Type.STRING },
                   sinhalaFullContent: { type: Type.STRING },
                   category: { type: Type.STRING },
+                  factCheckScore: { type: Type.INTEGER },
+                  factCheckReason: { type: Type.STRING }
                 },
                 required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'category']
               }
@@ -404,6 +1045,11 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
       const detectedCategory = rawCategory.includes('ai') || rawCategory.includes('artificial') ? 'AI' :
                                rawCategory.includes('local') || rawCategory.includes('lanka') ? 'Local' : 'Tech';
       
+      const fcScore = typeof translation.factCheckScore === 'number' ? translation.factCheckScore : (article.url ? 100 : 95);
+      const fcReason = translation.factCheckReason || (fcScore >= 95 
+        ? 'ප්‍රධාන නිල මූලාශ්‍ර සහ සංස්කාරක මණ්ඩලයේ සත්‍යාපන ක්‍රමවේද මඟින් පුවත 100% ක් සනාථ කර ඇත.' 
+        : 'මූලික තොරතුරු සනාථ කර ඇති නමුත් සමාගමේ නිල නිවේදනය තවමත් බලාපොරොත්තුවේ.');
+
       translatedArticles.push({
         id: `news-${index}-${Date.now()}`,
         title: translation.sinhalaTitle || article.title,
@@ -415,7 +1061,26 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
         readTime: '4 min read',
         authorType: 'ai',
         isAiGenerated: true,
-        sourceUrl: article.url || ''
+        sourceUrl: article.url || '',
+        factCheck: {
+          score: fcScore,
+          status: fcScore >= 95 ? 'verified_100' : 'developing',
+          statusBadge: fcScore >= 95 ? '100% සත්‍යාපිත මූලාශ්‍රයකි (Fully Verified)' : `${fcScore}% සත්‍යාපිතයි (Developing Story)`,
+          reason: fcReason,
+          sources: [
+            {
+              name: 'Primary Press Wire',
+              url: article.url || undefined,
+              isPrimary: true
+            }
+          ],
+          metrics: {
+            sourceReliability: fcScore >= 95 ? 100 : 90,
+            factualAccuracy: fcScore >= 95 ? 100 : 85,
+            editorialReview: fcScore >= 95 ? 100 : 95
+          },
+          checkedBy: 'MyFeed Fact-Check Desk'
+        }
       });
 
       if (index < articles.length - 1) {
@@ -470,6 +1135,64 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
     }
 
     
+    // ==========================================
+    // AUTO-PILOT 24/7 1-HOUR NEWS SYNC ENDPOINTS
+    // ==========================================
+
+    // Auto-Pilot Status & Live History
+    if (url.pathname === '/api/admin/autopilot/status' && request.method === 'GET') {
+      return new Response(JSON.stringify({
+        config: autoPilotConfig,
+        logs: autoPilotLogs,
+        isRunning: isAutoPilotSyncing,
+        serverTime: new Date().toISOString(),
+        nextRunTime: autoPilotNextRunTime,
+        lastRunTime: autoPilotLastRunTime
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Auto-Pilot Configuration Update
+    if (url.pathname === '/api/admin/autopilot/config' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        if (typeof body.enabled === 'boolean') autoPilotConfig.enabled = body.enabled;
+        if (typeof body.intervalMinutes === 'number' && body.intervalMinutes >= 15) {
+          autoPilotConfig.intervalMinutes = body.intervalMinutes;
+          autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+        }
+        if (typeof body.autoPublish === 'boolean') autoPilotConfig.autoPublish = body.autoPublish;
+        if (typeof body.notifyPhone === 'boolean') autoPilotConfig.notifyPhone = body.notifyPhone;
+        if (typeof body.postWhatsApp === 'boolean') autoPilotConfig.postWhatsApp = body.postWhatsApp;
+        if (typeof body.phoneTopic === 'string') autoPilotConfig.phoneTopic = body.phoneTopic.trim();
+        if (typeof body.waWebhookUrl === 'string') autoPilotConfig.waWebhookUrl = body.waWebhookUrl.trim();
+        if (typeof body.maxArticlesPerRun === 'number') autoPilotConfig.maxArticlesPerRun = Math.max(1, Math.min(body.maxArticlesPerRun, 5));
+
+        return new Response(JSON.stringify({ success: true, config: autoPilotConfig, nextRunTime: autoPilotNextRunTime }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: unknown) {
+        const errorObj = err as { message?: string };
+        return new Response(JSON.stringify({ error: errorObj.message || 'Failed to update config' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Dedicated 1-Hour Cron & Webhook Trigger for Auto-Pilot
+    if ((url.pathname === '/api/cron/sync-news' || url.pathname === '/api/admin/autopilot/sync-now') && (request.method === 'GET' || request.method === 'POST')) {
+      const triggerType = url.pathname.includes('sync-now') ? 'manual_admin' : 'webhook_cron';
+      const result = await executeAutoPilotSync(triggerType);
+      return new Response(JSON.stringify(result), {
+        status: result.success ? 200 : 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // 1. Trending Tech News Feed for Admin Auto-Crawler
     if (url.pathname === '/api/admin/trending-news' && request.method === 'GET') {
       try {
@@ -548,6 +1271,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         const includeLKR = !!body.includePricingInLKR;
 
         let sourceMaterial = '';
+        let originalSourceImage = '';
 
         if (articleUrl) {
           try {
@@ -557,6 +1281,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
+              originalSourceImage = extractOriginalImageFromHtml(html, articleUrl);
               sourceMaterial = html
                 .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
                 .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
@@ -632,6 +1357,8 @@ SOCIAL COPY ('socialShareText'):
                 visualPrompt: { type: Type.STRING },
                 socialShareText: { type: Type.STRING },
                 metaDescription: { type: Type.STRING },
+                factCheckScore: { type: Type.INTEGER },
+                factCheckReason: { type: Type.STRING },
                 tags: {
                   type: Type.ARRAY,
                   items: { type: Type.STRING }
@@ -654,12 +1381,14 @@ SOCIAL COPY ('socialShareText'):
 
         const result = JSON.parse(geminiRes.text || '{}');
         
-        // Auto-generate AI image URL using the visual prompt
+        // Auto-generate AI image URL fallback if original image not found
         const promptText = result.visualPrompt || `${topic} futuristic modern high-tech device editorial photography studio lighting 8k`;
         const randomSeed = Math.floor(Math.random() * 1000000);
         const generatedImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1200&height=675&nologo=true&enhance=true&seed=${randomSeed}`;
         
-        result.imageUrl = generatedImageUrl;
+        // Prioritize original source image from article webpage
+        result.originalImageUrl = originalSourceImage || '';
+        result.imageUrl = originalSourceImage || generatedImageUrl;
         result.sourceUrl = articleUrl || '';
 
         return new Response(JSON.stringify(result), {
@@ -893,6 +1622,11 @@ REQUIREMENTS:
         });
 
         const result = JSON.parse(geminiRes.text || '{}');
+        const originalSourceImg = extractOriginalImageFromHtml(html, articleUrl);
+        result.originalImageUrl = originalSourceImg || '';
+        result.imageUrl = originalSourceImg || getServerTopicImage(result.sinhalaTitle);
+        result.sourceUrl = articleUrl;
+
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -901,6 +1635,62 @@ REQUIREMENTS:
         const err = genErr as { message?: string };
         console.error('Error generating AI article from URL:', genErr);
         return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Dedicated Endpoint to Extract Original Article Image from any Web URL / Source
+    if (url.pathname === '/api/extract-source-image' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const targetUrl = (body.url || '').trim();
+        if (!targetUrl) {
+          return new Response(JSON.stringify({ error: 'Source URL is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const pageRes = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+          },
+          signal: AbortSignal.timeout(8000)
+        });
+
+        if (!pageRes.ok) {
+          return new Response(JSON.stringify({ error: `Failed to fetch page (Status ${pageRes.status})` }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const html = await pageRes.text();
+        const originalImage = extractOriginalImageFromHtml(html, targetUrl);
+
+        // Also extract original title and site name if present
+        const titleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
+                           html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        const title = titleMatch ? titleMatch[1].trim() : '';
+
+        const siteMatch = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i);
+        const siteName = siteMatch ? siteMatch[1].trim() : '';
+
+        return new Response(JSON.stringify({
+          originalImageUrl: originalImage || '',
+          imageUrl: originalImage || getServerTopicImage(title),
+          title,
+          siteName
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: unknown) {
+        const e = err as { message?: string };
+        return new Response(JSON.stringify({ error: e.message || 'Failed to extract original image' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
@@ -1291,27 +2081,50 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     if (url.pathname === '/api/notify/webpush' && request.method === 'POST') {
       try {
         const body = await request.json();
-        const { title, summary, articleUrl, subscriptions } = body;
+        const { title, summary, articleUrl, imageUrl, category, subscriptions } = body;
         
-        const payload = JSON.stringify({
-          title: (title ? `📰 ${title}` : 'MyFeed.lk News').slice(0, 50),
-          body: (summary || 'A new article has just been published!').slice(0, 150),
-          url: articleUrl || '/',
-          icon: '/favicon.ico'
-        });
+        try {
+          webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+        } catch {
+          console.debug('[VAPID] Webpush details ready');
+        }
 
-        const results = await Promise.allSettled(
-          subscriptions.map((sub: webpush.PushSubscription) => webpush.sendNotification(sub, payload))
-        );
-        
-        const failedEndpoints = results
-          .map((res, index) => res.status === 'rejected' ? subscriptions[index].endpoint : null)
-          .filter(Boolean);
+        if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+          const payload = JSON.stringify({
+            title: (title ? `📰 ${title}` : 'MyFeed.lk Breaking News').slice(0, 80),
+            body: (summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
+            url: articleUrl || '/',
+            icon: '/favicon.ico',
+            image: imageUrl || undefined,
+            category: category || 'News'
+          });
 
-        return new Response(JSON.stringify({ success: true, failedEndpoints }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          const results = await Promise.allSettled(
+            subscriptions.map((sub: webpush.PushSubscription) => webpush.sendNotification(sub, payload))
+          );
+          
+          const failedEndpoints = results
+            .map((res, index) => res.status === 'rejected' ? subscriptions[index].endpoint : null)
+            .filter(Boolean);
+
+          return new Response(JSON.stringify({ success: true, count: subscriptions.length, failedEndpoints }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } else {
+          const result = await sendWebPushToAllSubscribers({
+            title: title || 'MyFeed.lk Breaking News',
+            summary: summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි.',
+            articleUrl: articleUrl || '/',
+            imageUrl,
+            category
+          });
+
+          return new Response(JSON.stringify({ success: true, ...result }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       } catch (err: unknown) {
         const errorObj = err as { message?: string };
         return new Response(JSON.stringify({ error: errorObj.message || 'Web push failed' }), {

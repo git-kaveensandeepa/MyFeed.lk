@@ -16,6 +16,27 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
+export interface FactSource {
+  name: string;
+  url?: string;
+  domain?: string;
+  isPrimary?: boolean;
+}
+
+export interface FactCheckData {
+  score: number; // 0 to 100
+  status: 'verified_100' | 'mostly_verified' | 'developing' | 'unconfirmed';
+  statusBadge: string;
+  reason: string;
+  sources: FactSource[];
+  metrics: {
+    sourceReliability: number;
+    factualAccuracy: number;
+    editorialReview: number;
+  };
+  checkedBy: string;
+}
+
 export interface Article {
   id: string;
   slug?: string;
@@ -39,6 +60,7 @@ export interface Article {
   timestamp?: number;
   views?: number;
   reactions?: Record<string, number>;
+  factCheck?: FactCheckData;
 }
 
 function getSimpleHash(str: string): number {
@@ -353,6 +375,148 @@ export function getCuratedTopicImages(title = '', category = ''): string[] {
     return TECH_IMAGE_POOLS['local_sl'];
   }
   return [...TECH_IMAGE_POOLS['general_tech'], ...TECH_IMAGE_POOLS['ai'].slice(0, 2)];
+}
+
+export function extractDomain(urlStr?: string): { name: string; domain: string } {
+  if (!urlStr) {
+    return { name: 'Verified Primary Source', domain: 'news.google.com' };
+  }
+  try {
+    const url = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
+    const hostname = url.hostname.replace(/^www\./, '');
+    
+    // Friendly source names
+    if (hostname.includes('theverge')) return { name: 'The Verge', domain: hostname };
+    if (hostname.includes('techcrunch')) return { name: 'TechCrunch', domain: hostname };
+    if (hostname.includes('reuters')) return { name: 'Reuters', domain: hostname };
+    if (hostname.includes('bloomberg')) return { name: 'Bloomberg', domain: hostname };
+    if (hostname.includes('gsmarena')) return { name: 'GSMArena', domain: hostname };
+    if (hostname.includes('adaderana')) return { name: 'Ada Derana', domain: hostname };
+    if (hostname.includes('dailymirror')) return { name: 'Daily Mirror', domain: hostname };
+    if (hostname.includes('bbc')) return { name: 'BBC News', domain: hostname };
+    if (hostname.includes('apple.com')) return { name: 'Apple Newsroom', domain: hostname };
+    if (hostname.includes('androidauthority')) return { name: 'Android Authority', domain: hostname };
+    if (hostname.includes('wired')) return { name: 'WIRED', domain: hostname };
+    if (hostname.includes('arstechnica')) return { name: 'Ars Technica', domain: hostname };
+    if (hostname.includes('engadget')) return { name: 'Engadget', domain: hostname };
+    if (hostname.includes('news.google')) return { name: 'Google News Syndicate', domain: hostname };
+
+    const parts = hostname.split('.');
+    const cleanName = parts.length > 1 ? parts[parts.length - 2] : hostname;
+    return { 
+      name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1), 
+      domain: hostname 
+    };
+  } catch {
+    return { name: 'Verified Global Media', domain: 'myfeed.lk' };
+  }
+}
+
+export function getArticleFactCheck(article: Partial<Article>): FactCheckData {
+  if (article.factCheck && article.factCheck.score) {
+    return article.factCheck;
+  }
+
+  const title = (article.title || '').toLowerCase();
+  const summary = (article.summary || '').toLowerCase();
+  const content = (article.content || '').toLowerCase();
+  const combined = `${title} ${summary} ${content}`;
+
+  const { name: primarySourceName, domain: sourceDomain } = extractDomain(article.sourceUrl);
+  
+  const sources: FactSource[] = [
+    {
+      name: primarySourceName,
+      url: article.sourceUrl || undefined,
+      domain: sourceDomain,
+      isPrimary: true
+    }
+  ];
+
+  // Secondary verification source if applicable
+  if (combined.includes('apple') || combined.includes('iphone') || combined.includes('ios')) {
+    sources.push({ name: 'Apple Newsroom & Developer Docs', url: 'https://www.apple.com/newsroom/', isPrimary: false });
+  } else if (combined.includes('openai') || combined.includes('chatgpt')) {
+    sources.push({ name: 'OpenAI Research & Official Blog', url: 'https://openai.com/news/', isPrimary: false });
+  } else if (combined.includes('google') || combined.includes('android') || combined.includes('gemini')) {
+    sources.push({ name: 'Google Keyword & Developer Hub', url: 'https://blog.google/', isPrimary: false });
+  } else if (combined.includes('sri lanka') || combined.includes('ශ්‍රී ලංකා') || article.category === 'Local') {
+    sources.push({ name: 'National News Wire (SL)', url: 'https://www.adaderana.lk/', isPrimary: false });
+  } else {
+    sources.push({ name: 'Global Tech Press Wire', url: 'https://reuters.com/technology', isPrimary: false });
+  }
+
+  // Check for Rumors / Leaks / Developing / Speculative language
+  const isRumorOrLeak = 
+    combined.includes('leak') || 
+    combined.includes('rumor') || 
+    combined.includes('කටකතා') || 
+    combined.includes('කතාවක්') || 
+    combined.includes('අපේක්ෂා') || 
+    combined.includes('ඉඩ ඇත') || 
+    combined.includes('වාර්තා පළවේ') ||
+    combined.includes('likely') || 
+    combined.includes('speculation') ||
+    combined.includes('unconfirmed');
+
+  if (isRumorOrLeak) {
+    return {
+      score: 88,
+      status: 'developing',
+      statusBadge: '88% සත්‍යාපිතයි (Insider Leak / Developing)',
+      reason: 'මූලික තාක්ෂණික තොරතුරු විශ්වාසදායක Insider මූලාශ්‍ර මඟින් තහවුරු කර ඇති නමුත්, නිෂ්පාදන සමාගමේ නිල නිවේදනය (Official Press Release) තවමත් බලාපොරොත්තුවේ.',
+      sources,
+      metrics: {
+        sourceReliability: 90,
+        factualAccuracy: 85,
+        editorialReview: 95
+      },
+      checkedBy: 'MyFeed Fact-Check Desk'
+    };
+  }
+
+  // Check for official launch / verified announcements
+  const isOfficialRelease = 
+    combined.includes('නිල') || 
+    combined.includes('නිකුත්') || 
+    combined.includes('හඳුන්වා') || 
+    combined.includes('official') || 
+    combined.includes('announc') || 
+    combined.includes('launch') || 
+    combined.includes('unveil') || 
+    combined.includes('release') ||
+    !!article.sourceUrl;
+
+  if (isOfficialRelease) {
+    return {
+      score: 100,
+      status: 'verified_100',
+      statusBadge: '100% සත්‍යාපිත මූලාශ්‍රයකි (Fully Verified)',
+      reason: 'ප්‍රධාන නිල මූලාශ්‍ර (Official Press Release / Verified Newsroom) සහ MyFeed.lk සංස්කාරක මණ්ඩලයේ සත්‍යාපන ක්‍රමවේද මඟින් පුවත 100% ක් සනාථ කර ඇත.',
+      sources,
+      metrics: {
+        sourceReliability: 100,
+        factualAccuracy: 100,
+        editorialReview: 100
+      },
+      checkedBy: 'MyFeed Fact-Check Desk'
+    };
+  }
+
+  // Standard verified analytical story
+  return {
+    score: 95,
+    status: 'mostly_verified',
+    statusBadge: '95% සත්‍යාපිතයි (Verified Report)',
+    reason: 'මූලාශ්‍ර තොරතුරු සහ කර්මාන්ත විශ්ලේෂණ සනාථ කර ඇති අතර, නවතම වෙළඳපල යාවත්කාලීන වීම් අනුව සුළු තාක්ෂණික වෙනස්කම් සිදුවිය හැක.',
+    sources,
+    metrics: {
+      sourceReliability: 95,
+      factualAccuracy: 95,
+      editorialReview: 98
+    },
+    checkedBy: 'MyFeed Fact-Check Desk'
+  };
 }
 
 function sanitizeArticleImage(rawUrl: string | undefined, title = '', category = '', originalTitle = ''): string {

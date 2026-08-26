@@ -18,6 +18,15 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if true;
     }
+
+    match /drafts/{document} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    match /autopilot_logs/{document} {
+      allow read, write: if true;
+    }
     
     match /analytics/{document} {
       allow create, update: if true;
@@ -37,6 +46,10 @@ service cloud.firestore {
 
     match /settings/{document} {
       allow read, write: if isAdmin();
+    }
+
+    match /web_push_subscriptions/{document} {
+      allow read, write: if true;
     }
 
     match /users/{document} {

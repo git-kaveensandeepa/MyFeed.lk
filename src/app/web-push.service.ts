@@ -8,7 +8,9 @@ import { db } from './firebase';
 })
 export class WebPushService {
   private platformId = inject(PLATFORM_ID);
-  readonly VAPID_PUBLIC_KEY = 'BFz1QBsKF7a5H4_PVvapXa4gYLCjBrjBTQTp7KOB8fVzLZcUqGoPGXMUYjHO2PAYZuw1IdUwlicgOGL1B9yIeP8';
+  
+  // Matched VAPID Public Key
+  readonly VAPID_PUBLIC_KEY = 'BGAgbaEbbGpuE92I7FiigT8999bHBAfgsZNcr7ayNUuAE3KTpSGKbKtbjRPo8_f96hTzCvGv0nzUX8I5dBH8-0g';
   
   isSupported = false;
   isSubscribed = signal<boolean>(false);
@@ -31,16 +33,16 @@ export class WebPushService {
       const subscription = await registration.pushManager.getSubscription();
       this.isSubscribed.set(!!subscription);
     } catch (e) {
-      console.error('SW registration error', e);
+      console.error('SW registration check error', e);
     }
   }
 
-  async subscribe() {
+  async subscribe(): Promise<boolean> {
     if (!this.isSupported) return false;
     
     // Check if running inside an iframe (like AI Studio preview)
     if (window.self !== window.top) {
-      alert("Push notifications are blocked inside iframes by the browser for security reasons.\n\nPlease open the app in a new tab to enable notifications.");
+      alert("Push notifications are restricted inside preview iframes by browser security policies.\n\nPlease open MyFeed in a new browser tab to enable push notifications.");
       this.isDenied.set(true);
       return false;
     }
@@ -54,6 +56,16 @@ export class WebPushService {
 
       const registration = await navigator.serviceWorker.ready;
       
+      // If there was an old subscription with previous keys, unsubscribe it first
+      const oldSub = await registration.pushManager.getSubscription();
+      if (oldSub) {
+        try {
+          await oldSub.unsubscribe();
+        } catch {
+          // ignore
+        }
+      }
+
       const convertedVapidKey = this.urlBase64ToUint8Array(this.VAPID_PUBLIC_KEY);
       
       const subscription = await registration.pushManager.subscribe({
@@ -69,10 +81,13 @@ export class WebPushService {
       if (snap.empty) {
         await addDoc(colRef, {
           ...subJson,
+          userAgent: navigator.userAgent || '',
           createdAt: serverTimestamp()
         });
       }
+      
       this.isSubscribed.set(true);
+      this.isDenied.set(false);
       return true;
     } catch (e) {
       console.error('Subscription error', e);
@@ -83,7 +98,7 @@ export class WebPushService {
   private urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
-      .replace(/\\-/g, '+')
+      .replace(/-/g, '+')
       .replace(/_/g, '/');
 
     const rawData = window.atob(base64);

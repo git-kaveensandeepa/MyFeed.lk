@@ -3,7 +3,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {HttpClient} from '@angular/common/http';
-import {ArticleService, Article, getCuratedTopicImages} from './article.service';
+import {ArticleService, Article, getCuratedTopicImages, FactCheckData, extractDomain} from './article.service';
 import {SubscriberService} from './subscriber.service';
 import {AdManagerService, Ad} from './ad-manager.service';
 import {AnalyticsService} from './analytics.service';
@@ -313,6 +313,100 @@ export interface PolishedResult {
                 <div>
                   <label for="formReadTime" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Read Time</label>
                   <input type="text" id="formReadTime" [(ngModel)]="formReadTime" name="readTime" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans" placeholder="e.g. 5 min">
+                </div>
+              </div>
+
+              <!-- Source URL (Optional) & Original Source Image Extractor -->
+              <div class="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <label for="formSourceUrl" class="block text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600">link</mat-icon>
+                    <span>Original Source / Course URL (මූලාශ්‍ර Web Link එක)</span>
+                  </label>
+                  <span class="text-[11px] text-gray-400 font-medium">The Verge, GSM Arena, BBC, Ada Derana, etc.</span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input 
+                    type="url" 
+                    id="formSourceUrl" 
+                    [(ngModel)]="formSourceUrl" 
+                    name="sourceUrl" 
+                    placeholder="https://www.theverge.com/2025/..." 
+                    class="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+                  />
+                  <button 
+                    type="button" 
+                    (click)="extractImageFromFormSourceUrl()"
+                    [disabled]="isExtractingFormSourceImage() || !formSourceUrl.trim()"
+                    class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <mat-icon [class.animate-spin]="isExtractingFormSourceImage()" style="font-size: 16px; width: 16px; height: 16px;">
+                      {{ isExtractingFormSourceImage() ? 'refresh' : 'image_search' }}
+                    </mat-icon>
+                    <span>{{ isExtractingFormSourceImage() ? 'Extracting...' : '🌐 Original Image එක ගන්න' }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Fact-Check & Credibility Meter Settings -->
+              <div class="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">verified</mat-icon>
+                    </div>
+                    <div>
+                      <h4 class="text-xs font-black uppercase tracking-widest text-emerald-950">Fact-Check & Credibility Meter (තොරතුරු සත්‍යාපනය)</h4>
+                      <p class="text-[11px] text-emerald-800/80 font-medium">මූලාශ්‍ර සත්‍යාපන මට්ටම (100% නැතිනම් හේතුව සඳහන් කරන්න)</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm"
+                       [class.bg-emerald-600]="formFactScore >= 95"
+                       [class.text-white]="formFactScore >= 95"
+                       [class.bg-amber-500]="formFactScore < 95"
+                       [class.text-amber-950]="formFactScore < 95">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">{{ formFactScore >= 95 ? 'verified' : 'pending_actions' }}</mat-icon>
+                    <span>{{ formFactScore }}% {{ formFactScore >= 95 ? 'Verified' : 'Developing' }}</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label for="formFactScore" class="block text-[11px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">Credibility Score (0-100%)</label>
+                    <input 
+                      type="number" 
+                      id="formFactScore" 
+                      [(ngModel)]="formFactScore" 
+                      name="factScore" 
+                      min="0" 
+                      max="100"
+                      class="w-full px-4 py-2.5 bg-white rounded-xl border border-emerald-300 text-sm font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label for="formPrimarySourceName" class="block text-[11px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">Primary Source Name (මූලාශ්‍ර ආයතනයේ නම)</label>
+                    <input 
+                      type="text" 
+                      id="formPrimarySourceName" 
+                      [(ngModel)]="formPrimarySourceName" 
+                      name="primarySourceName" 
+                      placeholder="e.g. Apple Newsroom, The Verge, Reuters, Ada Derana"
+                      class="w-full px-4 py-2.5 bg-white rounded-xl border border-emerald-300 text-sm text-emerald-950 focus:ring-2 focus:ring-emerald-600 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label for="formFactReason" class="block text-[11px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">
+                    {{ formFactScore >= 95 ? 'Verification Reasoning (100% සනාථ කළ ආකාරය)' : 'Status / Missing Verification Reason (100% නැතිනම් හේතුව)' }}
+                  </label>
+                  <input 
+                    type="text" 
+                    id="formFactReason" 
+                    [(ngModel)]="formFactReason" 
+                    name="factReason" 
+                    [placeholder]="formFactScore >= 95 ? 'ප්‍රධාන නිල මූලාශ්‍ර සහ මාධ්‍ය නිවේදන මඟින් 100% ක් සනාථ කර ඇත.' : 'සමාගමේ නිල නිවේදනය තවමත් බලාපොරොත්තුවේ. මූලික කාන්දුවීම් (leaks) මත පදනම් වේ.'"
+                    class="w-full px-4 py-2.5 bg-white rounded-xl border border-emerald-300 text-sm text-emerald-950 focus:ring-2 focus:ring-emerald-600 outline-none font-sans"
+                  />
                 </div>
               </div>
 
@@ -711,7 +805,27 @@ export interface PolishedResult {
                   [class.bg-white/10]="autoStudioSubTab() !== 'polish'"
                   [class.text-gray-300]="autoStudioSubTab() !== 'polish'">
                   <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_fix_high</mat-icon>
-                  <span>4. Content Polisher & Formatter</span>
+                  <span>4. Content Polisher</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  (click)="autoStudioSubTab.set('autopilot'); loadAutoPilotStatus()" 
+                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer relative group"
+                  [class.bg-gradient-to-r]="autoStudioSubTab() === 'autopilot'"
+                  [class.from-emerald-600]="autoStudioSubTab() === 'autopilot'"
+                  [class.to-teal-600]="autoStudioSubTab() === 'autopilot'"
+                  [class.text-white]="autoStudioSubTab() === 'autopilot'"
+                  [class.shadow-lg]="autoStudioSubTab() === 'autopilot'"
+                  [class.shadow-emerald-600/30]="autoStudioSubTab() === 'autopilot'"
+                  [class.bg-white/10]="autoStudioSubTab() !== 'autopilot'"
+                  [class.text-emerald-400]="autoStudioSubTab() !== 'autopilot'">
+                  <div class="relative flex items-center justify-center">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">schedule</mat-icon>
+                    <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  </div>
+                  <span>5. Auto-Pilot 24/7 (පැයෙන් පැයට)</span>
+                  <span class="px-1.5 py-0.5 rounded-md bg-emerald-400/20 text-emerald-300 text-[10px] font-mono font-bold tracking-tight">1-Hr Cron</span>
                 </button>
               </div>
             </div>
@@ -1196,6 +1310,300 @@ export interface PolishedResult {
                 </div>
               </div>
             }
+
+            <!-- SUB-TAB 5: AUTO-PILOT 24/7 HOURLY NEWS ENGINE -->
+            @if (autoStudioSubTab() === 'autopilot') {
+              <div class="space-y-8 animate-fade-in">
+                <!-- Status & Control Header Banner -->
+                <div class="p-6 sm:p-8 rounded-[2.5rem] bg-gradient-to-br from-gray-900 via-slate-900 to-indigo-950 text-white border border-emerald-500/20 shadow-2xl relative overflow-hidden">
+                  <div class="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                  <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div class="space-y-2 max-w-2xl">
+                      <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold tracking-wider">
+                          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400" [class.animate-pulse]="autoPilotEnabled"></span>
+                          <span>{{ autoPilotEnabled ? 'AUTO-PILOT ACTIVE (24/7)' : 'AUTO-PILOT PAUSED' }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400 font-mono">Interval: {{ autoPilotIntervalMinutes }} Minutes</span>
+                      </div>
+                      <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">පැයෙන් පැයට ස්වයංක්‍රීය පුවත් එන්ජිම (1-Hour Auto Sync)</h3>
+                      <p class="text-sm text-gray-300 leading-relaxed">
+                        ලොව ප්‍රමුඛ පෙළේ AI සහ තාක්ෂණ පුවත් මූලාශ්‍ර (TechCrunch, The Verge, Wired, Google News) ස්වයංක්‍රීයව පරිලෝකනය කර, අලුත්ම පුවත් තෝරාගෙන, Gemini AI මඟින් පූර්ණ සිංහල වාර්තා සකස් කර Firestore වෙත Publish කරයි.
+                      </p>
+                    </div>
+
+                    <!-- Actions & Countdown -->
+                    <div class="flex flex-col sm:flex-row lg:flex-col items-stretch lg:items-end gap-3 shrink-0">
+                      <!-- Next Sync Countdown Box -->
+                      <div class="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-between gap-4">
+                        <div>
+                          <div class="text-[10px] uppercase font-bold tracking-widest text-gray-400">Next Scheduled Sync</div>
+                          <div class="text-lg font-black text-emerald-400 font-mono">{{ autoPilotCountdown() }}</div>
+                        </div>
+                        <mat-icon class="text-emerald-400" style="font-size: 24px; width: 24px; height: 24px;">timelapse</mat-icon>
+                      </div>
+
+                      <button 
+                        type="button" 
+                        (click)="triggerAutoPilotNow()" 
+                        [disabled]="isTriggeringAutoPilot()"
+                        class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                        @if (isTriggeringAutoPilot()) {
+                          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <span>Scanning & Publishing Now...</span>
+                        } @else {
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                          <span>⚡ Sync Now (දැන්ම පුවත් Sync කරන්න)</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2-Column Controls: Settings + 24/7 Cloud Webhook Setup -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  <!-- Configuration Panel (5 cols) -->
+                  <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6">
+                    <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                      <div class="flex items-center gap-2">
+                        <mat-icon class="text-indigo-600">tune</mat-icon>
+                        <h4 class="text-base font-bold text-[#1d1d1f]">Auto-Pilot Settings</h4>
+                      </div>
+                      <button (click)="loadAutoPilotStatus()" class="text-xs text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-1">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">refresh</mat-icon> Refresh
+                      </button>
+                    </div>
+
+                    <div class="space-y-4">
+                      <!-- Enable Toggle -->
+                      <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div>
+                          <div class="text-sm font-bold text-gray-900">Auto-Pilot Active State</div>
+                          <div class="text-xs text-gray-500">Enable or disable background timer</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="autoPilotEnabled" class="sr-only peer">
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                      </div>
+
+                      <!-- Interval Selector -->
+                      <div>
+                        <label for="adminAutoPilotInterval" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Sync Frequency (කාල පරතරය)</label>
+                        <select id="adminAutoPilotInterval" [(ngModel)]="autoPilotIntervalMinutes" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-600 outline-none">
+                          <option [value]="30">Every 30 Minutes (මිනිත්තු 30 කට වරක්)</option>
+                          <option [value]="60">Every 1 Hour - Recommended (පැයෙන් පැයට)</option>
+                          <option [value]="120">Every 2 Hours (පැය 2 කට වරක්)</option>
+                          <option [value]="240">Every 4 Hours (පැය 4 කට වරක්)</option>
+                        </select>
+                      </div>
+
+                      <!-- Max Articles per Run -->
+                      <div>
+                        <label for="adminAutoPilotMaxArticles" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Max Articles Per Sync Cycle</label>
+                        <select id="adminAutoPilotMaxArticles" [(ngModel)]="autoPilotMaxArticles" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-600 outline-none">
+                          <option [value]="1">1 Breaking Article per run</option>
+                          <option [value]="2">2 Breaking Articles per run (Recommended)</option>
+                          <option [value]="3">3 Breaking Articles per run</option>
+                        </select>
+                      </div>
+
+                      <!-- Direct Live Publish vs Draft -->
+                      <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div>
+                          <div class="text-sm font-bold text-gray-900">Direct Live Publishing</div>
+                          <div class="text-xs text-gray-500">Publish directly to feed vs save to drafts</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="autoPilotAutoPublish" class="sr-only peer">
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                      </div>
+
+                      <!-- Phone Alert Notification -->
+                      <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div>
+                          <div class="text-sm font-bold text-gray-900">Mobile Phone Alert (ntfy.sh)</div>
+                          <div class="text-xs text-gray-500">Send push notification to your phone</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="autoPilotNotifyPhone" class="sr-only peer">
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                      </div>
+
+                      <!-- WhatsApp Auto Post -->
+                      <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div>
+                          <div class="text-sm font-bold text-gray-900">WhatsApp Channel Auto-Post</div>
+                          <div class="text-xs text-gray-500">Send formatted post to WhatsApp webhook</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="autoPilotPostWhatsApp" class="sr-only peer">
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                      </div>
+
+                      <!-- Save Configuration Button -->
+                      <button 
+                        type="button" 
+                        (click)="saveAutoPilotConfig()" 
+                        [disabled]="isSavingAutoPilotConfig()"
+                        class="w-full py-3.5 rounded-2xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md">
+                        @if (isSavingAutoPilotConfig()) {
+                          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <span>Saving Settings...</span>
+                        } @else {
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">save</mat-icon>
+                          <span>Save Auto-Pilot Settings</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 24/7 Cloud Webhook Cron Setup Guide (7 cols) -->
+                  <div class="lg:col-span-7 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6 flex flex-col justify-between">
+                    <div class="space-y-4">
+                      <div class="flex items-center gap-2 pb-4 border-b border-gray-100">
+                        <mat-icon class="text-emerald-600">cloud_sync</mat-icon>
+                        <h4 class="text-base font-bold text-[#1d1d1f]">24/7 Uninterrupted Cloud Cron Setup</h4>
+                      </div>
+
+                      <p class="text-xs text-gray-600 leading-relaxed">
+                        Browser එක වසා තැබුවද, ඔබේ පරිගණකය හෝ දුරකථනය ක්‍රියා විරහිතව තිබුණද, <strong>පැයෙන් පැයට 100% නොකඩවා පුවත් Publish වීමට</strong> පහත Webhook URL එක භාවිතා කරන්න.
+                      </p>
+
+                      <!-- Webhook Endpoint Box -->
+                      <div class="p-4 rounded-2xl bg-gray-900 text-white space-y-2">
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                          <span class="font-mono text-emerald-400 font-bold">1-HOUR CRON WEBHOOK URL:</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">GET / POST</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <input type="text" readonly [value]="cronWebhookUrl" class="w-full bg-transparent font-mono text-xs text-emerald-300 outline-none truncate" />
+                          <button (click)="copyToClipboard(cronWebhookUrl, 'Cron Webhook URL copied!')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">content_copy</mat-icon> Copy
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- 3-Step Simple Setup Instructions -->
+                      <div class="space-y-3 pt-2">
+                        <div class="text-xs font-bold uppercase tracking-wider text-gray-700">නොමිලේ 1 Minute එකෙන් Set කරගන්නා ආකාරය:</div>
+                        
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                          <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                          <div class="text-xs text-gray-700">
+                            <strong>cron-job.org</strong> (නොමිලේ සේවාවකට) පිවිස නොමිලේ Account එකක් සාදන්න.
+                          </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                          <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                          <div class="text-xs text-gray-700">
+                            <strong>Create Cronjob</strong> ක්ලික් කර, URL එකට ඉහත Webhook URL එක Paste කරන්න.
+                          </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                          <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                          <div class="text-xs text-gray-700">
+                            Execution Schedule එක <strong>"Every 1 hour"</strong> (හෝ every 30 mins) තෝරා <strong>Save</strong> කරන්න.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Security & Specs Footer Note -->
+                    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 flex items-center gap-3 mt-4">
+                      <mat-icon class="text-emerald-600 shrink-0">verified</mat-icon>
+                      <span>Anti-Duplicate Guard සක්‍රීයයි: කලින් පළ වූ පුවත් නැවත duplicate වීම 100% ක් වැළැක්වේ.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Live Auto-Pilot Activity & Sync Logs -->
+                <div class="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                    <div class="flex items-center gap-2">
+                      <mat-icon class="text-indigo-600">history</mat-icon>
+                      <h4 class="text-base font-bold text-[#1d1d1f]">Live Execution History & Sync Logs</h4>
+                      <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-mono">
+                        {{ autoPilotLogs().length }} events
+                      </span>
+                    </div>
+                    <button (click)="loadAutoPilotStatus()" class="text-xs text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-1 self-start sm:self-auto">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">refresh</mat-icon> Refresh Logs
+                    </button>
+                  </div>
+
+                  @if (autoPilotLogs().length === 0) {
+                    <div class="p-12 text-center text-gray-400 space-y-3">
+                      <mat-icon style="font-size: 40px; width: 40px; height: 40px;" class="text-gray-300">hourglass_empty</mat-icon>
+                      <div class="text-sm font-medium">No sync events recorded yet. Click "⚡ Sync Now" to run the first check.</div>
+                    </div>
+                  } @else {
+                    <div class="space-y-3">
+                      @for (log of autoPilotLogs(); track log.id) {
+                        <div class="p-4 sm:p-5 rounded-2xl border transition-all"
+                             [class.bg-emerald-50/50]="log.status === 'success'"
+                             [class.border-emerald-200]="log.status === 'success'"
+                             [class.bg-amber-50/40]="log.status === 'warning'"
+                             [class.border-amber-200]="log.status === 'warning'"
+                             [class.bg-red-50/40]="log.status === 'error'"
+                             [class.border-red-200]="log.status === 'error'">
+                          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2">
+                              @if (log.status === 'success') {
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                <span class="text-xs font-bold text-emerald-800 uppercase tracking-wide">Sync Successful</span>
+                              } @else if (log.status === 'warning') {
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">Up to Date</span>
+                              } @else {
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                <span class="text-xs font-bold text-red-800 uppercase tracking-wide">Sync Error</span>
+                              }
+                              <span class="text-xs text-gray-500 font-mono">({{ log.triggerType }})</span>
+                            </div>
+
+                            <div class="flex items-center gap-3 text-xs text-gray-500 font-mono">
+                              <span>⏱️ {{ log.durationMs }}ms</span>
+                              <span>•</span>
+                              <span>{{ log.timestamp }}</span>
+                            </div>
+                          </div>
+
+                          <p class="text-xs text-gray-700 font-medium mb-3">{{ log.message }}</p>
+
+                          <!-- Published Articles from this run -->
+                          @if (log.publishedArticles && log.publishedArticles.length > 0) {
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-black/5">
+                              @for (pub of log.publishedArticles; track pub.title) {
+                                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-white/80 border border-black/5">
+                                  <img [src]="pub.imageUrl" alt="Thumb" referrerpolicy="no-referrer" class="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                  <div class="min-w-0 flex-1">
+                                    <div class="text-xs font-bold text-gray-900 truncate">{{ pub.title }}</div>
+                                    <div class="text-[10px] text-gray-500 flex items-center gap-2">
+                                      <span class="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold">{{ pub.category }}</span>
+                                      @if (pub.url) {
+                                        <a [href]="pub.url" target="_blank" class="text-blue-600 hover:underline">View Article ↗</a>
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
           </div>
         } @else if (activeTab() === 'subscribers') {
           <!-- Subscribers Tab -->
@@ -1348,6 +1756,65 @@ export interface PolishedResult {
           <!-- Notify Tab -->
           <div class="max-w-3xl mx-auto space-y-8">
             
+            <!-- Browser Web Push Notifications Card -->
+            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div class="flex items-center gap-6">
+                  <div class="w-16 h-16 rounded-[2rem] bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+                    <mat-icon style="font-size: 32px; width: 32px; height: 32px;">podcasts</mat-icon>
+                  </div>
+                  <div>
+                    <h2 class="text-2xl font-black text-[#1d1d1f]">Web Push Notifications (Browsers)</h2>
+                    <p class="text-sm text-gray-500">Auto-sent to all readers who tapped "Allow Notifications" on Chrome, Safari & Android</p>
+                  </div>
+                </div>
+                <div class="px-4 py-2 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-2 self-start sm:self-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  <span>{{ webPushSubscriberCount() }} Active Subscribers</span>
+                </div>
+              </div>
+
+              <!-- Web Push Quick Test -->
+              <div class="space-y-4">
+                <div class="p-6 rounded-[2rem] bg-indigo-50/50 border border-indigo-100 space-y-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                      <label for="webPushTitle" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Push Alert Title</label>
+                      <input id="webPushTitle" [(ngModel)]="webPushTitle" name="webPushTitle" class="w-full px-6 py-4 rounded-2xl bg-white border border-black/5 focus:outline-none focus:ring-2 focus:ring-indigo-600 font-bold text-sm" placeholder="📰 MyFeed.lk Breaking News" />
+                    </div>
+                    <div class="space-y-2">
+                      <label for="webPushBody" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Push Alert Message Body</label>
+                      <input id="webPushBody" [(ngModel)]="webPushBody" name="webPushBody" class="w-full px-6 py-4 rounded-2xl bg-white border border-black/5 focus:outline-none focus:ring-2 focus:ring-indigo-600 font-medium text-sm" placeholder="නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි." />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button type="button" (click)="sendTestWebPush()" [disabled]="isTestingWebPush()" class="flex-1 py-4 rounded-full bg-indigo-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                      @if (isTestingWebPush()) {
+                        <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                        <span>Dispatching Web Push to Subscribers...</span>
+                      } @else {
+                        <mat-icon>send</mat-icon>
+                        <span>Send Test Web Push to All Browsers</span>
+                      }
+                    </button>
+
+                    <button type="button" (click)="loadWebPushSubscribersCount()" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
+                      <mat-icon>refresh</mat-icon>
+                      <span>Refresh Count</span>
+                    </button>
+                  </div>
+
+                  @if (webPushTestSuccess()) {
+                    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
+                      <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                      <span class="text-xs font-bold">{{ webPushTestSuccess() }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
             <!-- Phone Push Alerts Card (100% Free Instant Mobile Alerts via ntfy.sh) -->
             <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
               <div class="flex items-center gap-6 mb-8">
@@ -1847,8 +2314,31 @@ export interface PolishedResult {
               </div>
             </div>
 
-            <!-- Alternative Options: AI Generate or Custom URL or Local File -->
+            <!-- Alternative Options: AI Generate or Custom URL or Local File or Source URL -->
             <div class="space-y-3 mb-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <!-- Original Web Source Image Extraction Option -->
+              @if (qArticle.sourceUrl) {
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-600">travel_explore</mat-icon>
+                      <span>Original Source Website එකෙන් Image එක ගන්න</span>
+                    </div>
+                    <div class="text-[11px] text-gray-500 truncate max-w-sm">{{ qArticle.sourceUrl }}</div>
+                  </div>
+                  <button type="button" (click)="extractQuickSourceImage()" [disabled]="isExtractingQuickSourceImage()"
+                          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0">
+                    @if (isExtractingQuickSourceImage()) {
+                      <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Extracting...</span>
+                    } @else {
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">image_search</mat-icon>
+                      <span>🌐 Fetch Original Photo</span>
+                    }
+                  </button>
+                </div>
+              }
+
               <!-- AI Generate Option -->
               <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
                 <div>
@@ -1927,7 +2417,7 @@ export class AdminComponent {
   readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics'>('articles');
   
   // Auto Studio signals & state
-  readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish'>('trending');
+  readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish' | 'autopilot'>('trending');
   readonly trendingNews = signal<TrendingNewsItem[]>([]);
   readonly isLoadingTrending = signal(false);
   readonly selectedTrendingIds = signal<string[]>([]);
@@ -2010,6 +2500,8 @@ export class AdminComponent {
   readonly quickImageSuggestions = signal<string[]>([]);
   readonly isQuickImageUpdating = signal(false);
   readonly isGeneratingQuickAiImage = signal(false);
+  readonly isExtractingQuickSourceImage = signal(false);
+  readonly isExtractingFormSourceImage = signal(false);
 
   // Deployment signals
   netlifyHookUrl = '';
@@ -2035,6 +2527,39 @@ export class AdminComponent {
   readonly phoneAlertSuccess = signal(false);
   readonly isSendingAlertForId = signal<string | null>(null);
 
+  // Auto-Pilot 24/7 Engine Signals & State
+  autoPilotEnabled = true;
+  autoPilotIntervalMinutes = 60;
+  autoPilotMaxArticles = 2;
+  autoPilotAutoPublish = true;
+  autoPilotNotifyPhone = true;
+  autoPilotPostWhatsApp = true;
+  readonly autoPilotLogs = signal<{
+    id: string;
+    timestamp: string;
+    durationMs: number;
+    sourcesScanned: number;
+    newArticlesFound: number;
+    publishedArticles: { title: string; category: string; imageUrl: string; url?: string }[];
+    status: 'success' | 'warning' | 'error';
+    message: string;
+    triggerType: string;
+  }[]>([]);
+  readonly autoPilotCountdown = signal<string>('--:--');
+  readonly isTriggeringAutoPilot = signal(false);
+  readonly isSavingAutoPilotConfig = signal(false);
+  readonly isLoadingAutoPilot = signal(false);
+  cronWebhookUrl = 'https://myfeed.lk/api/cron/sync-news';
+  private autoPilotNextTargetTime = Date.now() + 60 * 60 * 1000;
+  private autoPilotCountdownInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Web Push Browser Notifications State
+  webPushTitle = '📰 MyFeed.lk Breaking News';
+  webPushBody = 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!';
+  readonly webPushSubscriberCount = signal<number>(0);
+  readonly isTestingWebPush = signal(false);
+  readonly webPushTestSuccess = signal<string | null>(null);
+
   // Broadcast signals
   broadcastSubject = '';
   broadcastMessage = '';
@@ -2049,8 +2574,12 @@ export class AdminComponent {
   formContent = '';
   formCategory = '';
   formImageUrl = '';
+  formSourceUrl = '';
   formReadTime = '';
   formAuthorType: 'ai' | 'human' = 'ai';
+  formFactScore = 100;
+  formFactReason = '';
+  formPrimarySourceName = '';
   
   editingAdId = signal<string | null>(null);
   adFormTitle = '';
@@ -2081,6 +2610,9 @@ export class AdminComponent {
         this.loadDeploySettings();
         this.loadWaSettings();
         this.loadPhoneSettings();
+        this.loadWebPushSubscribersCount();
+        this.loadAutoPilotStatus();
+        this.startAutoPilotCountdown();
       }
     });
   }
@@ -2115,8 +2647,12 @@ export class AdminComponent {
     this.formContent = article.content;
     this.formCategory = article.category;
     this.formImageUrl = article.imageUrl;
+    this.formSourceUrl = article.sourceUrl || '';
     this.formReadTime = article.readTime || '5 min';
     this.formAuthorType = article.authorType === 'human' ? 'human' : 'ai';
+    this.formFactScore = article.factCheck?.score ?? (article.sourceUrl ? 100 : 95);
+    this.formFactReason = article.factCheck?.reason ?? '';
+    this.formPrimarySourceName = article.factCheck?.sources?.[0]?.name ?? '';
     this.isAdding.set(true);
   }
 
@@ -2350,6 +2886,81 @@ export class AdminComponent {
     }
   }
 
+  async extractQuickSourceImage() {
+    const article = this.quickImageArticle();
+    const sourceUrl = article?.sourceUrl || '';
+    if (!sourceUrl || !sourceUrl.startsWith('http')) {
+      alert('Source URL එකක් හමු නොවීය.');
+      return;
+    }
+
+    this.isExtractingQuickSourceImage.set(true);
+    try {
+      const res = await fetch('/api/extract-source-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: sourceUrl })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to extract image from source website');
+      }
+
+      const data = await res.json();
+      if (data.originalImageUrl) {
+        this.quickImageUrl.set(data.originalImageUrl);
+      } else if (data.imageUrl) {
+        this.quickImageUrl.set(data.imageUrl);
+      } else {
+        alert('මෙම Source Website එකෙන් Original Image එකක් හඳුනාගත නොහැකි විය.');
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Source Image Extraction Error: ' + (e.message || String(err)));
+    } finally {
+      this.isExtractingQuickSourceImage.set(false);
+    }
+  }
+
+  async extractImageFromFormSourceUrl() {
+    const url = (this.formSourceUrl || '').trim();
+    if (!url || !url.startsWith('http')) {
+      alert('කරුණාකර වලංගු Source URL (Web Link) එකක් ඇතුළත් කරන්න.');
+      return;
+    }
+
+    this.isExtractingFormSourceImage.set(true);
+    try {
+      const res = await fetch('/api/extract-source-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to extract original image');
+      }
+
+      const data = await res.json();
+      if (data.originalImageUrl) {
+        this.formImageUrl = data.originalImageUrl;
+        this.deleteToast.set('Original Source Image එක සාර්ථකව load කරගන්නා ලදී! 📸');
+        setTimeout(() => this.deleteToast.set(null), 4000);
+      } else if (data.imageUrl) {
+        this.formImageUrl = data.imageUrl;
+      } else {
+        alert('මෙම Source Website එකෙන් Image එකක් හමු නොවීය.');
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Extraction Error: ' + (e.message || String(err)));
+    } finally {
+      this.isExtractingFormSourceImage.set(false);
+    }
+  }
+
   async saveQuickImage() {
     const article = this.quickImageArticle();
     const newUrl = this.quickImageUrl().trim();
@@ -2394,6 +3005,8 @@ export class AdminComponent {
       this.formContent = data.sinhalaFullContent || '';
       if (data.suggestedCategory) this.formCategory = data.suggestedCategory;
       if (data.readTime) this.formReadTime = data.readTime;
+      if (data.factCheckScore !== undefined) this.formFactScore = data.factCheckScore;
+      if (data.factCheckReason) this.formFactReason = data.factCheckReason;
       
       // Generate matching AI image tailored to the newly generated title
       if (!this.formImageUrl) {
@@ -2427,8 +3040,15 @@ export class AdminComponent {
       this.formCategory = data.suggestedCategory || 'Tech';
       this.formReadTime = data.readTime || '4 min read';
       this.formAuthorType = 'ai';
+      this.formSourceUrl = this.aiUrlPrompt;
+      if (data.factCheckScore !== undefined) this.formFactScore = data.factCheckScore;
+      if (data.factCheckReason) this.formFactReason = data.factCheckReason;
       
-      if (data.visualPrompt) {
+      if (data.originalImageUrl) {
+        this.formImageUrl = data.originalImageUrl;
+      } else if (data.imageUrl) {
+        this.formImageUrl = data.imageUrl;
+      } else if (data.visualPrompt) {
         this.generatedImagePrompt.set(data.visualPrompt);
         // Automatically trigger image generation
         this.generateImageFromTitle();
@@ -2449,16 +3069,44 @@ export class AdminComponent {
     try {
       const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       
+      const fcScore = typeof this.formFactScore === 'number' ? this.formFactScore : 100;
+      const sourceName = this.formPrimarySourceName.trim() || (this.formSourceUrl ? extractDomain(this.formSourceUrl).name : 'Primary Verified Source');
+      const fcReason = this.formFactReason.trim() || (fcScore >= 95 
+        ? 'ප්‍රධාන නිල මූලාශ්‍ර සහ මාධ්‍ය නිවේදන මඟින් 100% ක් සනාථ කර ඇත.' 
+        : 'සමාගමේ නිල නිවේදනය තවමත් බලාපොරොත්තුවේ. මූලික කාන්දුවීම් (leaks) මත පදනම් වේ.');
+
+      const factCheckObj: FactCheckData = {
+        score: fcScore,
+        status: fcScore >= 95 ? 'verified_100' : 'developing',
+        statusBadge: fcScore >= 95 ? '100% සත්‍යාපිත මූලාශ්‍රයකි (Fully Verified)' : `${fcScore}% සත්‍යාපිතයි (Developing Story)`,
+        reason: fcReason,
+        sources: [
+          {
+            name: sourceName,
+            url: this.formSourceUrl || undefined,
+            isPrimary: true
+          }
+        ],
+        metrics: {
+          sourceReliability: fcScore >= 95 ? 100 : 90,
+          factualAccuracy: fcScore >= 95 ? 100 : 85,
+          editorialReview: fcScore >= 95 ? 100 : 95
+        },
+        checkedBy: 'MyFeed Fact-Check Desk'
+      };
+
       const payload: Partial<Article> = {
         title: this.formTitle,
         summary: this.formSummary,
         content: this.formContent,
         category: this.formCategory,
         imageUrl: this.formImageUrl,
+        sourceUrl: this.formSourceUrl || undefined,
         readTime: this.formReadTime,
         date: dateStr,
         authorType: this.formAuthorType,
         isAiGenerated: this.formAuthorType === 'ai',
+        factCheck: factCheckObj,
         slug: this.formTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
       };
 
@@ -2634,8 +3282,12 @@ export class AdminComponent {
     this.formContent = '';
     this.formCategory = '';
     this.formImageUrl = '';
+    this.formSourceUrl = '';
     this.formReadTime = '';
     this.formAuthorType = 'ai';
+    this.formFactScore = 100;
+    this.formFactReason = '';
+    this.formPrimarySourceName = '';
   }
 
   async sendBroadcast() {
@@ -2937,27 +3589,57 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   }
 
   
-  async triggerWebPushNotification(data: { title: string; summary: string; articleUrl: string; imageUrl?: string }): Promise<boolean> {
+  async loadWebPushSubscribersCount() {
     try {
       const { collection, getDocs } = await import('firebase/firestore');
       const { db } = await import('./firebase');
-      const colRef = collection(db, 'web_push_subscriptions');
-      const snap = await getDocs(colRef);
-      const subscriptions = snap.docs.map(d => d.data());
-      
-      if (subscriptions.length === 0) return true;
+      const snap = await getDocs(collection(db, 'web_push_subscriptions'));
+      this.webPushSubscriberCount.set(snap.size);
+    } catch {
+      this.webPushSubscriberCount.set(0);
+    }
+  }
 
-      const payload = {
-        title: data.title,
-        summary: data.summary,
-        articleUrl: data.articleUrl,
-        subscriptions
-      };
-
+  async sendTestWebPush() {
+    this.isTestingWebPush.set(true);
+    this.webPushTestSuccess.set(null);
+    try {
       const res = await fetch('/api/notify/webpush', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          title: this.webPushTitle || 'MyFeed.lk Test Notification',
+          summary: this.webPushBody || 'This is a test notification from MyFeed.lk',
+          articleUrl: '/'
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        this.webPushTestSuccess.set(`✅ Web Push sent! ${data.sent ?? data.count ?? 0} delivered (Total subscribers: ${data.total ?? this.webPushSubscriberCount()})`);
+        await this.loadWebPushSubscribersCount();
+      } else {
+        throw new Error(data.error || 'Failed to send test web push');
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('Web Push Test Error: ' + (err.message || String(e)));
+    } finally {
+      this.isTestingWebPush.set(false);
+    }
+  }
+  
+  async triggerWebPushNotification(data: { title: string; summary: string; articleUrl: string; imageUrl?: string; category?: string }): Promise<boolean> {
+    try {
+      const res = await fetch('/api/notify/webpush', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          summary: data.summary,
+          articleUrl: data.articleUrl,
+          imageUrl: data.imageUrl,
+          category: data.category
+        })
       });
       return res.ok;
     } catch (e) {
@@ -3214,6 +3896,15 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         });
       }
 
+      // 5. Dispatch Web Push to all browser subscribers
+      this.triggerWebPushNotification({
+        title: newArticlePayload.title || '',
+        summary: newArticlePayload.summary || '',
+        imageUrl: newArticlePayload.imageUrl || '',
+        articleUrl,
+        category: newArticlePayload.category || 'Tech'
+      });
+
       this.deleteToast.set(`🚀 Published "${newArticlePayload.title}" successfully!`);
       setTimeout(() => this.deleteToast.set(null), 6000);
       this.selectedTrendingIds.set(this.selectedTrendingIds().filter(id => id !== item.id));
@@ -3304,6 +3995,15 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
                 customSnippet: generated.socialShareText
               });
             }
+
+            // Web Push notification to subscribers
+            this.triggerWebPushNotification({
+              title: newArticlePayload.title || '',
+              summary: newArticlePayload.summary || '',
+              imageUrl: newArticlePayload.imageUrl || '',
+              articleUrl,
+              category: newArticlePayload.category || 'Tech'
+            });
           }
         } catch (itemErr) {
           console.error('Batch item error:', itemErr);
@@ -3481,6 +4181,15 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         });
       }
 
+      // Trigger Web Push to Browser Subscribers
+      this.triggerWebPushNotification({
+        title: newArticlePayload.title || '',
+        summary: newArticlePayload.summary || '',
+        imageUrl: newArticlePayload.imageUrl || '',
+        articleUrl,
+        category: newArticlePayload.category || 'Tech'
+      });
+
       this.deleteToast.set(`🚀 "${newArticlePayload.title}" Published Successfully!`);
       setTimeout(() => this.deleteToast.set(null), 6000);
       this.generatedStudioArticle.set(null);
@@ -3565,5 +4274,141 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }).catch(() => {
       alert('Copy failed');
     });
+  }
+
+  // ==========================================
+  // AUTO-PILOT 24/7 ENGINE METHODS
+  // ==========================================
+
+  async loadAutoPilotStatus() {
+    this.isLoadingAutoPilot.set(true);
+    try {
+      if (typeof window !== 'undefined') {
+        this.cronWebhookUrl = `${window.location.origin}/api/cron/sync-news`;
+      }
+      const res = await fetch('/api/admin/autopilot/status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.config) {
+          this.autoPilotEnabled = data.config.enabled ?? true;
+          this.autoPilotIntervalMinutes = data.config.intervalMinutes ?? 60;
+          this.autoPilotAutoPublish = data.config.autoPublish ?? true;
+          this.autoPilotNotifyPhone = data.config.notifyPhone ?? true;
+          this.autoPilotPostWhatsApp = data.config.postWhatsApp ?? true;
+          this.autoPilotMaxArticles = data.config.maxArticlesPerRun ?? 2;
+        }
+        if (data.logs) {
+          this.autoPilotLogs.set(data.logs);
+        }
+        if (data.nextRunTime) {
+          this.autoPilotNextTargetTime = data.nextRunTime;
+          this.updateAutoPilotCountdown();
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch auto-pilot status:', err);
+    } finally {
+      this.isLoadingAutoPilot.set(false);
+    }
+  }
+
+  async saveAutoPilotConfig() {
+    this.isSavingAutoPilotConfig.set(true);
+    try {
+      const res = await fetch('/api/admin/autopilot/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: this.autoPilotEnabled,
+          intervalMinutes: Number(this.autoPilotIntervalMinutes),
+          autoPublish: this.autoPilotAutoPublish,
+          notifyPhone: this.autoPilotNotifyPhone,
+          postWhatsApp: this.autoPilotPostWhatsApp,
+          phoneTopic: this.phoneTopic,
+          waWebhookUrl: this.waWebhookUrl,
+          maxArticlesPerRun: Number(this.autoPilotMaxArticles)
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to save auto-pilot config');
+      }
+
+      const data = await res.json();
+      if (data.nextRunTime) {
+        this.autoPilotNextTargetTime = data.nextRunTime;
+        this.updateAutoPilotCountdown();
+      }
+
+      this.deleteToast.set('⚙️ Auto-Pilot Settings Saved Successfully!');
+      setTimeout(() => this.deleteToast.set(null), 4000);
+      await this.loadAutoPilotStatus();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Save Error: ' + (e.message || String(err)));
+    } finally {
+      this.isSavingAutoPilotConfig.set(false);
+    }
+  }
+
+  async triggerAutoPilotNow() {
+    this.isTriggeringAutoPilot.set(true);
+    try {
+      const res = await fetch('/api/admin/autopilot/sync-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Auto-pilot sync failed');
+      }
+
+      if (data.count > 0) {
+        this.deleteToast.set(`🚀 Synced & Published ${data.count} New Articles on Auto-Pilot!`);
+        this.articleService.loadArticles(); // Refresh article list in dashboard
+      } else {
+        this.deleteToast.set(`ℹ️ Feeds Scanned: All current stories are already published & synced.`);
+      }
+      setTimeout(() => this.deleteToast.set(null), 5000);
+      await this.loadAutoPilotStatus();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert('Auto-Pilot Error: ' + (e.message || String(err)));
+    } finally {
+      this.isTriggeringAutoPilot.set(false);
+    }
+  }
+
+  private startAutoPilotCountdown() {
+    if (typeof window === 'undefined') return;
+    if (this.autoPilotCountdownInterval) {
+      clearInterval(this.autoPilotCountdownInterval);
+    }
+    this.updateAutoPilotCountdown();
+    this.autoPilotCountdownInterval = setInterval(() => {
+      this.updateAutoPilotCountdown();
+    }, 1000);
+  }
+
+  private updateAutoPilotCountdown() {
+    if (!this.autoPilotEnabled) {
+      this.autoPilotCountdown.set('PAUSED');
+      return;
+    }
+
+    const now = Date.now();
+    const diff = Math.max(0, this.autoPilotNextTargetTime - now);
+
+    if (diff === 0) {
+      this.autoPilotCountdown.set('Syncing Now...');
+      return;
+    }
+
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    const formatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    this.autoPilotCountdown.set(formatted);
   }
 }
