@@ -1,19 +1,23 @@
-import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, signal, untracked, ChangeDetectorRef} from '@angular/core';
 import {Title, Meta} from '@angular/platform-browser';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {map} from 'rxjs/operators';
-import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, getArticleFactCheck, Article} from './article.service';
+import {FormsModule} from '@angular/forms';
+import {DatePipe} from '@angular/common';
+import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, getArticleFactCheck, Article, ArticleComment} from './article.service';
 import {BookmarkManager} from './bookmark';
 import {SkeletonLoaderComponent} from './skeleton-loader.component';
+import {AuthService} from './auth.service';
 import {auth} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
+import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-article',
-  imports: [MatIconModule, RouterLink, SkeletonLoaderComponent],
+  imports: [MatIconModule, RouterLink, SkeletonLoaderComponent, FormsModule, DatePipe],
   template: `
     @if (articleService.loading() && !article()) {
       <app-skeleton-loader type="article-detail"></app-skeleton-loader>
@@ -84,40 +88,6 @@ import {onAuthStateChanged} from 'firebase/auth';
                 title="Create Social Media Story Card">
                 <mat-icon style="font-size: 16px; width: 16px; height: 16px;">image</mat-icon>
                 <span>Story Poster</span>
-              </button>
-
-              <!-- Audio TTS Listen -->
-              <button 
-                (click)="toggleSpeech(article)"
-                [disabled]="isLoadingAudio()"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full transition-all cursor-pointer border text-xs font-bold shrink-0 active:scale-95"
-                [class.bg-blue-600]="isSpeaking()"
-                [class.text-white]="isSpeaking()"
-                [class.border-blue-600]="isSpeaking()"
-                [class.shadow-md]="isSpeaking()"
-                [class.shadow-blue-500/20]="isSpeaking()"
-                [class.bg-black/5]="!isSpeaking()"
-                [class.dark:bg-white/10]="!isSpeaking()"
-                [class.hover:bg-black/10]="!isSpeaking()"
-                [class.dark:hover:bg-white/20]="!isSpeaking()"
-                [class.text-[#1d1d1f]]="!isSpeaking()"
-                [class.dark:text-white]="!isSpeaking()"
-                [class.border-black/5]="!isSpeaking()"
-                [class.dark:border-white/10]="!isSpeaking()"
-                title="Listen to this article">
-                @if (isLoadingAudio()) {
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="animate-spin text-blue-600 dark:text-blue-400">sync</mat-icon>
-                  <span>Loading...</span>
-                } @else if (isSpeaking() && !isPaused()) {
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="animate-pulse">volume_up</mat-icon>
-                  <span>Playing</span>
-                } @else if (isPaused()) {
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">pause</mat-icon>
-                  <span>Paused</span>
-                } @else {
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600 dark:text-blue-400">headphones</mat-icon>
-                  <span>Listen</span>
-                }
               </button>
 
               <!-- WhatsApp Direct Share & Forward Button -->
@@ -218,7 +188,7 @@ import {onAuthStateChanged} from 'firebase/auth';
                   </span>
                 </div>
                 <div class="text-[11px] sm:text-sm font-medium text-[#1d1d1f]/60 dark:text-white/60 leading-snug">
-                  Supervised & Edited by Kaveen Sandeepa
+                  Supervised & Edited by MyFeed Editorial Desk
                 </div>
               </div>
             }
@@ -520,6 +490,124 @@ import {onAuthStateChanged} from 'firebase/auth';
             </div>
           </div>
 
+          <!-- Comments Section -->
+          <div class="mt-14 sm:mt-20 pt-10 sm:pt-14 border-t border-black/5 dark:border-white/10" id="comments">
+            <h3 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-6 flex items-center gap-2">
+              <mat-icon class="text-blue-500">forum</mat-icon>
+              Comments (අදහස්)
+              <span class="text-sm font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full ml-2">
+                {{ comments().length }}
+              </span>
+            </h3>
+
+            <!-- Add Comment Form -->
+            <div class="mb-10 bg-black/[0.02] dark:bg-white/[0.02] p-5 sm:p-6 rounded-2xl border border-black/5 dark:border-white/5">
+              @if (authService.isLoggedIn()) {
+                <div class="flex gap-4">
+                  <div class="relative w-10 h-10 shrink-0">
+                    <div class="w-full h-full rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold border border-black/5 dark:border-white/10">
+                      @if (authService.userProfile()?.photoURL || authService.currentUser()?.photoURL) {
+                        <img [src]="authService.userProfile()?.photoURL || authService.currentUser()?.photoURL" alt="You" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                      } @else {
+                        {{ authService.userInitials() }}
+                      }
+                    </div>
+                    
+                    <!-- Online Status Indicator -->
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-[#1c1c1e] rounded-full z-10 shadow-sm" title="Online"></div>
+
+                    <!-- Verification / Admin Badge -->
+                    @if (authService.userProfile()?.verified || authService.isAdmin()) {
+                      <div class="absolute -top-1 -right-1 z-10 bg-white dark:bg-[#1c1c1e] rounded-full p-[1px] flex items-center justify-center shadow-sm" title="{{ authService.isAdmin() ? 'Admin' : 'Verified User' }}">
+                        <mat-icon class="{{ authService.isAdmin() ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ authService.isAdmin() ? 'shield' : 'verified' }}</mat-icon>
+                      </div>
+                    }
+                  </div>
+                  <div class="flex-grow">
+                    <textarea 
+                      [(ngModel)]="newCommentText" 
+                      rows="3" 
+                      placeholder="Share your thoughts about this article..." 
+                      class="w-full bg-white dark:bg-[#1a1a1c] border border-black/10 dark:border-white/10 rounded-xl p-4 text-[#1d1d1f] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-y min-h-[80px]"
+                    ></textarea>
+                    <div class="mt-3 flex justify-end">
+                      <button 
+                        (click)="submitComment()" 
+                        [disabled]="isSubmittingComment() || !newCommentText().trim()"
+                        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-full transition-all flex items-center gap-2 shadow-sm"
+                      >
+                        @if (isSubmittingComment()) {
+                          <mat-icon class="animate-spin" style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
+                          <span>Posting...</span>
+                        } @else {
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">send</mat-icon>
+                          <span>Post Comment</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <div class="text-center py-6">
+                  <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100 dark:border-blue-800/30">
+                    <mat-icon class="text-blue-500" style="font-size: 32px; width: 32px; height: 32px;">lock</mat-icon>
+                  </div>
+                  <h4 class="text-[#1d1d1f] dark:text-white font-bold text-lg mb-2">Join the Conversation</h4>
+                  <p class="text-sm text-[#1d1d1f]/60 dark:text-white/60 mb-6 max-w-sm mx-auto">
+                    Sign in to share your thoughts, ask questions, and interact with other readers.
+                  </p>
+                  <button 
+                    (click)="authService.openAuthModal('login')"
+                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-transform active:scale-95 shadow-md"
+                  >
+                    Log in to Comment
+                  </button>
+                </div>
+              }
+            </div>
+
+            <!-- Comments List -->
+            <div class="space-y-6">
+              @for (comment of comments(); track comment.id) {
+                <div class="flex gap-4 group">
+                  <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-gray-200 dark:bg-gray-800 border border-black/5 dark:border-white/5 flex items-center justify-center text-gray-500 font-bold text-sm">
+                    @if (comment.authorPhotoURL) {
+                      <img [src]="comment.authorPhotoURL" alt="{{comment.authorName}}" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                    } @else {
+                      {{ comment.authorName.substring(0, 2).toUpperCase() }}
+                    }
+                  </div>
+                  <div class="flex-grow">
+                    <div class="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl rounded-tl-sm p-4 border border-black/[0.02] dark:border-white/[0.02]">
+                      <div class="flex items-center gap-1.5 mb-1.5">
+                        <span class="font-bold text-sm text-[#1d1d1f] dark:text-[#f5f5f7]">{{ comment.authorName }}</span>
+                        <!-- Verification / Admin Badge -->
+                        @if (comment.authorVerified || comment.authorRole === 'admin') {
+                          <div class="flex items-center justify-center" title="{{ comment.authorRole === 'admin' ? 'Admin' : 'Verified User' }}">
+                            <mat-icon class="{{ comment.authorRole === 'admin' ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ comment.authorRole === 'admin' ? 'shield' : 'verified' }}</mat-icon>
+                          </div>
+                        }
+                        @if (comment.createdAt) {
+                          <span class="text-[10px] text-gray-500 font-medium ml-1">
+                            {{ formatCommentDate(comment.createdAt) | date:'MMM d, y, h:mm a' }}
+                          </span>
+                        }
+                      </div>
+                      <p class="text-sm text-[#1d1d1f]/80 dark:text-white/80 whitespace-pre-wrap leading-relaxed">
+                        {{ comment.text }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="text-center py-10 bg-black/[0.01] dark:bg-white/[0.01] border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+                  <mat-icon class="text-gray-400 dark:text-gray-600 mb-3" style="font-size: 40px; width: 40px; height: 40px;">chat_bubble_outline</mat-icon>
+                  <p class="text-sm text-gray-500 font-medium">No comments yet. Be the first to share your thoughts!</p>
+                </div>
+              }
+            </div>
+          </div>
+
           <!-- Related Articles Section (සබැඳි පුවත්) -->
           @if (relatedArticles().length > 0) {
             <section class="mt-14 sm:mt-20 pt-10 sm:pt-14 border-t border-black/5 dark:border-white/10 animate-fade-in-up">
@@ -600,7 +688,7 @@ import {onAuthStateChanged} from 'firebase/auth';
                 <span>AI විනිවිදභාවය සහ සංස්කාරක ප්‍රකාශනය (AI Transparency)</span>
               </div>
               <p class="text-blue-900/70 dark:text-blue-200/70 text-[11px] sm:text-xs leading-relaxed">
-                මෙම තාක්ෂණික පුවත් වාර්තාව MyFeed.lk ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) මාධ්‍ය පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු ප්‍රධාන කර්තෘ කවින් සඳීප විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
+                මෙම තාක්ෂණික පුවත් වාර්තාව MyFeed.lk ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) මාධ්‍ය පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු MyFeed.lk සංස්කාරක මණ්ඩලය (Editorial Team) විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
               </p>
             </div>
           }
@@ -877,6 +965,14 @@ export class ArticleComponent implements OnDestroy {
   private titleService = inject(Title);
   private metaService = inject(Meta);
 
+  readonly authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+
+  readonly comments = signal<ArticleComment[]>([]);
+  readonly newCommentText = signal<string>('');
+  readonly isSubmittingComment = signal<boolean>(false);
+  private unsubscribeComments: Unsubscribe | null = null;
+
   readonly isAdmin = signal(false);
   readonly showDeleteConfirmModal = signal(false);
   readonly isDeletingArticle = signal(false);
@@ -969,6 +1065,30 @@ export class ArticleComponent implements OnDestroy {
           }, 1500);
         });
       }
+    });
+
+    // 3. Comments listener
+    effect(() => {
+      const art = this.article();
+      untracked(() => {
+        if (this.unsubscribeComments) {
+          this.unsubscribeComments();
+          this.unsubscribeComments = null;
+        }
+        if (art && art.id && typeof window !== 'undefined') {
+          const q = this.articleService.getComments(art.id);
+          this.unsubscribeComments = onSnapshot(q, (snapshot) => {
+            const fetchedComments: ArticleComment[] = [];
+            snapshot.forEach(doc => {
+              fetchedComments.push({ id: doc.id, ...doc.data() } as ArticleComment);
+            });
+            this.comments.set(fetchedComments);
+            this.cdr.markForCheck();
+          }, (error) => {
+            console.error('Error fetching comments', error);
+          });
+        }
+      });
     });
   }
 
@@ -1160,10 +1280,6 @@ export class ArticleComponent implements OnDestroy {
     this.showToast('Story Poster Downloaded! 📸');
   }
 
-  readonly isSpeaking = signal(false);
-  readonly isPaused = signal(false);
-  readonly isLoadingAudio = signal(false);
-  private currentAudioElement: HTMLAudioElement | null = null;
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   showToast(message: string) {
@@ -1300,144 +1416,6 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     const msg = `*MyFeed.lk Fact-Check Update Request*\n\n📌 *ලිපිය (Article):* ${title}\n🔗 *සබැඳිය (Link):* ${link}\n\n📝 *නිවැරදි කිරීම / අදහස (Correction / Details):* `;
     const waUrl = `https://wa.me/94775467475?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
-  }
-
-  async toggleSpeech(article: { title: string; summary: string; content: string }) {
-    if (typeof window === 'undefined') return;
-
-    // 1. If already playing via HTMLAudioElement (OpenAI TTS)
-    if (this.currentAudioElement) {
-      if (this.isPaused()) {
-        this.currentAudioElement.play();
-        this.isPaused.set(false);
-      } else {
-        this.currentAudioElement.pause();
-        this.isPaused.set(true);
-      }
-      return;
-    }
-
-    // 2. If speaking via Browser Web Speech Synthesis
-    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-      if (this.isPaused()) {
-        window.speechSynthesis.resume();
-        this.isPaused.set(false);
-      } else {
-        window.speechSynthesis.pause();
-        this.isPaused.set(true);
-      }
-      return;
-    }
-
-    // Extract text cleanly
-    const tmp = document.createElement('div');
-    tmp.innerHTML = article.content;
-    const cleanContent = (tmp.textContent || tmp.innerText || '').slice(0, 3500);
-    const fullTextToRead = `${article.title}. ${article.summary}. ${cleanContent}`;
-
-    this.isLoadingAudio.set(true);
-
-    // Try OpenAI HD TTS first via server proxy
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: fullTextToRead,
-          voice: 'nova' // 'nova' is clear and expressive
-        })
-      });
-
-      if (response.ok && response.headers.get('Content-Type')?.includes('audio')) {
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        const audio = new Audio(audioUrl);
-        this.currentAudioElement = audio;
-
-        audio.onplay = () => {
-          this.isSpeaking.set(true);
-          this.isPaused.set(false);
-          this.isLoadingAudio.set(false);
-        };
-
-        audio.onpause = () => {
-          if (!audio.ended) {
-            this.isPaused.set(true);
-          }
-        };
-
-        audio.onended = () => {
-          this.stopSpeech();
-        };
-
-        audio.onerror = () => {
-          this.stopSpeech();
-          this.fallbackBrowserSpeech(fullTextToRead);
-        };
-
-        await audio.play();
-        return;
-      }
-    } catch {
-      // Fallback silently if OpenAI key is not set or network fails
-    } finally {
-      this.isLoadingAudio.set(false);
-    }
-
-    // 3. Fallback to Browser Speech Synthesis
-    this.fallbackBrowserSpeech(fullTextToRead);
-  }
-
-  private fallbackBrowserSpeech(text: string) {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      this.showToast('Speech synthesis is not supported on this device.');
-      return;
-    }
-
-    const synth = window.speechSynthesis;
-    synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = synth.getVoices();
-    const siVoice = voices.find(v => v.lang.startsWith('si') || v.lang.startsWith('ta'));
-    if (siVoice) {
-      utterance.voice = siVoice;
-    }
-    
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => {
-      this.isSpeaking.set(true);
-      this.isPaused.set(false);
-    };
-
-    utterance.onend = () => {
-      this.isSpeaking.set(false);
-      this.isPaused.set(false);
-    };
-
-    utterance.onerror = () => {
-      this.isSpeaking.set(false);
-      this.isPaused.set(false);
-    };
-
-    synth.speak(utterance);
-  }
-
-  stopSpeech() {
-    if (this.currentAudioElement) {
-      this.currentAudioElement.pause();
-      this.currentAudioElement.currentTime = 0;
-      this.currentAudioElement = null;
-    }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    this.isSpeaking.set(false);
-    this.isPaused.set(false);
-    this.isLoadingAudio.set(false);
   }
 
   copyLink() {
@@ -1595,8 +1573,52 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
+  async submitComment() {
+    if (this.isSubmittingComment() || !this.newCommentText().trim()) return;
+    const art = this.article();
+    const user = this.authService.userProfile();
+    const curUser = this.authService.currentUser();
+    
+    const uid = user?.uid || curUser?.uid;
+    if (!art || !art.id || !uid) return;
+    
+    this.isSubmittingComment.set(true);
+    try {
+      const displayName = user?.displayName || curUser?.displayName || 'User';
+      const photoURL = user?.photoURL || curUser?.photoURL || '';
+      const verified = user?.verified ?? false;
+      const role = user?.role ?? 'reader';
+      
+      await this.articleService.addComment(
+        art.id, 
+        this.newCommentText(), 
+        uid, 
+        displayName, 
+        photoURL,
+        verified,
+        role
+      );
+      this.newCommentText.set('');
+    } catch (err) {
+      console.error('Failed to submit comment', err);
+    } finally {
+      this.isSubmittingComment.set(false);
+    }
+  }
+
+  formatCommentDate(createdAt: unknown): number | Date | null {
+    if (!createdAt) return null;
+    const dateObj = createdAt as { toDate?: () => Date };
+    if (typeof dateObj.toDate === 'function') {
+      return dateObj.toDate();
+    }
+    return createdAt as (number | Date);
+  }
+
   ngOnDestroy() {
-    this.stopSpeech();
+    if (this.unsubscribeComments) {
+      this.unsubscribeComments();
+    }
     if (this.toastTimeout) {
       clearTimeout(this.toastTimeout);
     }

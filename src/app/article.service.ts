@@ -12,7 +12,9 @@ import {
   getDoc,
   increment,
   writeBatch,
-  Unsubscribe 
+  Unsubscribe,
+  query,
+  orderBy
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -35,6 +37,18 @@ export interface FactCheckData {
     editorialReview: number;
   };
   checkedBy: string;
+}
+
+export interface ArticleComment {
+  id?: string;
+  articleId: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorPhotoURL: string;
+  authorVerified?: boolean;
+  authorRole?: string;
+  createdAt?: unknown;
 }
 
 export interface Article {
@@ -61,6 +75,11 @@ export interface Article {
   views?: number;
   reactions?: Record<string, number>;
   factCheck?: FactCheckData;
+  audioUrl?: string;
+  hasAiVoice?: boolean;
+  audioDuration?: number;
+  audioVoiceType?: string;
+  audioUpdatedAt?: string;
 }
 
 function getSimpleHash(str: string): number {
@@ -816,6 +835,48 @@ export class ArticleService implements OnDestroy {
     } catch (error) {
       console.error('Error batch deleting articles from Firestore:', error);
       throw error;
+    }
+  }
+
+  getComments(articleId: string) {
+    const q = query(
+      collection(db, `articles/${articleId}/comments`),
+      orderBy('createdAt', 'desc')
+    );
+    return q; // Component will handle snapshot listening
+  }
+
+  async addComment(
+    articleId: string,
+    text: string,
+    authorId: string,
+    authorName: string,
+    authorPhotoURL: string,
+    authorVerified: boolean = false,
+    authorRole: string = 'reader'
+  ) {
+    if (!text.trim() || !articleId) return;
+    try {
+      const colRef = collection(db, `articles/${articleId}/comments`);
+      await addDoc(colRef, {
+        articleId,
+        text: text.trim(),
+        authorId,
+        authorName,
+        authorPhotoURL,
+        authorVerified,
+        authorRole,
+        createdAt: serverTimestamp()
+      });
+      
+      // Update article comments count
+      const articleRef = doc(db, 'articles', articleId);
+      await updateDoc(articleRef, {
+        commentsCount: increment(1)
+      }).catch(e => console.warn('Could not increment comments count (might not exist yet)', e));
+    } catch (err) {
+      console.error('Error adding comment', err);
+      throw err;
     }
   }
 

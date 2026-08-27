@@ -5,12 +5,12 @@ import {DeveloperComponent} from './developer';
 import {AboutComponent} from './about';
 import {PrivacyComponent} from './privacy';
 import {TermsComponent} from './terms';
-import {AdminComponent} from './admin';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'article/:id', component: ArticleComponent },
-  { path: 'admin', component: AdminComponent },
+  { path: 'admin', loadComponent: () => import('./admin').then(m => m.AdminComponent) },
+  { path: 'profile', loadComponent: () => import('./profile').then(m => m.ProfileComponent) },
   { path: 'about', component: AboutComponent },
   { path: 'developer', component: DeveloperComponent },
   { path: 'privacy', component: PrivacyComponent },

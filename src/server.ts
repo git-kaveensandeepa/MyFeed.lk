@@ -1830,67 +1830,6 @@ Rules:
       }
     }
 
-    // High-Quality OpenAI Text-to-Speech (TTS) Proxy Endpoint
-    if (url.pathname === '/api/tts' && request.method === 'POST') {
-      const openAiApiKey = process.env['OPENAI_API_KEY'];
-      if (!openAiApiKey) {
-        return new Response(JSON.stringify({ error: 'OPENAI_API_KEY is not configured on server', hasOpenAI: false }), { 
-          status: 400, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
-      }
-
-      try {
-        const body = await request.json();
-        const inputText = (body.text || '').slice(0, 4096); // OpenAI TTS character limit
-        const voice = body.voice || 'alloy'; // alloy, echo, fable, onyx, nova, shimmer
-
-        if (!inputText.trim()) {
-          return new Response(JSON.stringify({ error: 'Text is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAiApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'tts-1',
-            input: inputText,
-            voice: voice,
-            response_format: 'mp3'
-          })
-        });
-
-        if (!ttsResponse.ok) {
-          const errData = await ttsResponse.json().catch(() => ({ error: { message: 'TTS Request failed' } }));
-          const errMsg = errData?.error?.message || 'OpenAI TTS returned status ' + ttsResponse.status;
-          console.warn('OpenAI TTS API notice:', errMsg);
-          return new Response(JSON.stringify({ error: errMsg, hasOpenAI: true, status: ttsResponse.status }), { 
-            status: ttsResponse.status, 
-            headers: { 'Content-Type': 'application/json' } 
-          });
-        }
-
-        const audioBuffer = await ttsResponse.arrayBuffer();
-        return new Response(audioBuffer, {
-          status: 200,
-          headers: {
-            'Content-Type': 'audio/mpeg',
-            'Cache-Control': 'public, max-age=86400'
-          }
-        });
-      } catch (ttsErr: unknown) {
-        const err = ttsErr as { message?: string };
-        console.error('TTS proxy error:', ttsErr);
-        return new Response(JSON.stringify({ error: err.message || 'TTS request failed' }), { 
-          status: 500, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
-      }
-    }
-
     // Automated WhatsApp Channel Auto-Post API
     if (url.pathname === '/api/whatsapp/post' && request.method === 'POST') {
       try {

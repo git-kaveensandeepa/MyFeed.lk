@@ -7,9 +7,10 @@ import {ArticleService, Article, getCuratedTopicImages, FactCheckData, extractDo
 import {SubscriberService} from './subscriber.service';
 import {AdManagerService, Ad} from './ad-manager.service';
 import {AnalyticsService} from './analytics.service';
-import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc} from 'firebase/firestore';
+import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc, getDocs, updateDoc} from 'firebase/firestore';
 import {db, auth} from './firebase';
-import {GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User} from 'firebase/auth';
+import {signInWithEmailAndPassword, signOut, onAuthStateChanged, User} from 'firebase/auth';
+import {UserProfile} from './auth.service';
 
 export interface TrendingNewsItem {
   id: string;
@@ -61,18 +62,49 @@ export interface PolishedResult {
           <div class="w-12 h-12 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
         </div>
       } @else if (!user()) {
-        <div class="max-w-md mx-auto text-center mt-20">
-          <h1 class="text-4xl font-black mb-6">Admin Login</h1>
-          <p class="text-gray-500 mb-8">Sign in with your Google account to manage articles.</p>
-          <button (click)="login()" class="px-8 py-4 bg-[#1d1d1f] text-white rounded-full font-bold tracking-widest uppercase hover:bg-black transition-all shadow-xl active:scale-95 w-full flex items-center justify-center gap-3">
-            <svg class="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12.16-4.53z"/>
-            </svg>
-            Continue with Google
-          </button>
+        <div class="max-w-md mx-auto mt-12 p-8 bg-white rounded-3xl border border-black/10 shadow-2xl text-center">
+          <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+            <mat-icon style="font-size: 28px; width: 28px; height: 28px;">admin_panel_settings</mat-icon>
+          </div>
+          <h1 class="text-3xl font-black mb-1 text-[#1d1d1f]">Admin Access</h1>
+          <p class="text-gray-500 mb-6 text-xs">Sign in with authorized administrator credentials.</p>
+
+          <!-- Email & Password Form for Admin -->
+          <form (ngSubmit)="loginWithEmail()" class="space-y-3.5 mb-6 text-left">
+            <div>
+              <label for="adminEmailInput" class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+              <input 
+                type="email" 
+                id="adminEmailInput"
+                [(ngModel)]="adminEmailInput" 
+                name="adminEmailInput" 
+                required 
+                placeholder="mail.kaveensandeepa@gmail.com" 
+                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium" />
+            </div>
+            <div>
+              <label for="adminPasswordInput" class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
+              <input 
+                type="password" 
+                id="adminPasswordInput"
+                [(ngModel)]="adminPasswordInput" 
+                name="adminPasswordInput" 
+                required 
+                placeholder="••••••••" 
+                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium" />
+            </div>
+            @if (adminAuthError()) {
+              <p class="text-rose-600 text-xs font-bold">{{ adminAuthError() }}</p>
+            }
+            <button 
+              type="submit" 
+              [disabled]="loading() || !adminEmailInput || !adminPasswordInput" 
+              class="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">lock_open</mat-icon>
+              <span>Sign In with Password</span>
+            </button>
+          </form>
+
         </div>
       } @else {
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
@@ -128,7 +160,7 @@ export interface PolishedResult {
         <!-- Navigation Tabs -->
         <div class="flex border-b border-gray-200 mb-8 gap-4 md:gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide no-scrollbar pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
           <button 
-            (click)="activeTab.set('articles')"
+            (click)="setActiveTab('articles')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'articles'"
             [class.text-gray-400]="activeTab() !== 'articles'">
@@ -140,7 +172,7 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('auto-studio')"
+            (click)="setActiveTab('auto-studio')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-indigo-600]="activeTab() === 'auto-studio'"
             [class.text-gray-400]="activeTab() !== 'auto-studio'">
@@ -152,7 +184,7 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('subscribers')"
+            (click)="setActiveTab('subscribers')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'subscribers'"
             [class.text-gray-400]="activeTab() !== 'subscribers'">
@@ -164,7 +196,19 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('ads')"
+            (click)="setActiveTab('users')"
+            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
+            [class.text-blue-600]="activeTab() === 'users'"
+            [class.text-gray-400]="activeTab() !== 'users'">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">people</mat-icon>
+            <span>Users (පරිශීලකයින්)</span>
+            @if (activeTab() === 'users') {
+              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+            }
+          </button>
+
+          <button 
+            (click)="setActiveTab('ads')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'ads'"
             [class.text-gray-400]="activeTab() !== 'ads'">
@@ -176,7 +220,7 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('notify')"
+            (click)="setActiveTab('notify')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'notify'"
             [class.text-gray-400]="activeTab() !== 'notify'">
@@ -188,7 +232,7 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('whatsapp')"
+            (click)="setActiveTab('whatsapp')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-emerald-600]="activeTab() === 'whatsapp'"
             [class.text-gray-400]="activeTab() !== 'whatsapp'">
@@ -200,7 +244,7 @@ export interface PolishedResult {
           </button>
 
           <button 
-            (click)="activeTab.set('deploy')"
+            (click)="setActiveTab('deploy')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'deploy'"
             [class.text-gray-400]="activeTab() !== 'deploy'">
@@ -212,7 +256,7 @@ export interface PolishedResult {
           </button>
           
           <button 
-            (click)="activeTab.set('analytics')"
+            (click)="setActiveTab('analytics')"
             class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
             [class.text-blue-600]="activeTab() === 'analytics'"
             [class.text-gray-400]="activeTab() !== 'analytics'">
@@ -1994,6 +2038,112 @@ export interface PolishedResult {
               </div>
             </div>
           </div>
+        } @else if (activeTab() === 'users') {
+          <!-- Users Management Tab -->
+          <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 overflow-hidden mb-16 p-8 md:p-12">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-2xl font-black text-[#1d1d1f]">User Management</h2>
+              <div class="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-widest">
+                Total: {{ usersList().length }}
+              </div>
+            </div>
+
+            @if (loadingUsers()) {
+              <div class="py-12 flex justify-center">
+                <div class="w-8 h-8 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
+              </div>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr class="border-b border-black/5">
+                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">User</th>
+                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Birthday</th>
+                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Last Seen</th>
+                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Role</th>
+                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (user of usersList(); track user.uid) {
+                      <tr class="border-b border-black/5 hover:bg-black/[0.02] transition-colors group">
+                        <td class="py-4 px-6">
+                          <div class="flex items-center gap-3">
+                            <div class="relative w-10 h-10 shrink-0">
+                              <div class="w-full h-full rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden shadow-inner border border-blue-600/10">
+                                @if (user.photoURL) {
+                                  <img [src]="user.photoURL" alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                                } @else {
+                                  {{ (user.displayName || user.email || 'U').substring(0,2).toUpperCase() }}
+                                }
+                              </div>
+
+                              <!-- Online Status Indicator (Mocking for UI or checking lastSeen if recent, but just adding UI dot) -->
+                              <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full z-10 shadow-sm" title="Online"></div>
+
+                              <!-- Verification Badge -->
+                              @if (user.verified || user.role === 'admin') {
+                                <div class="absolute -top-1.5 -right-1.5 z-10 bg-white rounded-full p-[1px] flex items-center justify-center shadow-sm" title="{{ user.role === 'admin' ? 'Admin' : 'Verified User' }}">
+                                  <mat-icon class="{{ user.role === 'admin' ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ user.role === 'admin' ? 'shield' : 'verified' }}</mat-icon>
+                                </div>
+                              }
+                            </div>
+                            <div>
+                              <p class="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
+                                {{ user.displayName || 'Unnamed User' }}
+                                @if (user.banned) {
+                                  <span class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[9px] uppercase tracking-wider font-bold">Banned</span>
+                                }
+                              </p>
+                              <p class="text-xs text-gray-500">{{ user.email }}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="py-4 px-6">
+                          <span class="text-sm text-[#1d1d1f] font-mono">{{ user.birthday || 'N/A' }}</span>
+                        </td>
+                        <td class="py-4 px-6">
+                          <span class="text-sm text-gray-500">{{ formatDate(user.lastSeen) }}</span>
+                        </td>
+                        <td class="py-4 px-6">
+                          <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" 
+                                [class.bg-blue-100]="user.role === 'admin'"
+                                [class.text-blue-700]="user.role === 'admin'"
+                                [class.bg-gray-100]="user.role !== 'admin'"
+                                [class.text-gray-600]="user.role !== 'admin'">
+                            {{ user.role }}
+                          </span>
+                        </td>
+                        <td class="py-4 px-6 text-right">
+                          <button 
+                            (click)="toggleBanStatus(user)"
+                            class="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
+                            [class.bg-red-50]="!user.banned"
+                            [class.text-red-600]="!user.banned"
+                            [class.hover:bg-red-100]="!user.banned"
+                            [class.bg-emerald-50]="user.banned"
+                            [class.text-emerald-600]="user.banned"
+                            [class.hover:bg-emerald-100]="user.banned"
+                            [disabled]="user.role === 'admin'">
+                            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">
+                              {{ user.banned ? 'check_circle' : 'block' }}
+                            </mat-icon>
+                            {{ user.banned ? 'Unban' : 'Ban' }}
+                          </button>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5" class="py-12 text-center text-gray-500">
+                          No users found.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
         } @else if (activeTab() === 'deploy') {
           <!-- Deploy Tab -->
           <div class="max-w-2xl mx-auto">
@@ -2414,7 +2564,7 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics'>('articles');
+  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
   
   // Auto Studio signals & state
   readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish' | 'autopilot'>('trending');
@@ -2519,7 +2669,7 @@ export class AdminComponent {
   autoPostWhatsApp = true;
 
   // Phone Push Notifications (via ntfy.sh)
-  phoneTopic = 'myfeedlk_kaveen';
+  phoneTopic = 'myfeedlk_alerts';
   siteDomain = 'https://myfeedlk.web.app';
   autoAlertPhone = true;
   readonly isSavingPhoneSettings = signal(false);
@@ -2594,6 +2744,11 @@ export class AdminComponent {
   readonly isGeneratingImage = signal(false);
   readonly generatedImagePrompt = signal('');
 
+  // Admin Email Login State
+  adminEmailInput = 'mail.kaveensandeepa@gmail.com';
+  adminPasswordInput = '';
+  readonly adminAuthError = signal<string | null>(null);
+
   constructor() {
     onAuthStateChanged(auth, async user => {
       if (user && user.email !== 'mail.kaveensandeepa@gmail.com') {
@@ -2617,21 +2772,23 @@ export class AdminComponent {
     });
   }
 
-  async login() {
+  async loginWithEmail() {
+    if (!this.adminEmailInput || !this.adminPasswordInput) return;
     this.loading.set(true);
+    this.adminAuthError.set(null);
+
     try {
-      const provider = new GoogleAuthProvider();
-      // Force account selection to allow switching if needed
-      provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
-    } catch (err: unknown) {
-      const error = err as { code?: string; message?: string };
-      console.error('Login failed', error);
-      if (error.code === 'auth/network-request-failed') {
-        alert('Login failed: Network request blocked. Please ensure your browser allows popups and that you are not using an ad-blocker. If the issue persists, try opening the app in a new tab.');
-      } else {
-        alert('Login failed: ' + (error.message || 'Unknown error'));
+      const userCred = await signInWithEmailAndPassword(auth, this.adminEmailInput.trim(), this.adminPasswordInput);
+      if (userCred.user.email !== 'mail.kaveensandeepa@gmail.com') {
+        await signOut(auth);
+        this.user.set(null);
+        this.adminAuthError.set('Unauthorized access. Only the administrator account is permitted in this dashboard.');
       }
+    } catch (err: unknown) {
+      console.error('Admin email login failed', err);
+      const error = err as { message?: string };
+      this.adminAuthError.set(error.message || 'Login failed. Please verify credentials.');
+    } finally {
       this.loading.set(false);
     }
   }
@@ -4410,5 +4567,77 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     const seconds = Math.floor((diff % 60000) / 1000);
     const formatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     this.autoPilotCountdown.set(formatted);
+  }
+
+  // ==========================================
+  // USERS MANAGEMENT
+  // ==========================================
+  readonly usersList = signal<UserProfile[]>([]);
+  readonly loadingUsers = signal<boolean>(false);
+
+  setActiveTab(tabName: 'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics' | 'users') {
+    this.activeTab.set(tabName);
+    if (tabName === 'users') {
+      this.fetchUsers();
+    }
+  }
+
+  async fetchUsers() {
+    this.loadingUsers.set(true);
+    try {
+      // Fetch all users
+      const snapshot = await getDocs(collection(db, 'users'));
+      const users: UserProfile[] = [];
+      snapshot.forEach(d => {
+        users.push(d.data() as UserProfile);
+      });
+      
+      // Sort manually by lastSeen (descending)
+      users.sort((a, b) => {
+        const timeA = (a.lastSeen as { seconds?: number })?.seconds || 0;
+        const timeB = (b.lastSeen as { seconds?: number })?.seconds || 0;
+        return timeB - timeA;
+      });
+      
+      this.usersList.set(users);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    } finally {
+      this.loadingUsers.set(false);
+    }
+  }
+
+  async toggleBanStatus(user: UserProfile) {
+    if (user.role === 'admin') {
+      alert('Cannot ban an administrator.');
+      return;
+    }
+    
+    try {
+      const newStatus = !user.banned;
+      await updateDoc(doc(db, 'users', user.uid), { banned: newStatus });
+      
+      const currentList = this.usersList();
+      const updatedList = currentList.map(u => 
+        u.uid === user.uid ? { ...u, banned: newStatus } : u
+      );
+      this.usersList.set(updatedList);
+    } catch (err) {
+      console.error('Error toggling ban status', err);
+      alert('Failed to update user ban status.');
+    }
+  }
+
+  formatDate(timestamp: unknown) {
+    if (!timestamp) return 'N/A';
+    try {
+      const ts = timestamp as { toDate?: () => Date, seconds?: number };
+      if (ts.toDate) return ts.toDate().toLocaleString('si-LK');
+      if (timestamp instanceof Date) return timestamp.toLocaleString('si-LK');
+      if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString('si-LK');
+    } catch {
+      // ignore
+    }
+    return 'N/A';
   }
 }

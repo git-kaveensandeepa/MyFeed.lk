@@ -1,37 +1,62 @@
 {
-  "collections": [
-    {
-      "collectionName": "articles",
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile containing authentication details, full name, birthday, and role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "birthday": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "reader", "editor"] },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "displayName"]
+    },
+    "Article": {
+      "title": "Article",
       "description": "Articles published on the news blog.",
-      "fields": [
-        { "name": "title", "type": "string", "description": "Title of the article." },
-        { "name": "summary", "type": "string", "description": "Short summary of the article." },
-        { "name": "content", "type": "string", "description": "Full content of the article." },
-        { "name": "imageUrl", "type": "string", "description": "Cover image URL." },
-        { "name": "category", "type": "string", "description": "Article category (e.g., AI, Tech, Local)." },
-        { "name": "date", "type": "string", "description": "Date formatted string." },
-        { "name": "readTime", "type": "string", "description": "Read time estimation." },
-        { "name": "createdAt", "type": "timestamp", "description": "Creation timestamp." },
-        { "name": "authorId", "type": "string", "description": "ID of the author who created the article." },
-        { "name": "featured", "type": "boolean", "description": "Whether this is the featured article." }
-      ]
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "readTime": { "type": "string" },
+        "authorId": { "type": "string" },
+        "featured": { "type": "boolean" }
+      },
+      "required": ["title", "content", "category"]
     },
-    {
-      "collectionName": "users",
-      "description": "Registered users (admins).",
-      "fields": [
-        { "name": "email", "type": "string", "description": "User email." },
-        { "name": "role", "type": "string", "description": "User role, e.g., 'admin'." }
-      ]
-    },
-    {
-      "collectionName": "subscribers",
-      "description": "Newsletter subscribers.",
-      "fields": [
-        { "name": "email", "type": "string", "description": "Subscriber email." },
-        { "name": "createdAt", "type": "timestamp", "description": "Subscription timestamp." },
-        { "name": "active", "type": "boolean", "description": "Subscription status." }
-      ]
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "Newsletter subscriber record.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["email"]
     }
-  ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles containing name, email, birthday, and preferences."
+    },
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "News articles published on MyFeed.lk."
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": "Subscriber",
+      "description": "Newsletter subscribers."
+    }
+  }
 }

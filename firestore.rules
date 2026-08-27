@@ -17,6 +17,11 @@ service cloud.firestore {
     match /articles/{document} {
       allow read: if true;
       allow create, update, delete: if true;
+      
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create, update, delete: if true;
+      }
     }
 
     match /drafts/{document} {
@@ -54,7 +59,8 @@ service cloud.firestore {
 
     match /users/{document} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == document;
+      allow create, update: if request.auth != null && (request.auth.uid == document || isAdmin());
+      allow delete: if isAdmin();
     }
   }
 }

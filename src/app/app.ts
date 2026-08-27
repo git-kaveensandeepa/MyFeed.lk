@@ -9,13 +9,14 @@ import {ArticleService} from './article.service';
 import {TickerService} from './ticker.service';
 import {PwaService} from './pwa.service';
 import {WebPushService} from './web-push.service';
-
 import {AnalyticsService} from './analytics.service';
+import {AuthService} from './auth.service';
+import {AuthModalComponent} from './auth-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink],
+  imports: [MatIconModule, RouterOutlet, RouterLink, AuthModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
@@ -26,6 +27,7 @@ import {AnalyticsService} from './analytics.service';
   }
 })
 export class App implements OnInit {
+  readonly authService = inject(AuthService);
   readonly searchService = inject(SearchService);
   readonly subscriberService = inject(SubscriberService);
   readonly themeManager = inject(ThemeManager);
