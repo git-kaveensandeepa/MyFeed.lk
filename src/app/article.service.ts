@@ -852,8 +852,8 @@ export class ArticleService implements OnDestroy {
     authorId: string,
     authorName: string,
     authorPhotoURL: string,
-    authorVerified: boolean = false,
-    authorRole: string = 'reader'
+    authorVerified = false,
+    authorRole = 'reader'
   ) {
     if (!text.trim() || !articleId) return;
     try {

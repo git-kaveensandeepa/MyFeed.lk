@@ -22,9 +22,9 @@ export interface UserProfile {
   banned?: boolean;
   verified?: boolean;
   memberNumber?: number;
-  lastSeen?: unknown;
-  createdAt?: unknown;
-  updatedAt?: unknown;
+  lastSeen?: any;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 @Injectable({
@@ -167,7 +167,7 @@ export class AuthService {
           return null;
         }
 
-        let updates: Partial<UserProfile> = { lastSeen: serverTimestamp() };
+        const updates: Partial<UserProfile> = { lastSeen: serverTimestamp() };
 
         // Retroactively add verified badge to early adopters if they don't have it explicitly set yet
         if (data.verified === undefined || data.memberNumber === undefined) {
@@ -333,7 +333,7 @@ export class AuthService {
         this.closeAuthModal();
       }, 1200);
       return true;
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Sign up error:', err);
       this.authError.set(this.formatErrorMessage(err));
       return false;
@@ -361,7 +361,7 @@ export class AuthService {
         this.closeAuthModal();
       }, 1000);
       return true;
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Sign in error:', err);
       this.authError.set(this.formatErrorMessage(err));
       return false;
@@ -384,7 +384,7 @@ export class AuthService {
       await sendPasswordResetEmail(auth, email);
       this.authSuccess.set(`මුරපදය නැවත සැකසීමේ ලින්ක් එක (${email}) ලිපිනයට යවන ලදී. කරුණාකර ඔබගේ Inbox පරීක්ෂා කරන්න.`);
       return true;
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Password reset error:', err);
       this.authError.set(this.formatErrorMessage(err));
       return false;
@@ -465,7 +465,7 @@ export class AuthService {
     }
   }
 
-  private formatErrorMessage(err: unknown): string {
+  private formatErrorMessage(err: any): string {
     const code = (err as { code?: string })?.code || '';
     switch (code) {
       case 'auth/invalid-email':

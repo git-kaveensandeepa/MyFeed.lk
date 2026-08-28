@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, signal, inject, OnInit, computed} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {RouterOutlet, RouterLink} from '@angular/router';
+import {RouterOutlet, RouterLink, RouterLinkActive} from '@angular/router';
 import {SearchService} from './search.service';
 import {SubscriberService} from './subscriber.service';
 import {ThemeManager} from './theme';
@@ -16,7 +16,7 @@ import {AuthModalComponent} from './auth-modal.component';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink, AuthModalComponent],
+  imports: [MatIconModule, RouterOutlet, RouterLink, RouterLinkActive, AuthModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {

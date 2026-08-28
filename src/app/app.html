@@ -6,15 +6,12 @@
     [class.pointer-events-none]="splashFading()">
     
     <div class="flex flex-col items-center gap-6 animate-fade-in-up px-4 text-center">
-      <!-- Icon with glowing backdrop -->
       <div class="relative flex items-center justify-center">
         <div class="absolute -inset-4 bg-blue-600/40 rounded-3xl blur-xl animate-pulse"></div>
         <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white text-[#1d1d1f] flex items-center justify-center shadow-2xl relative z-10">
           <mat-icon style="font-size: 40px; width: 40px; height: 40px;">article</mat-icon>
         </div>
       </div>
-      
-      <!-- Brand Title -->
       <div>
         <h1 class="text-4xl sm:text-5xl font-black tracking-tighter text-white">
           MyFeed<span class="text-blue-500">.lk</span>
@@ -23,8 +20,6 @@
           Curated Journal &bull; Sri Lanka
         </p>
       </div>
-
-      <!-- Progress Line -->
       <div class="w-48 h-1 bg-white/10 rounded-full overflow-hidden mt-2">
         <div class="h-full bg-blue-500 rounded-full animate-[splashProgress_1.5s_ease-in-out_forwards]"></div>
       </div>
@@ -32,14 +27,13 @@
   </div>
 }
 
-<!-- Live Market & Sri Lanka Forex Rates Ticker -->
-<div class="w-full bg-[#161617] text-white/90 text-xs py-2 px-3 sm:px-4 overflow-hidden border-b border-white/10 relative z-40 select-none">
-  <div class="max-w-7xl mx-auto flex items-center gap-4">
-    <div class="flex items-center gap-1.5 shrink-0 text-[10px] sm:text-xs font-black uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/40">
+<!-- Ticker (Fixed Top on Desktop, hidden on Mobile) -->
+<div class="fixed top-0 left-0 right-0 h-8 bg-[#161617] text-white/90 text-[10px] sm:text-xs px-4 overflow-hidden z-[60] select-none hidden lg:flex items-center">
+  <div class="max-w-7xl mx-auto flex w-full items-center gap-4">
+    <div class="flex items-center gap-1.5 shrink-0 font-black uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/40">
       <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
       <span>Live Rates</span>
     </div>
-    
     <div class="flex-1 overflow-hidden relative">
       <div class="animate-ticker flex items-center gap-8">
         @for (item of tickerService.items(); track item.symbol) {
@@ -56,7 +50,6 @@
             </span>
           </div>
         }
-        <!-- Repeat loop once for continuous smooth marquee loop -->
         @for (item of tickerService.items(); track (item.symbol + '_dup')) {
           <div class="flex items-center gap-2 shrink-0">
             <span class="font-bold text-white/90">{{ item.symbol }}</span>
@@ -76,125 +69,211 @@
   </div>
 </div>
 
-<!-- Navigation -->
-<nav class="sticky top-0 z-50 w-full backdrop-blur-2xl bg-[#fcfcfd]/90 dark:bg-[#121212]/90 border-b border-black/[0.04] dark:border-white/10 transition-all duration-300">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
-    <a routerLink="/" class="flex items-center gap-2.5 sm:gap-3 cursor-pointer group shrink-0">
-      <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] flex items-center justify-center group-hover:scale-105 group-hover:-rotate-3 transition-all duration-300 shadow-md">
+<!-- Desktop Left Sidebar -->
+<aside class="hidden lg:flex flex-col fixed top-8 left-0 bottom-0 w-64 border-r border-black/5 dark:border-white/5 bg-[#fcfcfd]/90 dark:bg-[#121212]/90 backdrop-blur-2xl z-50">
+  <!-- Brand -->
+  <div class="h-20 flex items-center px-6">
+    <a routerLink="/" class="flex items-center gap-3 cursor-pointer group shrink-0">
+      <div class="w-10 h-10 rounded-2xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] flex items-center justify-center group-hover:scale-105 group-hover:-rotate-3 transition-transform shadow-md">
         <mat-icon style="font-size: 20px; width: 20px; height: 20px;">article</mat-icon>
       </div>
-      <span class="text-xl sm:text-2xl font-black tracking-tighter text-[#1d1d1f] dark:text-white">MyFeed<span class="text-blue-600">.lk</span></span>
+      <span class="text-2xl font-black tracking-tighter text-[#1d1d1f] dark:text-white">MyFeed<span class="text-blue-600">.lk</span></span>
+    </a>
+  </div>
+
+  <!-- Scrollable Nav -->
+  <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1 custom-scrollbar">
+    
+    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-3">Platform</div>
+    
+    <a routerLink="/" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="bg-black/5 dark:bg-white/10 text-blue-600 dark:text-blue-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+      <mat-icon style="font-size: 20px; width: 20px; height: 20px;" [class.text-blue-500]="true">home</mat-icon> News Feed
     </a>
     
-    <div class="flex items-center gap-2 sm:gap-4">
-      <!-- Install App PWA Button -->
-      @if (pwaService.canInstall()) {
-        <button 
-          (click)="pwaService.installApp()"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer animate-pulse shrink-0">
-          <mat-icon style="font-size: 16px; width: 16px; height: 16px;">install_mobile</mat-icon>
-          <span class="hidden sm:inline">Install App</span>
-        </button>
-      }
+    <a routerLink="/events" routerLinkActive="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+      <div class="flex items-center gap-3">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-[#FF9500]">event_upcoming</mat-icon> Events
+      </div>
+      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Soon</span>
+    </a>
 
-      <!-- Reading List / Bookmarks Button -->
-      <button 
-        (click)="toggleReadingList()"
-        class="relative p-2.5 sm:px-4 sm:py-2 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-[#1d1d1f] dark:text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer border border-black/5 dark:border-white/10">
-        <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-600">bookmark</mat-icon>
-        <span class="hidden md:inline">Saved</span>
-        @if (bookmarkManager.bookmarkedIds().length > 0) {
-          <span class="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
-            {{ bookmarkManager.bookmarkedIds().length }}
-          </span>
-        }
+    <a routerLink="/radio" routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+      <div class="flex items-center gap-3">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-500">podcasts</mat-icon> Audio
+      </div>
+      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Soon</span>
+    </a>
+
+    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-8 mb-2 px-3">Library & Me</div>
+    
+    <button (click)="toggleReadingList()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all w-full text-left cursor-pointer" [class.bg-black]="showReadingList()" [class.bg-opacity-5]="showReadingList()" [class.dark:bg-white]="showReadingList()" [class.dark:bg-opacity-10]="showReadingList()">
+      <div class="flex items-center gap-3">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">bookmark</mat-icon> Saved
+      </div>
+      @if (bookmarkManager.bookmarkedIds().length > 0) {
+        <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full">{{ bookmarkManager.bookmarkedIds().length }}</span>
+      }
+    </button>
+
+    <a routerLink="/profile" routerLinkActive="bg-black/5 dark:bg-white/10 text-blue-600 dark:text-blue-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+      <mat-icon style="font-size: 20px; width: 20px; height: 20px;">person</mat-icon> Profile
+    </a>
+
+    @if (authService.isAdmin()) {
+      <div class="text-[10px] font-black uppercase tracking-widest text-red-400 mt-8 mb-2 px-3">System</div>
+      <a routerLink="/admin" routerLinkActive="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">admin_panel_settings</mat-icon> Admin Panel
+      </a>
+    }
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="p-4 border-t border-black/5 dark:border-white/5 flex flex-col gap-3">
+    @if (pwaService.canInstall()) {
+      <button (click)="pwaService.installApp()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer animate-pulse">
+        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">install_mobile</mat-icon> Install App
       </button>
-
-      <!-- User Auth State Button -->
-      @if (authService.isLoggedIn()) {
-        <!-- Logged In User Pill Button -->
-        <button 
-          [routerLink]="['/profile']"
-          class="p-1.5 sm:px-3 sm:py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[#1d1d1f] dark:text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer border border-blue-200 dark:border-blue-800/40 group shadow-sm"
-          title="View Profile">
-          <div class="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0 group-hover:scale-105 transition-transform">
-            <div class="w-full h-full rounded-full overflow-hidden shadow-inner relative border border-blue-600/10">
-              @if (authService.userProfile()?.photoURL || authService.currentUser()?.photoURL) {
-                <img [src]="authService.userProfile()?.photoURL || authService.currentUser()?.photoURL" alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
-              } @else {
-                <div class="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-black">
-                  {{ authService.userInitials() }}
-                </div>
-              }
-            </div>
-            
-            <!-- Online Status Indicator (Green Dot) -->
-            <div class="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-white dark:border-[#1c1c1e] rounded-full z-10 shadow-sm" title="Online"></div>
-
-            <!-- Verification / Admin Badge -->
-            @if (authService.userProfile()?.verified || authService.isAdmin()) {
-              <div class="absolute -top-1 -right-1 z-10 bg-white dark:bg-[#1c1c1e] rounded-full p-[1px] flex items-center justify-center shadow-sm" title="{{ authService.isAdmin() ? 'Admin' : 'Verified User' }}">
-                <mat-icon class="{{ authService.isAdmin() ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ authService.isAdmin() ? 'shield' : 'verified' }}</mat-icon>
-              </div>
-            }
-          </div>
-          <div class="hidden lg:flex flex-col text-left pr-1">
-            <span class="text-xs font-bold leading-tight truncate max-w-[100px] flex items-center gap-1">
-              {{ authService.displayName() }}
-              @if (authService.userProfile()?.verified) {
-                <mat-icon 
-                  (click)="authService.openVerificationModal(); $event.stopPropagation();"
-                  class="text-blue-500 cursor-pointer hover:scale-110 transition-transform" 
-                  style="font-size: 14px; width: 14px; height: 14px;" 
-                  title="View Verified Status">verified</mat-icon>
-              }
-            </span>
-            <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-none">{{ authService.isAdmin() ? 'Admin' : 'Member' }}</span>
-          </div>
-        </button>
-      } @else {
-        <!-- Sign In Button -->
-        <button 
-          (click)="authService.openAuthModal('login')"
-          class="px-3.5 py-2 sm:px-4 sm:py-2 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] hover:bg-black dark:hover:bg-gray-100 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95">
-          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">person</mat-icon>
-          <span>Log In</span>
-        </button>
-      }
-
-      <!-- Theme Toggle Button -->
-      <button 
-        (click)="themeManager.toggle()"
-        class="p-2.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-[#1d1d1f] dark:text-white transition-all cursor-pointer border border-black/5 dark:border-white/10"
-        [attr.aria-label]="themeManager.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
-        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">
-          {{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}
-        </mat-icon>
+    }
+    
+    <div class="flex items-center justify-between px-2">
+      <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Theme</span>
+      <button (click)="themeManager.toggle()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
     </div>
   </div>
+</aside>
+
+<!-- Main Workspace Layout -->
+<div class="lg:pl-64 min-h-screen flex flex-col bg-[#f2f2f7] dark:bg-[#000000] pt-0 lg:pt-8 relative transition-all duration-300">
+  
+  <!-- iOS Mobile Top Navigation Bar -->
+  <header class="lg:hidden sticky top-0 z-40 w-full ios-glass border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between px-4 h-14 pt-[env(safe-area-inset-top,0px)] transition-all">
+    <a routerLink="/" class="flex items-center gap-2.5 cursor-pointer group shrink-0 ios-touch">
+      <div class="w-8 h-8 rounded-[10px] bg-gradient-to-tr from-[#1d1d1f] to-[#3a3a3c] dark:from-white dark:to-[#e5e5ea] text-white dark:text-[#1c1c1e] flex items-center justify-center shadow-sm">
+        <mat-icon style="font-size: 17px; width: 17px; height: 17px;">article</mat-icon>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-lg font-black tracking-tight leading-none text-[#000000] dark:text-white">MyFeed<span class="text-[#007AFF]">.lk</span></span>
+        <span class="text-[9px] font-semibold text-[#8e8e93] tracking-tight leading-tight mt-0.5">Sri Lanka</span>
+      </div>
+    </a>
+  </header>
+
+  <!-- Desktop Top Header -->
+  <header class="hidden lg:flex sticky top-8 z-40 w-full h-20 bg-[#f2f2f7]/90 dark:bg-[#000000]/90 backdrop-blur-2xl border-b border-black/5 dark:border-white/5 items-center justify-between px-8">
+    
+    <!-- Search Bar -->
+    <div class="flex-1 max-w-xl">
+      <div class="relative w-full group">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <mat-icon class="text-gray-400 group-focus-within:text-blue-500 transition-colors" style="font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+        </div>
+        <input 
+          type="text" 
+          (input)="onSearch($event)" 
+          placeholder="Search articles, podcasts, or tags..." 
+          class="w-full bg-black/[0.03] dark:bg-white/[0.03] border border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-[#1a1a1a] rounded-2xl py-3 pl-12 pr-4 text-sm font-medium transition-all outline-none placeholder:text-gray-400 shadow-sm focus:shadow-md text-[#1d1d1f] dark:text-white"
+        >
+        <div class="absolute inset-y-0 right-0 pr-2 flex items-center">
+          <div class="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 text-[10px] font-bold text-gray-500">
+            <span>⌘</span><span>K</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-4 shrink-0"></div>
+  </header>
+
+  <!-- Dynamic Content Route (Where Home/Bites/Radio load) -->
+  <main class="flex-1 w-full pb-20 lg:pb-0">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>
+
+<!-- iOS Native Cupertino Bottom Tab Bar -->
+<nav class="lg:hidden fixed bottom-0 left-0 w-full ios-tab-bar z-[60] flex items-center justify-around px-3 pt-2 pb-[max(env(safe-area-inset-bottom,0px),8px)] transition-all">
+  
+  <!-- Feed Tab -->
+  <a routerLink="/" [routerLinkActiveOptions]="{exact: true}" #rlaHome="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
+    <div class="relative flex items-center justify-center">
+      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">{{ rlaHome.isActive ? 'article' : 'article' }}</mat-icon>
+      @if (rlaHome.isActive) {
+        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
+      }
+    </div>
+    <span class="text-[10px] font-semibold tracking-tight">News</span>
+  </a>
+
+  <!-- Events & Meetups Tab -->
+  <a routerLink="/events" #rlaEvents="routerLinkActive" routerLinkActive="text-[#FF9500] dark:text-[#FF9F0A]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
+    <div class="relative flex items-center justify-center">
+      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">event_upcoming</mat-icon>
+      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-amber-500 text-[8px] font-black text-white leading-none shadow-xs">SOON</span>
+      @if (rlaEvents.isActive) {
+        <span class="absolute -bottom-1 w-1 h-1 bg-[#FF9500] dark:bg-[#FF9F0A] rounded-full"></span>
+      }
+    </div>
+    <span class="text-[10px] font-semibold tracking-tight">Events</span>
+  </a>
+
+  <!-- Audio Podcasts Tab -->
+  <a routerLink="/radio" #rlaRadio="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
+    <div class="relative flex items-center justify-center">
+      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">graphic_eq</mat-icon>
+      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-blue-500 text-[8px] font-black text-white leading-none shadow-xs">SOON</span>
+      @if (rlaRadio.isActive) {
+        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
+      }
+    </div>
+    <span class="text-[10px] font-semibold tracking-tight">Audio</span>
+  </a>
+
+  <!-- Profile / Me Tab -->
+  <a routerLink="/profile" #rlaProfile="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
+    <div class="relative flex items-center justify-center">
+      @if (authService.currentUser()?.photoURL) {
+        <div class="w-5.5 h-5.5 rounded-full overflow-hidden border border-black/10 dark:border-white/15" [class.ring-2]="rlaProfile.isActive" [class.ring-[#007AFF]]="rlaProfile.isActive">
+          <img [src]="authService.currentUser()?.photoURL" alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+        </div>
+      } @else {
+        <mat-icon style="font-size: 23px; width: 23px; height: 23px;">account_circle</mat-icon>
+      }
+      @if (rlaProfile.isActive) {
+        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
+      }
+    </div>
+    <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+  </a>
 </nav>
 
-<!-- Reading List Drawer / Slide-Over -->
+<!-- iOS Style Bottom Sheet / Drawer -->
 @if (showReadingList()) {
-  <div class="fixed inset-0 z-[100] flex justify-end animate-fade-in">
+  <div class="fixed inset-0 z-[100] flex items-end sm:items-stretch sm:justify-end animate-fade-in">
     <!-- Backdrop -->
-    <button type="button" aria-label="Close reading list" (click)="toggleReadingList()" (keydown.enter)="toggleReadingList()" class="absolute inset-0 bg-black/40 backdrop-blur-sm w-full h-full border-none cursor-pointer"></button>
+    <button type="button" aria-label="Close reading list" (click)="toggleReadingList()" (keydown.enter)="toggleReadingList()" class="absolute inset-0 bg-black/50 backdrop-blur-md w-full h-full border-none cursor-pointer"></button>
     
-    <!-- Drawer Panel -->
-    <div class="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] text-[#1d1d1f] dark:text-white h-full shadow-2xl flex flex-col z-10 p-6 sm:p-8 overflow-y-auto border-l border-black/10 dark:border-white/10">
-      <div class="flex items-center justify-between pb-6 border-b border-black/10 dark:border-white/10">
+    <!-- Drawer / Bottom Sheet Container -->
+    <div class="relative w-full sm:max-w-md bg-white dark:bg-[#1c1c1e] text-[#000000] dark:text-white max-h-[88vh] sm:max-h-full sm:h-full rounded-t-[32px] sm:rounded-t-none sm:rounded-l-[32px] shadow-2xl flex flex-col z-10 p-6 sm:p-8 overflow-y-auto border-t sm:border-t-0 sm:border-l border-black/10 dark:border-white/10 pb-[calc(env(safe-area-inset-bottom)+20px)]">
+      
+      <!-- iOS Drag Indicator on Mobile -->
+      <div class="sm:hidden w-10 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-4"></div>
+
+      <div class="flex items-center justify-between pb-5 border-b border-black/10 dark:border-white/10">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
+          <div class="w-10 h-10 rounded-[14px] bg-[#007AFF] text-white flex items-center justify-center shadow-md">
             <mat-icon>bookmark</mat-icon>
           </div>
           <div>
-            <h2 class="text-xl font-black tracking-tight text-[#1d1d1f] dark:text-white">Reading List</h2>
-            <p class="text-xs text-[#1d1d1f]/50 dark:text-white/50 font-medium">Saved on this device &bull; Offline Ready</p>
+            <h2 class="text-xl font-bold tracking-tight text-[#000000] dark:text-white">Reading List</h2>
+            <p class="text-xs text-[#8e8e93] font-medium">Offline Cached &bull; MyFeed</p>
           </div>
         </div>
-        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
-          <mat-icon>close</mat-icon>
+        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="w-8 h-8 rounded-full bg-black/[0.06] dark:bg-white/[0.1] flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 ios-touch cursor-pointer">
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
         </button>
       </div>
 
@@ -235,30 +314,8 @@
   </div>
 }
 
-<router-outlet />
-
-<!-- Floating Action Buttons Stack (Help & Scroll to Top) -->
+<!-- Floating Action Buttons Stack (Scroll to Top) -->
 <div class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-40 flex flex-col items-center gap-2.5 sm:gap-3">
-  
-  <!-- Help / Feedback WhatsApp Button (?) -->
-  <button 
-    (click)="toggleFeedbackModal()"
-    class="relative group w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl hover:shadow-blue-600/30 hover:-translate-y-1 transition-all duration-300 active:scale-95 cursor-pointer flex items-center justify-center border border-white/20"
-    aria-label="Report issue or send recommendations via WhatsApp"
-    title="Help & Feedback / Report Issue">
-    <mat-icon style="font-size: 22px; width: 22px; height: 22px;">help_outline</mat-icon>
-    
-    <!-- WhatsApp Indicator Badge -->
-    <span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white dark:border-[#121212] flex items-center justify-center">
-      <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-    </span>
-
-    <!-- Hover Tooltip -->
-    <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[11px] font-bold whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all shadow-lg hidden sm:block">
-      Help &amp; Feedback (WhatsApp)
-    </span>
-  </button>
-
   <!-- Scroll to Top Button -->
   <button 
     (click)="scrollToTop()"
@@ -424,89 +481,6 @@
     </div>
   </div>
 }
-
-<!-- Footer -->
-<footer class="bg-white dark:bg-[#121212] py-16 md:py-24 mt-auto relative overflow-hidden border-t border-black/[0.04] dark:border-white/10">
-  <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-blue-50/80 dark:from-blue-900/20 via-transparent to-transparent pointer-events-none"></div>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-[#1d1d1f] dark:text-white">
-    <div class="flex flex-col lg:flex-row justify-between items-start gap-12 lg:gap-16 mb-16">
-      <div class="flex flex-col gap-6 max-w-sm">
-        <div class="flex items-center gap-3.5">
-          <div class="w-12 h-12 rounded-2xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] flex items-center justify-center shadow-lg">
-            <mat-icon style="font-size: 24px; width: 24px; height: 24px;">article</mat-icon>
-          </div>
-          <span class="text-3xl sm:text-4xl font-black tracking-tighter text-[#1d1d1f] dark:text-white">MyFeed<span class="text-blue-600">.lk</span></span>
-        </div>
-        <p class="text-base text-[#1d1d1f]/60 dark:text-white/60 font-serif italic leading-relaxed">
-          ශ්‍රී ලාංකික තාක්ෂණික හා නවෝත්පාදන පුවත් සාරාංශය &bull; Curated stories for those who appreciate premium editorial experiences.
-        </p>
-        <div class="flex flex-col gap-3 mt-4">
-          <h4 class="text-xs font-bold uppercase tracking-widest text-[#1d1d1f]/50 dark:text-white/50">Connect With Us</h4>
-          <div class="flex items-center gap-3">
-            <a href="https://www.facebook.com/share/14rTT4XAjpi/" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 transition-colors flex items-center justify-center text-[#1d1d1f] dark:text-white shadow-sm" aria-label="Facebook Page">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-            </a>
-            <a href="https://www.instagram.com/myfeed.lk?igsi=bmluczhwZHJpZ3Ez" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-pink-600 hover:text-white dark:hover:bg-pink-500 transition-colors flex items-center justify-center text-[#1d1d1f] dark:text-white shadow-sm" aria-label="Instagram Page">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
-            </a>
-            <a href="https://whatsapp.com/channel/0029Vb92r0OEawdtkqTARr2V" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-green-500 hover:text-white transition-colors flex items-center justify-center text-[#1d1d1f] dark:text-white shadow-sm" aria-label="WhatsApp Channel">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-            </a>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 mt-2">
-          <a href="https://wa.me/94710947871" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-700 dark:text-green-400 font-bold text-xs sm:text-sm hover:bg-green-500/20 transition-colors border border-green-500/20">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
-            WhatsApp Admin (071 094 7871)
-          </a>
-        </div>
-      </div>
-
-      <!-- Newsletter Signup -->
-      <div class="w-full lg:w-[450px] shrink-0 bg-black/[0.02] dark:bg-white/[0.03] p-6 sm:p-8 rounded-3xl border border-black/5 dark:border-white/10">
-        <h3 class="text-xs font-bold text-[#1d1d1f] dark:text-white uppercase tracking-widest mb-2 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-blue-600"></span> Stay Updated
-        </h3>
-        <p class="text-[#1d1d1f]/60 dark:text-white/60 font-medium mb-5 text-sm sm:text-base">Get daily tech digests and AI news summaries straight to your inbox.</p>
-        
-        @if (subscribeSuccess()) {
-          <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center gap-3 animate-fade-in-up">
-            <mat-icon class="text-emerald-600">check_circle</mat-icon>
-            <span class="font-bold text-xs sm:text-sm">Thank you for subscribing! You're now on our mailing list.</span>
-          </div>
-        } @else {
-          <form (ngSubmit)="subscribeNewsletter($event)" class="flex flex-col sm:flex-row gap-2.5">
-            <input type="email" name="email" id="subscriberEmail" placeholder="Your email address" required [disabled]="subscribing()" class="w-full px-5 py-3 rounded-full border border-black/10 dark:border-white/10 bg-white dark:bg-[#1a1a1a] text-[#1d1d1f] dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600/30 transition-all font-medium placeholder:text-[#1d1d1f]/40 dark:placeholder:text-white/40 disabled:opacity-50 text-xs sm:text-sm" />
-            <button type="submit" [disabled]="subscribing()" class="shrink-0 px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-md">
-              @if (subscribing()) {
-                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              } @else {
-                <span>Subscribe</span>
-              }
-            </button>
-          </form>
-          @if (subscribeError(); as err) {
-            <p class="text-red-500 text-xs font-bold mt-2 pl-2 flex items-center gap-1">
-              <mat-icon style="font-size: 14px; width: 14px; height: 14px;">error</mat-icon> {{ err }}
-            </p>
-          }
-        }
-      </div>
-    </div>
-    
-    <div class="pt-8 border-t border-black/10 dark:border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-[11px] font-bold tracking-widest text-[#1d1d1f]/40 dark:text-white/40 uppercase">
-      <a routerLink="/admin" class="hover:text-inherit text-inherit cursor-default select-none focus:outline-none" title="">
-        &copy; 2026 MyFeed.lk &bull; Crafted by Kaveen Sandeepa
-      </a>
-      <div class="flex flex-wrap justify-center gap-6 sm:gap-8">
-        <a routerLink="/privacy" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">Privacy Policy</a>
-        <a routerLink="/terms" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">Terms</a>
-        <a routerLink="/about" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">About</a>
-        <a routerLink="/developer" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">Developer</a>
-      </div>
-    </div>
-  </div>
-</footer>
 
 <!-- Web Push Banner -->
 @if (webPushService.isSupported && !webPushService.isSubscribed() && !webPushService.isDenied()) {

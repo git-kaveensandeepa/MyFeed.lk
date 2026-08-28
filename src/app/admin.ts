@@ -56,23 +56,24 @@ export interface PolishedResult {
   selector: 'app-admin',
   imports: [MatIconModule, RouterLink, FormsModule],
   template: `
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 min-h-[calc(100vh-200px)]">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-[calc(100vh-200px)]">
       @if (loading()) {
         <div class="flex justify-center items-center py-32 animate-pulse">
-          <div class="w-12 h-12 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
+          <div class="w-10 h-10 rounded-full border-3 border-[#007AFF]/30 border-t-[#007AFF] animate-spin"></div>
         </div>
       } @else if (!user()) {
-        <div class="max-w-md mx-auto mt-12 p-8 bg-white rounded-3xl border border-black/10 shadow-2xl text-center">
-          <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
-            <mat-icon style="font-size: 28px; width: 28px; height: 28px;">admin_panel_settings</mat-icon>
+        <!-- Apple Inspired Login Box -->
+        <div class="max-w-md mx-auto mt-8 p-8 sm:p-10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl rounded-3xl border border-black/5 dark:border-white/10 shadow-2xl text-center">
+          <div class="w-16 h-16 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center mx-auto mb-5 shadow-inner">
+            <mat-icon style="font-size: 32px; width: 32px; height: 32px;">admin_panel_settings</mat-icon>
           </div>
-          <h1 class="text-3xl font-black mb-1 text-[#1d1d1f]">Admin Access</h1>
-          <p class="text-gray-500 mb-6 text-xs">Sign in with authorized administrator credentials.</p>
+          <h1 class="text-2xl font-bold mb-1 text-[#1d1d1f] dark:text-white tracking-tight">Admin Console</h1>
+          <p class="text-gray-500 dark:text-gray-400 mb-8 text-xs font-medium">Sign in with authorized administrator credentials to manage MyFeed.</p>
 
           <!-- Email & Password Form for Admin -->
-          <form (ngSubmit)="loginWithEmail()" class="space-y-3.5 mb-6 text-left">
+          <form (ngSubmit)="loginWithEmail()" class="space-y-4 mb-6 text-left">
             <div>
-              <label for="adminEmailInput" class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
+              <label for="adminEmailInput" class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Email</label>
               <input 
                 type="email" 
                 id="adminEmailInput"
@@ -80,10 +81,10 @@ export interface PolishedResult {
                 name="adminEmailInput" 
                 required 
                 placeholder="mail.kaveensandeepa@gmail.com" 
-                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium" />
+                class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-[#007AFF] outline-none font-medium text-gray-900 dark:text-white transition-all" />
             </div>
             <div>
-              <label for="adminPasswordInput" class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
+              <label for="adminPasswordInput" class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Password</label>
               <input 
                 type="password" 
                 id="adminPasswordInput"
@@ -91,228 +92,275 @@ export interface PolishedResult {
                 name="adminPasswordInput" 
                 required 
                 placeholder="••••••••" 
-                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium" />
+                class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-[#007AFF] outline-none font-medium text-gray-900 dark:text-white transition-all" />
             </div>
             @if (adminAuthError()) {
-              <p class="text-rose-600 text-xs font-bold">{{ adminAuthError() }}</p>
+              <div class="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                {{ adminAuthError() }}
+              </div>
             }
             <button 
               type="submit" 
               [disabled]="loading() || !adminEmailInput || !adminPasswordInput" 
-              class="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
+              class="w-full py-3.5 bg-[#007AFF] hover:bg-[#0062cc] disabled:opacity-50 text-white rounded-2xl font-bold text-sm transition-all shadow-md shadow-[#007AFF]/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]">
               <mat-icon style="font-size: 18px; width: 18px; height: 18px;">lock_open</mat-icon>
-              <span>Sign In with Password</span>
+              <span>Unlock Admin Panel</span>
             </button>
           </form>
-
         </div>
       } @else {
-        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-          <div>
-            <h1 class="text-4xl font-black text-[#1d1d1f] mb-2">Dashboard</h1>
-            <p class="text-gray-500 font-medium">Logged in as {{ user()?.email }}</p>
+        <!-- Modern Apple-Style Admin Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6 border-b border-black/5 dark:border-white/10">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center shadow-sm">
+              <mat-icon style="font-size: 26px; width: 26px; height: 26px;">shield</mat-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-2xl sm:text-3xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">Admin Portal</h1>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">Live</span>
+              </div>
+              <p class="text-xs text-gray-500 font-medium mt-0.5">{{ user()?.email }}</p>
+            </div>
           </div>
-          <div class="flex flex-wrap justify-center gap-4">
+
+          <div class="flex items-center gap-2.5 w-full md:w-auto">
             @if (activeTab() === 'articles' || activeTab() === 'ads') {
-              <button (click)="isAdding.set(true)" class="px-6 py-3 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all flex items-center gap-2">
-                <mat-icon>add</mat-icon> New Post
+              <button (click)="isAdding.set(true)" class="flex-1 md:flex-none px-5 py-2.5 bg-[#007AFF] hover:bg-[#0062cc] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-[#007AFF]/20 flex items-center justify-center gap-2 active:scale-95 cursor-pointer">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">add_circle</mat-icon>
+                <span>New {{ activeTab() === 'ads' ? 'Campaign' : 'Story' }}</span>
               </button>
             }
-            <button (click)="logout()" class="px-6 py-3 bg-gray-200 text-[#1d1d1f] rounded-full font-bold tracking-widest uppercase hover:bg-gray-300 transition-all">
-              Logout
+            <button (click)="logout()" class="px-4 py-2.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-200 dark:hover:bg-white/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
+              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">logout</mat-icon>
+              <span>Logout</span>
             </button>
           </div>
         </header>
 
-        <!-- Live Dashboard Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <div class="absolute -top-4 -right-4 p-6 opacity-20 transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
-              <mat-icon style="font-size: 100px; width: 100px; height: 100px;">group</mat-icon>
+        <!-- Apple Glass Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <!-- Live Visitors -->
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm relative overflow-hidden group">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                Active Visitors
+              </span>
+              <div class="w-8 h-8 rounded-xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">group</mat-icon>
+              </div>
             </div>
-            <h3 class="text-blue-100 font-bold uppercase tracking-wider mb-2 relative z-10 flex items-center gap-2 text-sm md:text-base">
-              <span class="w-3 h-3 rounded-full bg-green-400 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]"></span>
-              Live Today's Visitors
-            </h3>
-            <div class="text-5xl md:text-6xl font-black relative z-10 mt-2 mb-1 tracking-tighter">{{ analyticsService.todayLiveVisitors() }}</div>
-            <p class="text-sm text-blue-200 relative z-10 font-medium">Unique devices today</p>
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#1d1d1f] dark:text-white tracking-tight">{{ analyticsService.todayLiveVisitors() }}</div>
+            <p class="text-[11px] text-gray-400 font-medium mt-1">Unique devices logged today</p>
           </div>
           
-          <div class="bg-[#1d1d1f] rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <div class="absolute -top-4 -right-4 p-6 opacity-5 transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
-              <mat-icon style="font-size: 100px; width: 100px; height: 100px;">article</mat-icon>
+          <!-- Total Articles -->
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm relative overflow-hidden group">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                Stories Published
+              </span>
+              <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">article</mat-icon>
+              </div>
             </div>
-            <h3 class="text-gray-400 font-bold uppercase tracking-wider mb-2 relative z-10 text-sm md:text-base">Total Articles</h3>
-            <div class="text-5xl md:text-6xl font-black relative z-10 mt-2 mb-1 tracking-tighter">{{ articleService.articles().length }}</div>
-            <p class="text-sm text-gray-400 relative z-10 font-medium">Published on site</p>
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#1d1d1f] dark:text-white tracking-tight">{{ articleService.articles().length }}</div>
+            <p class="text-[11px] text-gray-400 font-medium mt-1">Live articles in catalog</p>
           </div>
           
-          <div class="bg-gray-100 rounded-3xl p-6 md:p-8 text-[#1d1d1f] shadow-xl relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-            <div class="absolute -top-4 -right-4 p-6 opacity-5 transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
-              <mat-icon style="font-size: 100px; width: 100px; height: 100px;">mark_email_read</mat-icon>
+          <!-- Subscribers -->
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm relative overflow-hidden group">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                Subscribers
+              </span>
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">mark_email_read</mat-icon>
+              </div>
             </div>
-            <h3 class="text-gray-500 font-bold uppercase tracking-wider mb-2 relative z-10 text-sm md:text-base">Total Subscribers</h3>
-            <div class="text-5xl md:text-6xl font-black relative z-10 mt-2 mb-1 tracking-tighter">{{ subscriberService.subscribers().length }}</div>
-            <p class="text-sm text-gray-500 relative z-10 font-medium">Email alerts active</p>
+            <div class="text-3xl sm:text-4xl font-extrabold text-[#1d1d1f] dark:text-white tracking-tight">{{ subscriberService.subscribers().length }}</div>
+            <p class="text-[11px] text-gray-400 font-medium mt-1">Email & Web push alerts active</p>
           </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex border-b border-gray-200 mb-8 gap-4 md:gap-6 overflow-x-auto whitespace-nowrap scrollbar-hide no-scrollbar pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
+        <!-- iOS Style Segmented Control Tab Bar -->
+        <div class="bg-gray-100/90 dark:bg-[#1c1c1e]/90 p-1.5 rounded-2xl mb-8 flex items-center gap-1 overflow-x-auto whitespace-nowrap scrollbar-none border border-black/5 dark:border-white/10 shadow-inner">
           <button 
             (click)="setActiveTab('articles')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'articles'"
-            [class.text-gray-400]="activeTab() !== 'articles'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">article</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'articles'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'articles'"
+            [class.text-[#007AFF]]="activeTab() === 'articles'"
+            [class.shadow-sm]="activeTab() === 'articles'"
+            [class.text-gray-600]="activeTab() !== 'articles'"
+            [class.dark:text-gray-400]="activeTab() !== 'articles'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">article</mat-icon>
             <span>Articles ({{ articleService.articles().length }})</span>
-            @if (activeTab() === 'articles') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
 
           <button 
             (click)="setActiveTab('auto-studio')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 relative"
+            [class.bg-white]="activeTab() === 'auto-studio'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'auto-studio'"
             [class.text-indigo-600]="activeTab() === 'auto-studio'"
-            [class.text-gray-400]="activeTab() !== 'auto-studio'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-indigo-600">auto_awesome</mat-icon>
-            <span>✨ ස්වයංක්‍රීය AI Studio</span>
-            @if (activeTab() === 'auto-studio') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"></div>
-            }
+            [class.shadow-sm]="activeTab() === 'auto-studio'"
+            [class.text-gray-600]="activeTab() !== 'auto-studio'"
+            [class.dark:text-gray-400]="activeTab() !== 'auto-studio'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-indigo-500">auto_awesome</mat-icon>
+            <span>✨ AI Studio</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
           </button>
 
           <button 
             (click)="setActiveTab('subscribers')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'subscribers'"
-            [class.text-gray-400]="activeTab() !== 'subscribers'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">mark_email_read</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'subscribers'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'subscribers'"
+            [class.text-[#007AFF]]="activeTab() === 'subscribers'"
+            [class.shadow-sm]="activeTab() === 'subscribers'"
+            [class.text-gray-600]="activeTab() !== 'subscribers'"
+            [class.dark:text-gray-400]="activeTab() !== 'subscribers'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">mark_email_read</mat-icon>
             <span>Subscribers</span>
-            @if (activeTab() === 'subscribers') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
 
           <button 
             (click)="setActiveTab('users')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'users'"
-            [class.text-gray-400]="activeTab() !== 'users'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">people</mat-icon>
-            <span>Users (පරිශීලකයින්)</span>
-            @if (activeTab() === 'users') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'users'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'users'"
+            [class.text-[#007AFF]]="activeTab() === 'users'"
+            [class.shadow-sm]="activeTab() === 'users'"
+            [class.text-gray-600]="activeTab() !== 'users'"
+            [class.dark:text-gray-400]="activeTab() !== 'users'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">people</mat-icon>
+            <span>Users</span>
           </button>
 
           <button 
             (click)="setActiveTab('ads')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'ads'"
-            [class.text-gray-400]="activeTab() !== 'ads'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">campaign</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'ads'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'ads'"
+            [class.text-[#007AFF]]="activeTab() === 'ads'"
+            [class.shadow-sm]="activeTab() === 'ads'"
+            [class.text-gray-600]="activeTab() !== 'ads'"
+            [class.dark:text-gray-400]="activeTab() !== 'ads'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">campaign</mat-icon>
             <span>Ads</span>
-            @if (activeTab() === 'ads') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
 
           <button 
             (click)="setActiveTab('notify')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'notify'"
-            [class.text-gray-400]="activeTab() !== 'notify'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'notify'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'notify'"
+            [class.text-purple-600]="activeTab() === 'notify'"
+            [class.shadow-sm]="activeTab() === 'notify'"
+            [class.text-gray-600]="activeTab() !== 'notify'"
+            [class.dark:text-gray-400]="activeTab() !== 'notify'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">notifications_active</mat-icon>
             <span>Notify</span>
-            @if (activeTab() === 'notify') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
 
           <button 
             (click)="setActiveTab('whatsapp')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'whatsapp'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'whatsapp'"
             [class.text-emerald-600]="activeTab() === 'whatsapp'"
-            [class.text-gray-400]="activeTab() !== 'whatsapp'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-emerald-500">chat</mat-icon>
+            [class.shadow-sm]="activeTab() === 'whatsapp'"
+            [class.text-gray-600]="activeTab() !== 'whatsapp'"
+            [class.dark:text-gray-400]="activeTab() !== 'whatsapp'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-emerald-500">chat</mat-icon>
             <span>WhatsApp</span>
-            @if (activeTab() === 'whatsapp') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-full"></div>
-            }
           </button>
 
           <button 
             (click)="setActiveTab('deploy')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'deploy'"
-            [class.text-gray-400]="activeTab() !== 'deploy'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">rocket_launch</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'deploy'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'deploy'"
+            [class.text-[#007AFF]]="activeTab() === 'deploy'"
+            [class.shadow-sm]="activeTab() === 'deploy'"
+            [class.text-gray-600]="activeTab() !== 'deploy'"
+            [class.dark:text-gray-400]="activeTab() !== 'deploy'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">rocket_launch</mat-icon>
             <span>Deploy</span>
-            @if (activeTab() === 'deploy') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
           
           <button 
             (click)="setActiveTab('analytics')"
-            class="pb-4 font-bold text-sm tracking-wider uppercase transition-all relative flex items-center gap-1.5 cursor-pointer"
-            [class.text-blue-600]="activeTab() === 'analytics'"
-            [class.text-gray-400]="activeTab() !== 'analytics'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">insights</mat-icon>
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'analytics'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'analytics'"
+            [class.text-[#007AFF]]="activeTab() === 'analytics'"
+            [class.shadow-sm]="activeTab() === 'analytics'"
+            [class.text-gray-600]="activeTab() !== 'analytics'"
+            [class.dark:text-gray-400]="activeTab() !== 'analytics'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">insights</mat-icon>
             <span>Analytics</span>
-            @if (activeTab() === 'analytics') {
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-            }
           </button>
         </div>
 
         @if (activeTab() === 'articles') {
 
         @if (isAdding()) {
-          <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 class="text-2xl font-black">{{ editingId() ? 'Edit' : 'Create' }} Article</h2>
+          <div class="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl p-6 sm:p-8 md:p-10 rounded-3xl shadow-xl border border-black/5 dark:border-white/10 mb-12">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-black/5 dark:border-white/10">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">{{ editingId() ? 'edit_note' : 'post_add' }}</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-[#1d1d1f] dark:text-white tracking-tight">{{ editingId() ? 'Edit Story' : 'Create New Story' }}</h2>
+                  <p class="text-xs text-gray-500 font-medium">Publish or revise news article with rich metadata</p>
+                </div>
+              </div>
+              <button type="button" (click)="cancelEdit()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-all cursor-pointer">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">close</mat-icon>
+              </button>
             </div>
 
             <!-- AI Long Article Generator Box -->
             @if (!editingId()) {
-              <div class="p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-blue-100 mb-8">
-                <div class="flex items-center gap-2 mb-2">
-                  <mat-icon class="text-blue-600" style="font-size: 20px; width: 20px; height: 20px;">auto_awesome</mat-icon>
-                  <h3 class="font-bold text-xs uppercase tracking-wider text-blue-900">AI Long Article Assistant (සිංහලෙන් දීර්ඝ ලිපි නිර්මාණය)</h3>
+              <div class="p-5 sm:p-6 bg-gradient-to-r from-[#007AFF]/5 to-indigo-500/5 dark:from-[#007AFF]/10 dark:to-indigo-500/10 rounded-2xl border border-[#007AFF]/20 dark:border-white/10 mb-6">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <mat-icon class="text-[#007AFF]" style="font-size: 20px; width: 20px; height: 20px;">auto_awesome</mat-icon>
+                  <h3 class="font-bold text-xs uppercase tracking-wider text-[#007AFF] dark:text-blue-400">AI Assistant (සිංහලෙන් දීර්ඝ ලිපි නිර්මාණය)</h3>
                 </div>
-                <p class="text-xs text-blue-700/70 mb-4">ඔබට අවශ්‍ය පුවතේ මාතෘකාව හෝ පුවත් ලින්ක් එකක් (News URL) ලබා දී AI මඟින් පූර්ණ සිංහල ලිපියක් සකසා ගන්න.</p>
+                <p class="text-xs text-gray-600 dark:text-gray-300 mb-4">ඔබට අවශ්‍ය පුවතේ මාතෘකාව හෝ පුවත් ලින්ක් එකක් (News URL) ලබා දී AI මඟින් පූර්ණ සිංහල ලිපියක් සකසා ගන්න.</p>
                 
                 <div class="flex flex-col gap-3">
                   <!-- From Topic -->
                   <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" [(ngModel)]="aiTopicPrompt" [ngModelOptions]="{standalone: true}" placeholder="මාතෘකාවක් දෙන්න (e.g., Apple Vision Pro 2)" class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
-                    <button type="button" (click)="generateWithAI()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
+                    <input type="text" [(ngModel)]="aiTopicPrompt" [ngModelOptions]="{standalone: true}" placeholder="මාතෘකාවක් දෙන්න (e.g., Apple Vision Pro 2)" class="flex-1 px-4 py-2.5 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-[#007AFF] outline-none text-gray-900 dark:text-white">
+                    <button type="button" (click)="generateWithAI()" [disabled]="isGeneratingAi()" class="px-5 py-2.5 bg-[#007AFF] hover:bg-[#0062cc] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 shadow-sm">
                       @if (isGeneratingAi()) {
                         <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
                       } @else {
-                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">bolt</mat-icon>
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">bolt</mat-icon>
                         <span>From Topic</span>
                       }
                     </button>
                   </div>
                   
-                  <div class="flex items-center gap-4 my-1">
-                    <div class="h-px bg-blue-200/60 flex-1"></div>
-                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">OR</span>
-                    <div class="h-px bg-blue-200/60 flex-1"></div>
+                  <div class="flex items-center gap-4 my-0.5">
+                    <div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OR</span>
+                    <div class="h-px bg-gray-200 dark:bg-white/10 flex-1"></div>
                   </div>
 
                   <!-- From URL -->
                   <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="url" [(ngModel)]="aiUrlPrompt" [ngModelOptions]="{standalone: true}" placeholder="පුවත් ලින්ක් එක මෙතනට දාන්න (e.g., https://news.google.com/...)" class="flex-1 px-4 py-3 bg-white rounded-xl border border-blue-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none">
-                    <button type="button" (click)="generateFromUrl()" [disabled]="isGeneratingAi()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50">
+                    <input type="url" [(ngModel)]="aiUrlPrompt" [ngModelOptions]="{standalone: true}" placeholder="පුවත් ලින්ක් එක මෙතනට දාන්න (e.g., https://news.google.com/...)" class="flex-1 px-4 py-2.5 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-[#007AFF] outline-none text-gray-900 dark:text-white">
+                    <button type="button" (click)="generateFromUrl()" [disabled]="isGeneratingAi()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 shadow-sm">
                       @if (isGeneratingAi()) {
                         <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
                       } @else {
-                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">link</mat-icon>
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">link</mat-icon>
                         <span>From URL</span>
                       }
                     </button>
@@ -321,22 +369,22 @@ export interface PolishedResult {
               </div>
             }
 
-            <form (ngSubmit)="saveArticle()" class="flex flex-col gap-6">
+            <form (ngSubmit)="saveArticle()" class="flex flex-col gap-5">
               
               <div>
-                <label for="formTitle" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Title</label>
-                <input type="text" id="formTitle" [(ngModel)]="formTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans text-lg" placeholder="Article Title (Sinhala/English)">
+                <label for="formTitle" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Title</label>
+                <input type="text" id="formTitle" [(ngModel)]="formTitle" name="title" required class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none font-bold text-base text-gray-900 dark:text-white" placeholder="Article Title (Sinhala/English)">
               </div>
               
               <div>
-                <label for="formSummary" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Summary</label>
-                <textarea id="formSummary" [(ngModel)]="formSummary" name="summary" required rows="2" class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-serif text-lg" placeholder="Short summary"></textarea>
+                <label for="formSummary" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Summary</label>
+                <textarea id="formSummary" [(ngModel)]="formSummary" name="summary" required rows="2" class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none text-sm text-gray-900 dark:text-white font-medium" placeholder="Short summary"></textarea>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label for="formCategory" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Category</label>
-                  <select id="formCategory" [(ngModel)]="formCategory" name="category" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans appearance-none bg-white">
+                  <label for="formCategory" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Category</label>
+                  <select id="formCategory" [(ngModel)]="formCategory" name="category" required class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none text-sm font-semibold text-gray-900 dark:text-white">
                     <option value="" disabled selected>Select Category</option>
                     <option value="AI">AI</option>
                     <option value="Tech">Tech</option>
@@ -348,26 +396,26 @@ export interface PolishedResult {
                   </select>
                 </div>
                 <div>
-                  <label for="formAuthorType" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Attribution (Author)</label>
-                  <select id="formAuthorType" [(ngModel)]="formAuthorType" name="authorType" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans appearance-none bg-white">
-                    <option value="ai">MyFeed AI Desk (AI-Assisted Story)</option>
-                    <option value="human">Written by Kaveen Sandeepa (Editor-in-Chief)</option>
+                  <label for="formAuthorType" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Attribution</label>
+                  <select id="formAuthorType" [(ngModel)]="formAuthorType" name="authorType" required class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none text-sm font-semibold text-gray-900 dark:text-white">
+                    <option value="ai">MyFeed AI Desk</option>
+                    <option value="human">Written by Kaveen Sandeepa</option>
                   </select>
                 </div>
                 <div>
-                  <label for="formReadTime" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Read Time</label>
-                  <input type="text" id="formReadTime" [(ngModel)]="formReadTime" name="readTime" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none font-sans" placeholder="e.g. 5 min">
+                  <label for="formReadTime" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Read Time</label>
+                  <input type="text" id="formReadTime" [(ngModel)]="formReadTime" name="readTime" required class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none text-sm text-gray-900 dark:text-white font-medium" placeholder="e.g. 5 min">
                 </div>
               </div>
 
               <!-- Source URL (Optional) & Original Source Image Extractor -->
-              <div class="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
+              <div class="p-4 sm:p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                  <label for="formSourceUrl" class="block text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-1.5">
-                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600">link</mat-icon>
-                    <span>Original Source / Course URL (මූලාශ්‍ර Web Link එක)</span>
+                  <label for="formSourceUrl" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-[#007AFF]">link</mat-icon>
+                    <span>Original Source URL</span>
                   </label>
-                  <span class="text-[11px] text-gray-400 font-medium">The Verge, GSM Arena, BBC, Ada Derana, etc.</span>
+                  <span class="text-[11px] text-gray-400 font-medium">The Verge, GSM Arena, Ada Derana, etc.</span>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
                   <input 
@@ -376,17 +424,17 @@ export interface PolishedResult {
                     [(ngModel)]="formSourceUrl" 
                     name="sourceUrl" 
                     placeholder="https://www.theverge.com/2025/..." 
-                    class="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-blue-600 outline-none"
+                    class="flex-1 px-4 py-2.5 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 text-sm focus:ring-2 focus:ring-[#007AFF] outline-none text-gray-900 dark:text-white"
                   />
                   <button 
                     type="button" 
                     (click)="extractImageFromFormSourceUrl()"
                     [disabled]="isExtractingFormSourceImage() || !formSourceUrl.trim()"
-                    class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <mat-icon [class.animate-spin]="isExtractingFormSourceImage()" style="font-size: 16px; width: 16px; height: 16px;">
                       {{ isExtractingFormSourceImage() ? 'refresh' : 'image_search' }}
                     </mat-icon>
-                    <span>{{ isExtractingFormSourceImage() ? 'Extracting...' : '🌐 Original Image එක ගන්න' }}</span>
+                    <span>{{ isExtractingFormSourceImage() ? 'Extracting...' : 'Extract Image' }}</span>
                   </button>
                 </div>
               </div>
@@ -540,30 +588,30 @@ export interface PolishedResult {
 
               <div class="flex flex-col sm:flex-row gap-4 py-2 flex-wrap">
                 <div class="flex items-center gap-3">
-                  <input type="checkbox" id="autoAlertPhone" [(ngModel)]="autoAlertPhone" name="autoAlertPhone" class="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-600">
-                  <label for="autoAlertPhone" class="text-sm font-bold text-purple-700 uppercase tracking-widest cursor-pointer flex items-center gap-1.5">
-                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+                  <input type="checkbox" id="autoAlertPhone" [(ngModel)]="autoAlertPhone" name="autoAlertPhone" class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600">
+                  <label for="autoAlertPhone" class="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider cursor-pointer flex items-center gap-1.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">notifications_active</mat-icon>
                     Alert My Phone
                   </label>
                 </div>
                 <div class="flex items-center gap-3">
-                  <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
-                  <label for="notifySubscribers" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Notify subscribers (Email)</label>
+                  <input type="checkbox" id="notifySubscribers" [(ngModel)]="notifySubscribers" name="notifySubscribers" class="w-4 h-4 rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF]">
+                  <label for="notifySubscribers" class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer">Notify subscribers (Email)</label>
                 </div>
                 <div class="flex items-center gap-3">
-                  <input type="checkbox" id="autoPostWhatsApp" [(ngModel)]="autoPostWhatsApp" name="autoPostWhatsApp" class="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600">
-                  <label for="autoPostWhatsApp" class="text-sm font-bold text-emerald-700 uppercase tracking-widest cursor-pointer flex items-center gap-1.5">
-                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
+                  <input type="checkbox" id="autoPostWhatsApp" [(ngModel)]="autoPostWhatsApp" name="autoPostWhatsApp" class="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600">
+                  <label for="autoPostWhatsApp" class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider cursor-pointer flex items-center gap-1.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">chat</mat-icon>
                     Auto-Post to WhatsApp Channel
                   </label>
                 </div>
               </div>
               
-              <div class="flex flex-col sm:flex-row gap-4 mt-4">
-                <button type="submit" class="px-8 py-4 bg-[#1d1d1f] text-white rounded-full font-bold tracking-widest uppercase hover:bg-black transition-all shadow-lg w-full md:w-auto">
-                  {{ editingId() ? 'Update' : 'Publish' }} Post
+              <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                <button type="submit" class="px-6 py-3 bg-[#007AFF] hover:bg-[#0062cc] text-white rounded-2xl font-bold tracking-wider uppercase text-xs transition-all shadow-md shadow-[#007AFF]/20 w-full sm:w-auto cursor-pointer active:scale-95">
+                  {{ editingId() ? 'Update Story' : 'Publish Story' }}
                 </button>
-                <button type="button" (click)="cancelEdit()" class="px-8 py-4 bg-gray-100 text-gray-600 rounded-full font-bold tracking-widest uppercase hover:bg-gray-200 transition-all w-full md:w-auto">
+                <button type="button" (click)="cancelEdit()" class="px-6 py-3 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-2xl font-bold tracking-wider uppercase text-xs hover:bg-gray-200 dark:hover:bg-white/20 transition-all w-full sm:w-auto cursor-pointer active:scale-95">
                   Cancel
                 </button>
               </div>
@@ -573,32 +621,31 @@ export interface PolishedResult {
         }
 
         <!-- ARTICLES MANAGEMENT SECTION -->
-        <div class="space-y-6">
+        <div class="space-y-4">
           <!-- Top Search & Filter Bar -->
-          <div class="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl p-4 sm:p-5 rounded-2xl shadow-sm border border-black/5 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <!-- Search input -->
             <div class="relative flex-1">
-              <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</mat-icon>
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">search</mat-icon>
               <input 
                 type="text" 
                 [(ngModel)]="searchArticleQuery" 
-                placeholder="ලිපි සොයන්න (Search by title, summary, or category)..." 
-                class="w-full pl-12 pr-10 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none text-sm font-medium transition-all"
+                placeholder="Search articles by title, category, or summary..." 
+                class="w-full pl-10 pr-10 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white transition-all"
               />
               @if (searchArticleQuery()) {
-                <button (click)="searchArticleQuery.set('')" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
-                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                <button (click)="searchArticleQuery.set('')" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
                 </button>
               }
             </div>
 
             <!-- Category Filter Tabs / Selector -->
             <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-              <span class="text-xs font-bold uppercase tracking-wider text-gray-400 shrink-0 mr-1 hidden sm:inline">Category:</span>
               <select 
                 [(ngModel)]="filterCategory" 
-                class="px-4 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-700 outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer">
-                <option value="ALL">All Categories (සියලු වර්ග)</option>
+                class="px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-[#007AFF] cursor-pointer">
+                <option value="ALL">All Categories</option>
                 <option value="AI">AI</option>
                 <option value="Tech">Tech</option>
                 <option value="Local">Local</option>
@@ -611,33 +658,30 @@ export interface PolishedResult {
               @if (selectedArticleIds().length > 0) {
                 <button 
                   (click)="openBulkDeleteModal()" 
-                  class="px-4 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-red-600/20 flex items-center gap-1.5 cursor-pointer shrink-0 animate-fade-in">
-                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_sweep</mat-icon>
-                  <span>Delete Selected ({{ selectedArticleIds().length }})</span>
+                  class="px-3.5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete_sweep</mat-icon>
+                  <span>Delete ({{ selectedArticleIds().length }})</span>
                 </button>
               }
             </div>
           </div>
 
           <!-- Articles Table Card -->
-          <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden">
             <!-- Header bar with counter & quick actions -->
-            <div class="p-6 sm:p-8 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="p-5 border-b border-black/5 dark:border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
-                <h2 class="text-xl font-bold text-[#1d1d1f] flex items-center gap-2">
-                  <span>පුවත් කළමනාකරණය (Published News Articles)</span>
-                  <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-black">{{ filteredArticles().length }}</span>
+                <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <span>Published Stories</span>
+                  <span class="px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-[11px] font-bold">{{ filteredArticles().length }}</span>
                 </h2>
-                <p class="text-xs text-gray-500 mt-1">
-                  ඔබට අවශ්‍ය පුවත පහසුවෙන්ම Edit කිරීමට හෝ Delete කිරීමට මෙතැනින් හැක.
-                </p>
               </div>
 
               <div class="flex items-center gap-2">
                 @if (selectedArticleIds().length > 0) {
                   <button 
                     (click)="clearSelection()" 
-                    class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold transition-all cursor-pointer">
+                    class="px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs font-semibold transition-all cursor-pointer">
                     Clear Selection ({{ selectedArticleIds().length }})
                   </button>
                 }
@@ -645,120 +689,120 @@ export interface PolishedResult {
             </div>
 
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse min-w-[900px]">
+              <table class="w-full text-left border-collapse min-w-[800px]">
                 <thead>
-                  <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
-                    <th class="p-5 w-12 text-center">
+                  <tr class="bg-gray-50/50 dark:bg-white/5 border-b border-black/5 dark:border-white/10 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+                    <th class="py-3.5 px-4 w-12 text-center">
                       <input 
                         type="checkbox" 
                         [checked]="isAllSelected()" 
                         (change)="toggleSelectAll()" 
-                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                        class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-[#007AFF] focus:ring-[#007AFF] cursor-pointer"
                         title="Select All"
                       />
                     </th>
-                    <th class="p-5 font-bold">News Article</th>
-                    <th class="p-5 font-bold">Category</th>
-                    <th class="p-5 font-bold">Date</th>
-                    <th class="p-5 font-bold text-center">Views</th>
-                    <th class="p-5 font-bold text-right">Actions</th>
+                    <th class="py-3.5 px-4">Story</th>
+                    <th class="py-3.5 px-4">Category</th>
+                    <th class="py-3.5 px-4">Date</th>
+                    <th class="py-3.5 px-4 text-center">Views</th>
+                    <th class="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-black/5 dark:divide-white/5">
                   @if (filteredArticles().length === 0) {
                     <tr>
                       <td colspan="6" class="p-12 text-center text-gray-400">
-                        <mat-icon style="font-size: 36px; width: 36px; height: 36px;" class="mb-2 opacity-50">search_off</mat-icon>
-                        <p class="font-bold text-sm">ලිපි කිසිවක් හමු නොවීය (No matching articles found)</p>
-                        <p class="text-xs text-gray-400 mt-1">කරුණාකර වෙනත් නමකින් සොයන්න හෝ Filter වෙනස් කරන්න.</p>
+                        <mat-icon style="font-size: 32px; width: 32px; height: 32px;" class="mb-2 opacity-50">search_off</mat-icon>
+                        <p class="font-bold text-sm text-gray-700 dark:text-gray-300">No articles found</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Try a different search term or category filter.</p>
                       </td>
                     </tr>
                   } @else {
                     @for (article of filteredArticles(); track article.id) {
                       <tr 
-                        class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
-                        [class.bg-blue-50/40]="isArticleSelected(article.id)">
+                        class="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors"
+                        [class.bg-[#007AFF]/5]="isArticleSelected(article.id)">
                         <!-- Checkbox -->
-                        <td class="p-5 text-center">
+                        <td class="py-3.5 px-4 text-center">
                           <input 
                             type="checkbox" 
                             [checked]="isArticleSelected(article.id)" 
                             (change)="toggleSelectArticle(article.id)" 
-                            class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-[#007AFF] focus:ring-[#007AFF] cursor-pointer"
                           />
                         </td>
 
                         <!-- Title + Thumbnail -->
-                        <td class="p-5">
-                          <div class="flex items-center gap-3.5 max-w-md">
+                        <td class="py-3.5 px-4">
+                          <div class="flex items-center gap-3 max-w-md">
                             @if (article.imageUrl) {
                               <img 
                                 [src]="article.imageUrl" 
                                 [alt]="article.title" 
-                                class="w-12 h-12 rounded-xl object-cover shrink-0 border border-black/5 bg-gray-100" 
+                                class="w-11 h-11 rounded-xl object-cover shrink-0 border border-black/5 dark:border-white/10 bg-gray-100 dark:bg-white/5" 
                                 referrerpolicy="no-referrer"
                               />
                             }
-                            <div>
-                              <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="font-bold text-sm text-[#1d1d1f] hover:text-blue-600 transition-colors line-clamp-2">
+                            <div class="min-w-0">
+                              <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white hover:text-[#007AFF] transition-colors line-clamp-1">
                                 {{ article.title }}
                               </a>
-                              <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">{{ article.summary }}</p>
+                              <p class="text-[11px] text-gray-400 line-clamp-1 mt-0.5">{{ article.summary }}</p>
                             </div>
                           </div>
                         </td>
 
                         <!-- Category -->
-                        <td class="p-5">
-                          <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                        <td class="py-3.5 px-4">
+                          <span class="px-2.5 py-1 bg-[#007AFF]/10 text-[#007AFF] rounded-lg text-[10px] font-bold uppercase tracking-wider">
                             {{ article.category }}
                           </span>
                         </td>
 
                         <!-- Date -->
-                        <td class="p-5 text-xs text-gray-500 whitespace-nowrap">{{ article.date }}</td>
+                        <td class="py-3.5 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap font-medium">{{ article.date }}</td>
 
                         <!-- Views -->
-                        <td class="p-5 text-center">
-                          <span class="inline-flex items-center gap-1 text-xs font-bold text-[#1d1d1f]/60 bg-gray-100 px-2.5 py-1 rounded-full">
-                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon>
+                        <td class="py-3.5 px-4 text-center">
+                          <span class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-2 py-0.5 rounded-md">
+                            <mat-icon style="font-size: 12px; width: 12px; height: 12px;">visibility</mat-icon>
                             {{ article.views || 0 }}
                           </span>
                         </td>
 
-                        <!-- Actions (View, Phone Alert, WhatsApp, Edit, Delete) -->
-                        <td class="p-5 text-right">
-                          <div class="flex items-center justify-end gap-1.5">
+                        <!-- Actions -->
+                        <td class="py-3.5 px-4 text-right">
+                          <div class="flex items-center justify-end gap-1">
                             <!-- View live -->
-                            <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all hover:scale-105" title="View Live Story">
-                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">visibility</mat-icon>
+                            <a [routerLink]="['/article', article.slug || article.id]" target="_blank" class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-all active:scale-95" title="View Story">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">visibility</mat-icon>
                             </a>
                             <!-- Phone alert -->
-                            <button (click)="sendPhoneAlertForArticle(article)" [disabled]="isSendingAlertForId() === article.id" class="w-9 h-9 rounded-full bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center transition-all hover:scale-105 disabled:opacity-50" title="Send Push Alert">
+                            <button (click)="sendPhoneAlertForArticle(article)" [disabled]="isSendingAlertForId() === article.id" class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 flex items-center justify-center transition-all active:scale-95 disabled:opacity-50" title="Push Alert">
                               @if (isSendingAlertForId() === article.id) {
-                                <div class="w-3.5 h-3.5 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
+                                <div class="w-3 h-3 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
                               } @else {
-                                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">notifications_active</mat-icon>
+                                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">notifications_active</mat-icon>
                               }
                             </button>
                             <!-- WhatsApp -->
-                            <button (click)="openWhatsAppModal(article)" class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-all hover:scale-105" title="Share to WhatsApp">
-                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chat</mat-icon>
+                            <button (click)="openWhatsAppModal(article)" class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="WhatsApp">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">chat</mat-icon>
                             </button>
-                            <!-- Quick Change Image Button -->
-                            <button (click)="openQuickImageModal(article)" class="w-9 h-9 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition-all hover:scale-105" title="Change Cover Image (පින්තූරය වෙනස් කරන්න)">
-                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">photo_camera</mat-icon>
+                            <!-- Quick Image -->
+                            <button (click)="openQuickImageModal(article)" class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="Change Image">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">photo_camera</mat-icon>
                             </button>
                             <!-- Edit -->
-                            <button (click)="editArticle(article)" class="w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-all hover:scale-105" title="Edit Story">
-                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">edit</mat-icon>
+                            <button (click)="editArticle(article)" class="w-8 h-8 rounded-xl bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="Edit">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit</mat-icon>
                             </button>
-                            <!-- Delete Button (Red) -->
+                            <!-- Delete -->
                             <button 
                               (click)="openDeleteModal(article)" 
-                              class="w-9 h-9 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all hover:scale-105 cursor-pointer shadow-sm" 
-                              title="Delete News Article (පුවත ඉවත් කරන්න)">
-                              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete</mat-icon>
+                              class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all active:scale-95 cursor-pointer" 
+                              title="Delete Story">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete</mat-icon>
                             </button>
                           </div>
                         </td>
@@ -772,21 +816,21 @@ export interface PolishedResult {
         </div>
         } @else if (activeTab() === 'auto-studio') {
           <!-- AUTO CONTENT GENERATION STUDIO -->
-          <div class="space-y-8 animate-fade-in pb-12">
+          <div class="space-y-6 animate-fade-in pb-12">
             <!-- Studio Hero Banner -->
-            <div class="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-[#121420] text-white relative overflow-hidden shadow-2xl border border-indigo-500/20">
+            <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-[#121420] text-white relative overflow-hidden shadow-xl border border-white/10">
               <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
               <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
               
-              <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 <div>
-                  <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold uppercase tracking-wider text-indigo-300 mb-3.5">
-                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_awesome</mat-icon>
+                  <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold uppercase tracking-wider text-indigo-300 mb-2.5">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">auto_awesome</mat-icon>
                     <span>Gemini 2.5 Pro Studio • Automated News Engine</span>
                   </div>
-                  <h2 class="text-2xl sm:text-4xl font-black tracking-tight text-white">ස්වයංක්‍රීය Article & Content Generation</h2>
-                  <p class="text-indigo-100/80 text-xs sm:text-sm mt-2 max-w-2xl leading-relaxed">
-                    සජීවී Tech පුවත් අධ්‍යයනය කර තත්පර ගණනකින් උසස් තත්ත්වයේ සිංහල ලිපි, AI ඡායාරූප, සහ WhatsApp Channel Posts නිර්මාණය කර 1-Click එකෙන් පළ කරන්න.
+                  <h2 class="text-xl sm:text-3xl font-extrabold tracking-tight text-white">Automated Content Studio</h2>
+                  <p class="text-indigo-100/80 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed">
+                    Scan live tech trends, draft rich Sinhala stories, generate AI visuals, and dispatch WhatsApp channel updates with one click.
                   </p>
                 </div>
                 
@@ -795,81 +839,82 @@ export interface PolishedResult {
                     type="button" 
                     (click)="loadTrendingNews()" 
                     [disabled]="isLoadingTrending()"
-                    class="px-5 py-3 rounded-2xl bg-white text-gray-900 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg cursor-pointer disabled:opacity-50">
-                    <mat-icon [class.animate-spin]="isLoadingTrending()" style="font-size: 18px; width: 18px; height: 18px;">refresh</mat-icon>
-                    <span>{{ isLoadingTrending() ? 'Scanning Live RSS...' : 'Refresh Trends' }}</span>
+                    class="px-4 py-2.5 rounded-xl bg-white text-gray-900 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 active:scale-95">
+                    <mat-icon [class.animate-spin]="isLoadingTrending()" style="font-size: 16px; width: 16px; height: 16px;">refresh</mat-icon>
+                    <span>{{ isLoadingTrending() ? 'Scanning Feeds...' : 'Refresh Trends' }}</span>
                   </button>
                 </div>
               </div>
 
               <!-- Sub-Navigation Switcher -->
-              <div class="flex flex-wrap gap-2 sm:gap-3 mt-8 pt-6 border-t border-white/10">
+              <div class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/10">
                 <button 
                   type="button" 
                   (click)="autoStudioSubTab.set('trending')" 
-                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-                  [class.bg-indigo-600]="autoStudioSubTab() === 'trending'"
+                  class="px-3.5 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                  [class.bg-[#007AFF]]="autoStudioSubTab() === 'trending'"
                   [class.text-white]="autoStudioSubTab() === 'trending'"
+                  [class.shadow-md]="autoStudioSubTab() === 'trending'"
                   [class.bg-white/10]="autoStudioSubTab() !== 'trending'"
                   [class.text-gray-300]="autoStudioSubTab() !== 'trending'">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">radar</mat-icon>
-                  <span>1. Live Tech Trends ({{ trendingNews().length }})</span>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">radar</mat-icon>
+                  <span>1. Live Trends ({{ trendingNews().length }})</span>
                 </button>
 
                 <button 
                   type="button" 
                   (click)="autoStudioSubTab.set('topic')" 
-                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-                  [class.bg-indigo-600]="autoStudioSubTab() === 'topic'"
+                  class="px-3.5 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                  [class.bg-[#007AFF]]="autoStudioSubTab() === 'topic'"
                   [class.text-white]="autoStudioSubTab() === 'topic'"
+                  [class.shadow-md]="autoStudioSubTab() === 'topic'"
                   [class.bg-white/10]="autoStudioSubTab() !== 'topic'"
                   [class.text-gray-300]="autoStudioSubTab() !== 'topic'">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit_note</mat-icon>
-                  <span>2. Topic & Keyword Studio</span>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">edit_note</mat-icon>
+                  <span>2. Topic Studio</span>
                 </button>
 
                 <button 
                   type="button" 
                   (click)="autoStudioSubTab.set('url')" 
-                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-                  [class.bg-indigo-600]="autoStudioSubTab() === 'url'"
+                  class="px-3.5 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                  [class.bg-[#007AFF]]="autoStudioSubTab() === 'url'"
                   [class.text-white]="autoStudioSubTab() === 'url'"
+                  [class.shadow-md]="autoStudioSubTab() === 'url'"
                   [class.bg-white/10]="autoStudioSubTab() !== 'url'"
                   [class.text-gray-300]="autoStudioSubTab() !== 'url'">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">link</mat-icon>
-                  <span>3. News URL to Article</span>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">link</mat-icon>
+                  <span>3. URL to Story</span>
                 </button>
 
                 <button 
                   type="button" 
                   (click)="autoStudioSubTab.set('polish')" 
-                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-                  [class.bg-indigo-600]="autoStudioSubTab() === 'polish'"
+                  class="px-3.5 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                  [class.bg-[#007AFF]]="autoStudioSubTab() === 'polish'"
                   [class.text-white]="autoStudioSubTab() === 'polish'"
+                  [class.shadow-md]="autoStudioSubTab() === 'polish'"
                   [class.bg-white/10]="autoStudioSubTab() !== 'polish'"
                   [class.text-gray-300]="autoStudioSubTab() !== 'polish'">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_fix_high</mat-icon>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">auto_fix_high</mat-icon>
                   <span>4. Content Polisher</span>
                 </button>
 
                 <button 
                   type="button" 
                   (click)="autoStudioSubTab.set('autopilot'); loadAutoPilotStatus()" 
-                  class="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer relative group"
-                  [class.bg-gradient-to-r]="autoStudioSubTab() === 'autopilot'"
-                  [class.from-emerald-600]="autoStudioSubTab() === 'autopilot'"
-                  [class.to-teal-600]="autoStudioSubTab() === 'autopilot'"
+                  class="px-3.5 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer relative group"
+                  [class.bg-emerald-600]="autoStudioSubTab() === 'autopilot'"
                   [class.text-white]="autoStudioSubTab() === 'autopilot'"
-                  [class.shadow-lg]="autoStudioSubTab() === 'autopilot'"
-                  [class.shadow-emerald-600/30]="autoStudioSubTab() === 'autopilot'"
+                  [class.shadow-md]="autoStudioSubTab() === 'autopilot'"
                   [class.bg-white/10]="autoStudioSubTab() !== 'autopilot'"
-                  [class.text-emerald-400]="autoStudioSubTab() !== 'autopilot'">
+                  [class.text-emerald-300]="autoStudioSubTab() !== 'autopilot'">
                   <div class="relative flex items-center justify-center">
-                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">schedule</mat-icon>
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">schedule</mat-icon>
                     <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                   </div>
-                  <span>5. Auto-Pilot 24/7 (පැයෙන් පැයට)</span>
-                  <span class="px-1.5 py-0.5 rounded-md bg-emerald-400/20 text-emerald-300 text-[10px] font-mono font-bold tracking-tight">1-Hr Cron</span>
+                  <span>5. Auto-Pilot 24/7</span>
+                  <span class="px-1.5 py-0.5 rounded-md bg-emerald-400/20 text-emerald-300 text-[10px] font-mono font-bold tracking-tight">1-Hr</span>
                 </button>
               </div>
             </div>
@@ -1408,24 +1453,24 @@ export interface PolishedResult {
 
                 <!-- 2-Column Controls: Settings + 24/7 Cloud Webhook Setup -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  <!-- Configuration Panel (5 cols) -->
-                  <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6">
+                  <!-- Configuration Panel (6 cols) -->
+                  <div class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6">
                     <div class="flex items-center justify-between pb-4 border-b border-gray-100">
                       <div class="flex items-center gap-2">
-                        <mat-icon class="text-indigo-600">tune</mat-icon>
-                        <h4 class="text-base font-bold text-[#1d1d1f]">Auto-Pilot Settings</h4>
+                        <mat-icon class="text-indigo-600">schedule</mat-icon>
+                        <h4 class="text-base font-bold text-[#1d1d1f]">Auto-Pilot කාලසටහන (Schedule Settings)</h4>
                       </div>
                       <button (click)="loadAutoPilotStatus()" class="text-xs text-gray-500 hover:text-indigo-600 font-bold flex items-center gap-1">
                         <mat-icon style="font-size: 14px; width: 14px; height: 14px;">refresh</mat-icon> Refresh
                       </button>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="space-y-5">
                       <!-- Enable Toggle -->
                       <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
                         <div>
                           <div class="text-sm font-bold text-gray-900">Auto-Pilot Active State</div>
-                          <div class="text-xs text-gray-500">Enable or disable background timer</div>
+                          <div class="text-xs text-gray-500">ස්වයංක්‍රීය පුවත් පද්ධතිය ක්‍රියාත්මක තත්ත්වය</div>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" [(ngModel)]="autoPilotEnabled" class="sr-only peer">
@@ -1433,16 +1478,105 @@ export interface PolishedResult {
                         </label>
                       </div>
 
-                      <!-- Interval Selector -->
+                      <!-- Schedule Mode Switcher -->
                       <div>
-                        <label for="adminAutoPilotInterval" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Sync Frequency (කාල පරතරය)</label>
-                        <select id="adminAutoPilotInterval" [(ngModel)]="autoPilotIntervalMinutes" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-600 outline-none">
-                          <option [value]="30">Every 30 Minutes (මිනිත්තු 30 කට වරක්)</option>
-                          <option [value]="60">Every 1 Hour - Recommended (පැයෙන් පැයට)</option>
-                          <option [value]="120">Every 2 Hours (පැය 2 කට වරක්)</option>
-                          <option [value]="240">Every 4 Hours (පැය 4 කට වරක්)</option>
-                        </select>
+                        <div class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">පුවත් පළවන ආකාරය (Schedule Mode)</div>
+                        <div class="grid grid-cols-2 gap-2 p-1.5 bg-gray-100 rounded-2xl border border-gray-200">
+                          <button 
+                            type="button" 
+                            (click)="autoPilotScheduleMode = 'interval'" 
+                            class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            [class.bg-white]="autoPilotScheduleMode === 'interval'"
+                            [class.text-indigo-600]="autoPilotScheduleMode === 'interval'"
+                            [class.shadow-sm]="autoPilotScheduleMode === 'interval'"
+                            [class.text-gray-600]="autoPilotScheduleMode !== 'interval'">
+                            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">timelapse</mat-icon>
+                            <span>Interval Loop (පැයෙන් පැයට)</span>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            (click)="autoPilotScheduleMode = 'exact_times'" 
+                            class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            [class.bg-white]="autoPilotScheduleMode === 'exact_times'"
+                            [class.text-indigo-600]="autoPilotScheduleMode === 'exact_times'"
+                            [class.shadow-sm]="autoPilotScheduleMode === 'exact_times'"
+                            [class.text-gray-600]="autoPilotScheduleMode !== 'exact_times'">
+                            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">alarm</mat-icon>
+                            <span>Exact Times (නියමිත වේලාවන්)</span>
+                          </button>
+                        </div>
                       </div>
+
+                      <!-- OPTION A: INTERVAL MODE -->
+                      @if (autoPilotScheduleMode === 'interval') {
+                        <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-3">
+                          <label for="adminAutoPilotInterval" class="block text-xs font-bold text-indigo-900 uppercase tracking-wider">Sync Frequency (කාල පරතරය)</label>
+                          <select id="adminAutoPilotInterval" [(ngModel)]="autoPilotIntervalMinutes" class="w-full px-4 py-3 rounded-xl border border-indigo-200 bg-white text-sm font-medium focus:ring-2 focus:ring-indigo-600 outline-none">
+                            <option [value]="30">Every 30 Minutes (මිනිත්තු 30 කට වරක්)</option>
+                            <option [value]="60">Every 1 Hour (පැයෙන් පැයට - නිර්දේශිතයි)</option>
+                            <option [value]="120">Every 2 Hours (පැය 2 කට වරක්)</option>
+                            <option [value]="180">Every 3 Hours (පැය 3 කට වරක්)</option>
+                            <option [value]="240">Every 4 Hours (පැය 4 කට වරක්)</option>
+                            <option [value]="360">Every 6 Hours (පැය 6 කට වරක්)</option>
+                          </select>
+                          <p class="text-[11px] text-indigo-700">පද්ධතිය ස්වයංක්‍රීයව තෝරාගත් මිනිත්තු සංඛ්‍යාවෙන් සංඛ්‍යාවට අලුත්ම පුවත් පරිලෝකනය කරයි.</p>
+                        </div>
+                      }
+
+                      <!-- OPTION B: EXACT DAILY CLOCK TIMES MODE -->
+                      @if (autoPilotScheduleMode === 'exact_times') {
+                        <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-4">
+                          <div class="flex items-center justify-between">
+                            <div class="block text-xs font-bold text-emerald-950 uppercase tracking-wider">දවසේ පුවත් පළවන නියමිත වේලාවන් (Asia/Colombo 🇱🇰)</div>
+                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-200 text-emerald-900">{{ autoPilotScheduledDailyTimes.length }} Times/Day</span>
+                          </div>
+
+                          <!-- Current Active Scheduled Times Badges -->
+                          <div class="flex flex-wrap gap-2">
+                            @for (t of autoPilotScheduledDailyTimes; track t) {
+                              <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-emerald-300 rounded-xl shadow-xs text-xs font-bold text-gray-800">
+                                <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-emerald-600">access_time</mat-icon>
+                                <span>{{ formatTimeDisplay(t) }}</span>
+                                <button type="button" (click)="removeScheduledTime(t)" class="text-gray-400 hover:text-red-600 transition-colors cursor-pointer" title="Remove this time">
+                                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">close</mat-icon>
+                                </button>
+                              </div>
+                            }
+                          </div>
+
+                          <!-- Add Custom Time Input -->
+                          <div class="flex items-center gap-2 pt-1">
+                            <input 
+                              id="adminAutoPilotNewTime"
+                              type="time" 
+                              [(ngModel)]="autoPilotNewTimeInput" 
+                              class="px-3 py-2 bg-white rounded-xl border border-emerald-300 text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-emerald-600" />
+                            <button 
+                              type="button" 
+                              (click)="addScheduledTime()" 
+                              class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">add</mat-icon> Add Time (වේලාවක් එකතු කරන්න)
+                            </button>
+                          </div>
+
+                          <!-- 1-Click Presets -->
+                          <div class="space-y-1.5 pt-2 border-t border-emerald-200/60">
+                            <div class="text-[10px] uppercase font-bold text-emerald-800">Quick 1-Click Presets:</div>
+                            <div class="flex flex-wrap gap-1.5">
+                              <button type="button" (click)="applySchedulePreset('four_times')" class="px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 text-[11px] font-bold transition-all cursor-pointer">
+                                ⚡ 4x Day (08:00 AM, 12:00 PM, 04:00 PM, 08:00 PM)
+                              </button>
+                              <button type="button" (click)="applySchedulePreset('six_times')" class="px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 text-[11px] font-bold transition-all cursor-pointer">
+                                🚀 6x Day (07:00 AM, 10:30 AM, 02:00 PM, 05:30 PM, 08:30 PM, 11:00 PM)
+                              </button>
+                              <button type="button" (click)="applySchedulePreset('morning_evening')" class="px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 text-[11px] font-bold transition-all cursor-pointer">
+                                🌅 2x Day (08:30 AM, 07:30 PM Prime)
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      }
 
                       <!-- Max Articles per Run -->
                       <div>
@@ -1507,22 +1641,25 @@ export interface PolishedResult {
                     </div>
                   </div>
 
-                  <!-- 24/7 Cloud Webhook Cron Setup Guide (7 cols) -->
-                  <div class="lg:col-span-7 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6 flex flex-col justify-between">
+                  <!-- 24/7 Cloud Webhook Cron Setup Guide (6 cols) -->
+                  <div class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-black/5 space-y-6 flex flex-col justify-between">
                     <div class="space-y-4">
                       <div class="flex items-center gap-2 pb-4 border-b border-gray-100">
                         <mat-icon class="text-emerald-600">cloud_sync</mat-icon>
-                        <h4 class="text-base font-bold text-[#1d1d1f]">24/7 Uninterrupted Cloud Cron Setup</h4>
+                        <h4 class="text-base font-bold text-[#1d1d1f]">24/7 Autonomous Cloud Trigger (Userla නැතත් 100% ක්‍රියාත්මකයි)</h4>
                       </div>
 
-                      <p class="text-xs text-gray-600 leading-relaxed">
-                        Browser එක වසා තැබුවද, ඔබේ පරිගණකය හෝ දුරකථනය ක්‍රියා විරහිතව තිබුණද, <strong>පැයෙන් පැයට 100% නොකඩවා පුවත් Publish වීමට</strong> පහත Webhook URL එක භාවිතා කරන්න.
-                      </p>
+                      <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed flex items-start gap-2.5">
+                        <mat-icon class="text-amber-600 shrink-0 mt-0.5" style="font-size: 18px; width: 18px; height: 18px;">info</mat-icon>
+                        <div>
+                          <strong>User කෙනෙක් Website එකේ නොසිටියත්</strong> නියමිත වේලාවටම (හෝ පැයෙන් පැයට) Server එක Wake වී AI එකෙන් News generate වී Live Publish වීමට පහත Webhook URL එක <strong>නොමිලේ Cloud Cron</strong> එකකට සම්බන්ධ කරන්න.
+                        </div>
+                      </div>
 
                       <!-- Webhook Endpoint Box -->
                       <div class="p-4 rounded-2xl bg-gray-900 text-white space-y-2">
                         <div class="flex items-center justify-between text-xs text-gray-400">
-                          <span class="font-mono text-emerald-400 font-bold">1-HOUR CRON WEBHOOK URL:</span>
+                          <span class="font-mono text-emerald-400 font-bold">CRON TRIGGER WEBHOOK URL:</span>
                           <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">GET / POST</span>
                         </div>
                         <div class="flex items-center gap-2">
@@ -1540,7 +1677,7 @@ export interface PolishedResult {
                         <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                           <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
                           <div class="text-xs text-gray-700">
-                            <strong>cron-job.org</strong> (නොමිලේ සේවාවකට) පිවිස නොමිලේ Account එකක් සාදන්න.
+                            <strong>cron-job.org</strong> (නොමිලේ Cloud Cron සේවාවකට) පිවිස Account එකක් සාදන්න.
                           </div>
                         </div>
 
@@ -1554,7 +1691,7 @@ export interface PolishedResult {
                         <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                           <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                           <div class="text-xs text-gray-700">
-                            Execution Schedule එක <strong>"Every 1 hour"</strong> (හෝ every 30 mins) තෝරා <strong>Save</strong> කරන්න.
+                            Schedule එක <strong>"Every 1 hour"</strong> හෝ ඔබට අවශ්‍ය <strong>නියමිත වේලාවන් (Exact Times)</strong> තෝරා <strong>Save</strong> කරන්න.
                           </div>
                         </div>
                       </div>
@@ -1563,7 +1700,7 @@ export interface PolishedResult {
                     <!-- Security & Specs Footer Note -->
                     <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-900 flex items-center gap-3 mt-4">
                       <mat-icon class="text-emerald-600 shrink-0">verified</mat-icon>
-                      <span>Anti-Duplicate Guard සක්‍රීයයි: කලින් පළ වූ පුවත් නැවත duplicate වීම 100% ක් වැළැක්වේ.</span>
+                      <span>Anti-Duplicate Shield සක්‍රීයයි: එකම පුවත නැවත පළ නොවන සේ 100% ක් Title & URL deduplication සිදු කෙරේ.</span>
                     </div>
                   </div>
                 </div>
@@ -1651,43 +1788,47 @@ export interface PolishedResult {
           </div>
         } @else if (activeTab() === 'subscribers') {
           <!-- Subscribers Tab -->
-          <div class="bg-white rounded-[3rem] shadow-sm border border-black/5 overflow-hidden">
-            <div class="p-8 border-b border-gray-100 flex justify-between items-center">
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden">
+            <div class="p-5 border-b border-black/5 dark:border-white/10 flex justify-between items-center">
               <div>
-                <h2 class="text-xl font-bold text-[#1d1d1f]">Newsletter Subscribers</h2>
-                <p class="text-sm text-gray-500">Total active subscribers: {{ subscriberService.subscribers().length }}</p>
+                <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <span>Newsletter Subscribers</span>
+                  <span class="px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-[11px] font-bold">{{ subscriberService.subscribers().length }}</span>
+                </h2>
               </div>
             </div>
             
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse min-w-[600px]">
+              <table class="w-full text-left border-collapse min-w-[500px]">
                 <thead>
-                  <tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-widest text-gray-500">
-                    <th class="p-6 font-bold">Email Address</th>
-                    <th class="p-6 font-bold">Status</th>
-                    <th class="p-6 font-bold text-right">Actions</th>
+                  <tr class="bg-gray-50/50 dark:bg-white/5 border-b border-black/5 dark:border-white/10 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+                    <th class="py-3 px-5">Email Address</th>
+                    <th class="py-3 px-5">Status</th>
+                    <th class="py-3 px-5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-black/5 dark:divide-white/5">
                   @if (subscriberService.subscribers().length === 0) {
                     <tr>
-                      <td colspan="3" class="p-12 text-center text-gray-400 font-medium">
+                      <td colspan="3" class="p-10 text-center text-gray-400 font-medium text-xs">
                         No newsletter subscribers found yet.
                       </td>
                     </tr>
                   } @else {
                     @for (sub of subscriberService.subscribers(); track sub.id) {
-                      <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                        <td class="p-6 font-bold text-[#1d1d1f] flex items-center gap-3">
-                          <mat-icon class="text-blue-600">email</mat-icon>
+                      <tr class="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                        <td class="py-3 px-5 font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white flex items-center gap-2.5">
+                          <div class="w-7 h-7 rounded-lg bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center">
+                            <mat-icon style="font-size: 15px; width: 15px; height: 15px;">email</mat-icon>
+                          </div>
                           {{ sub.email }}
                         </td>
-                        <td class="p-6">
-                          <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold">Active</span>
+                        <td class="py-3 px-5">
+                          <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-md text-[10px] font-bold">Active</span>
                         </td>
-                        <td class="p-6 text-right">
-                          <button (click)="deleteSubscriber(sub.id)" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 inline-flex items-center justify-center transition-colors">
-                            <mat-icon style="font-size: 20px; width: 20px; height: 20px;">delete</mat-icon>
+                        <td class="py-3 px-5 text-right">
+                          <button (click)="deleteSubscriber(sub.id)" class="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white inline-flex items-center justify-center transition-colors active:scale-95">
+                            <mat-icon style="font-size: 15px; width: 15px; height: 15px;">delete</mat-icon>
                           </button>
                         </td>
                       </tr>
@@ -1700,97 +1841,100 @@ export interface PolishedResult {
         } @else if (activeTab() === 'ads') {
           <!-- ADS MANAGEMENT SECTION -->
           @if (isAdding()) {
-            <div class="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-black/5 mb-16">
-              <h2 class="text-2xl font-black mb-8">{{ editingAdId() ? 'Edit' : 'Create' }} Ad Campaign</h2>
-              <form (ngSubmit)="saveAd()" class="flex flex-col gap-6">
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl p-6 sm:p-8 rounded-2xl shadow-sm border border-black/5 dark:border-white/10 mb-8">
+              <h2 class="text-lg font-bold text-[#1d1d1f] dark:text-white mb-6">{{ editingAdId() ? 'Edit' : 'Create' }} Campaign</h2>
+              <form (ngSubmit)="saveAd()" class="flex flex-col gap-4">
                 <div>
-                  <label for="adFormTitle" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Brand / Ad Title</label>
-                  <input id="adFormTitle" type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="Brand Name or Offer Title">
+                  <label for="adFormTitle" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Brand / Ad Title</label>
+                  <input id="adFormTitle" type="text" [(ngModel)]="adFormTitle" name="title" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white" placeholder="Brand Name or Offer Title">
                 </div>
                 <div>
-                  <label for="adFormLink" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Target URL (Link)</label>
-                  <input id="adFormLink" type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg" placeholder="https://www.example.com">
+                  <label for="adFormLink" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Target URL</label>
+                  <input id="adFormLink" type="url" [(ngModel)]="adFormLink" name="link" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white" placeholder="https://www.example.com">
                 </div>
                 <div>
-                  <label for="adFormImageFile" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Image</label>
-                  <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition-colors relative">
+                  <label for="adFormImageFile" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Banner Image</label>
+                  <div class="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl p-4 text-center hover:bg-gray-50 dark:hover:bg-white/5 transition-colors relative">
                     @if (adFormImageUrl) {
-                      <div class="relative w-full h-32 md:h-48 rounded-xl overflow-hidden mb-4 bg-gray-100">
+                      <div class="relative w-full h-32 rounded-lg overflow-hidden mb-2 bg-gray-100 dark:bg-white/5">
                         <img [src]="adFormImageUrl" alt="Ad Preview" class="w-full h-full object-contain">
                         <div class="absolute top-2 right-2 flex items-center gap-2 z-10">
-                          <button type="button" (click)="adFormImageUrl = ''" class="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm transition-all">
-                            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+                          <button type="button" (click)="adFormImageUrl = ''" class="w-7 h-7 bg-white/90 dark:bg-black/90 backdrop-blur-sm rounded-full flex items-center justify-center text-rose-500 hover:bg-white shadow-sm transition-all">
+                            <mat-icon style="font-size: 15px; width: 15px; height: 15px;">close</mat-icon>
                           </button>
                         </div>
                       </div>
                     } @else {
-                      <div class="py-4">
-                        <mat-icon class="text-gray-400 mb-2" style="font-size: 40px; width: 40px; height: 40px;">add_photo_alternate</mat-icon>
-                        <p class="text-sm font-bold text-gray-500 mb-1">Click to upload ad banner image</p>
+                      <div class="py-3">
+                        <mat-icon class="text-gray-400 mb-1" style="font-size: 32px; width: 32px; height: 32px;">add_photo_alternate</mat-icon>
+                        <p class="text-xs font-bold text-gray-500">Upload banner image</p>
                       </div>
                     }
                     <input id="adFormImageFile" type="file" accept="image/*" (change)="onAdImageUpload($event)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" [required]="!adFormImageUrl">
                   </div>
                 </div>
                 <div>
-                  <label for="adFormPlacement" class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-widest">Ad Placement (Slot)</label>
-                  <select id="adFormPlacement" [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-600 outline-none font-sans text-lg bg-white">
-                    <option value="home-top">Home Page - Top (Banner)</option>
+                  <label for="adFormPlacement" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Placement Slot</label>
+                  <select id="adFormPlacement" [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#2c2c2e] focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                    <option value="home-top">Home Page - Top Banner</option>
                     <option value="home-bottom">Home Page - Bottom</option>
                     <option value="article-inline">Inside Article (Inline)</option>
                     <option value="sidebar">Sidebar / Additional</option>
                   </select>
                 </div>
-                <div class="flex items-center gap-3">
-                  <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
-                  <label for="adIsActive" class="text-sm font-bold text-gray-700 uppercase tracking-widest cursor-pointer">Ad is Active (Visible on site)</label>
+                <div class="flex items-center gap-2 py-1">
+                  <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-4 h-4 rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF]">
+                  <label for="adIsActive" class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer">Ad is Active</label>
                 </div>
-                <div class="flex flex-col sm:flex-row gap-4 mt-4">
-                  <button type="submit" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold tracking-widest uppercase hover:bg-blue-700 transition-all shadow-lg w-full md:w-auto">
+                <div class="flex flex-col sm:flex-row gap-3 mt-3">
+                  <button type="submit" class="px-6 py-2.5 bg-[#007AFF] hover:bg-[#0062cc] text-white rounded-xl font-bold tracking-wider uppercase text-xs transition-all shadow-md shadow-[#007AFF]/20 w-full sm:w-auto active:scale-95">
                     {{ editingAdId() ? 'Update' : 'Publish' }} Ad
                   </button>
-                  <button type="button" (click)="cancelAdEdit()" class="px-8 py-4 bg-gray-100 text-gray-600 rounded-full font-bold tracking-widest uppercase hover:bg-gray-200 transition-all w-full md:w-auto">
+                  <button type="button" (click)="cancelAdEdit()" class="px-6 py-2.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold tracking-wider uppercase text-xs hover:bg-gray-200 dark:hover:bg-white/20 transition-all w-full sm:w-auto active:scale-95">
                     Cancel
                   </button>
                 </div>
               </form>
             </div>
           } @else {
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
-              <div class="p-6 md:p-8 flex justify-between items-center border-b border-gray-100">
-                <h3 class="text-xl font-black">Active & Inactive Ads</h3>
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden">
+              <div class="p-5 flex justify-between items-center border-b border-black/5 dark:border-white/10">
+                <h3 class="text-base font-bold text-[#1d1d1f] dark:text-white">Active & Inactive Campaigns</h3>
               </div>
-              <div class="divide-y divide-gray-100">
+              <div class="divide-y divide-black/5 dark:divide-white/5">
                 @for (ad of adService.ads(); track ad.id) {
-                  <div class="p-6 flex flex-col md:flex-row items-center gap-6 hover:bg-gray-50 transition-colors">
-                    <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                  <div class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                    <div class="w-20 h-16 rounded-xl bg-gray-100 dark:bg-white/5 overflow-hidden shrink-0 border border-black/5 dark:border-white/10">
                       <img [src]="ad.imageUrl" alt="Ad" class="w-full h-full object-cover">
                     </div>
-                    <div class="flex-1 text-center md:text-left">
-                      <h4 class="font-bold text-lg text-gray-900 mb-1">{{ ad.title }} <span class="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{{ ad.placement }}</span></h4>
-                      <p class="text-sm text-gray-500 mb-2 truncate max-w-xs md:max-w-md">{{ ad.link }}</p>
-                      <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                           [class.bg-green-100]="ad.isActive" [class.text-green-700]="ad.isActive"
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">{{ ad.title }}</h4>
+                        <span class="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-white/10 px-2 py-0.5 rounded-md">{{ ad.placement }}</span>
+                      </div>
+                      <p class="text-xs text-gray-400 truncate max-w-sm">{{ ad.link }}</p>
+                      <div class="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+                           [class.bg-emerald-500/10]="ad.isActive" [class.text-emerald-600]="ad.isActive"
                            [class.bg-gray-100]="!ad.isActive" [class.text-gray-500]="!ad.isActive">
                         {{ ad.isActive ? 'Active' : 'Inactive' }}
                       </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                      <button (click)="toggleAdStatus(ad)" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-bold text-xs uppercase tracking-wider hover:bg-gray-200">
+                    <div class="flex items-center gap-1.5 self-end sm:self-center">
+                      <button (click)="toggleAdStatus(ad)" class="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg font-bold text-xs hover:bg-gray-200 dark:hover:bg-white/20 transition-all">
                         Toggle
                       </button>
-                      <button (click)="editAd(ad)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-full">
-                        <mat-icon>edit</mat-icon>
+                      <button (click)="editAd(ad)" class="w-8 h-8 flex items-center justify-center text-[#007AFF] hover:bg-[#007AFF]/10 rounded-lg transition-colors">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">edit</mat-icon>
                       </button>
-                      <button (click)="deleteAd(ad.id)" class="p-2 text-red-600 hover:bg-red-50 rounded-full">
-                        <mat-icon>delete</mat-icon>
+                      <button (click)="deleteAd(ad.id)" class="w-8 h-8 flex items-center justify-center text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete</mat-icon>
                       </button>
                     </div>
                   </div>
                 }
                 @if (adService.ads().length === 0) {
-                  <div class="p-12 text-center text-gray-400 font-medium">
-                    No ads created yet. Click "New Post" (or New Ad) to add one.
+                  <div class="p-10 text-center text-gray-400 font-medium text-xs">
+                    No ads created yet.
                   </div>
                 }
               </div>
@@ -1798,241 +1942,216 @@ export interface PolishedResult {
           }
         } @else if (activeTab() === 'notify') {
           <!-- Notify Tab -->
-          <div class="max-w-3xl mx-auto space-y-8">
+          <div class="max-w-4xl mx-auto space-y-6">
             
             <!-- Browser Web Push Notifications Card -->
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div class="flex items-center gap-6">
-                  <div class="w-16 h-16 rounded-[2rem] bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
-                    <mat-icon style="font-size: 32px; width: 32px; height: 32px;">podcasts</mat-icon>
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-5 sm:p-7">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-4">
+                  <div class="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <mat-icon style="font-size: 22px; width: 22px; height: 22px;">podcasts</mat-icon>
                   </div>
                   <div>
-                    <h2 class="text-2xl font-black text-[#1d1d1f]">Web Push Notifications (Browsers)</h2>
-                    <p class="text-sm text-gray-500">Auto-sent to all readers who tapped "Allow Notifications" on Chrome, Safari & Android</p>
+                    <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">Web Push Notifications</h2>
+                    <p class="text-xs text-gray-500">Delivered to Chrome, Safari & Android browsers</p>
                   </div>
                 </div>
-                <div class="px-4 py-2 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-2 self-start sm:self-center">
-                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <div class="px-3 py-1 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 self-start sm:self-center">
+                  <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
                   <span>{{ webPushSubscriberCount() }} Active Subscribers</span>
                 </div>
               </div>
 
               <!-- Web Push Quick Test -->
-              <div class="space-y-4">
-                <div class="p-6 rounded-[2rem] bg-indigo-50/50 border border-indigo-100 space-y-4">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                      <label for="webPushTitle" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Push Alert Title</label>
-                      <input id="webPushTitle" [(ngModel)]="webPushTitle" name="webPushTitle" class="w-full px-6 py-4 rounded-2xl bg-white border border-black/5 focus:outline-none focus:ring-2 focus:ring-indigo-600 font-bold text-sm" placeholder="📰 MyFeed.lk Breaking News" />
+              <div class="space-y-3">
+                <div class="p-4 sm:p-5 rounded-xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                      <label for="webPushTitle" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Push Alert Title</label>
+                      <input id="webPushTitle" [(ngModel)]="webPushTitle" name="webPushTitle" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="📰 MyFeed.lk Breaking News" />
                     </div>
-                    <div class="space-y-2">
-                      <label for="webPushBody" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Push Alert Message Body</label>
-                      <input id="webPushBody" [(ngModel)]="webPushBody" name="webPushBody" class="w-full px-6 py-4 rounded-2xl bg-white border border-black/5 focus:outline-none focus:ring-2 focus:ring-indigo-600 font-medium text-sm" placeholder="නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි." />
+                    <div class="space-y-1">
+                      <label for="webPushBody" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Message Body</label>
+                      <input id="webPushBody" [(ngModel)]="webPushBody" name="webPushBody" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="New story published on MyFeed.lk" />
                     </div>
                   </div>
 
-                  <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button type="button" (click)="sendTestWebPush()" [disabled]="isTestingWebPush()" class="flex-1 py-4 rounded-full bg-indigo-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                  <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                    <button type="button" (click)="sendTestWebPush()" [disabled]="isTestingWebPush()" class="flex-1 py-2.5 rounded-xl bg-[#007AFF] text-white font-bold uppercase tracking-wider text-xs hover:bg-[#0062cc] transition-all shadow-md shadow-[#007AFF]/20 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95">
                       @if (isTestingWebPush()) {
-                        <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                        <span>Dispatching Web Push to Subscribers...</span>
+                        <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <span>Dispatching...</span>
                       } @else {
-                        <mat-icon>send</mat-icon>
-                        <span>Send Test Web Push to All Browsers</span>
+                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send</mat-icon>
+                        <span>Send Test Push</span>
                       }
                     </button>
 
-                    <button type="button" (click)="loadWebPushSubscribersCount()" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
-                      <mat-icon>refresh</mat-icon>
-                      <span>Refresh Count</span>
+                    <button type="button" (click)="loadWebPushSubscribersCount()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                      <mat-icon style="font-size: 15px; width: 15px; height: 15px;">refresh</mat-icon>
+                      <span>Refresh</span>
                     </button>
                   </div>
 
                   @if (webPushTestSuccess()) {
-                    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
-                      <mat-icon class="text-emerald-500">check_circle</mat-icon>
-                      <span class="text-xs font-bold">{{ webPushTestSuccess() }}</span>
+                    <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                      <span>{{ webPushTestSuccess() }}</span>
                     </div>
                   }
                 </div>
               </div>
             </div>
 
-            <!-- Phone Push Alerts Card (100% Free Instant Mobile Alerts via ntfy.sh) -->
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
-              <div class="flex items-center gap-6 mb-8">
-                <div class="w-16 h-16 rounded-[2rem] bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/20">
-                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">notifications_active</mat-icon>
+            <!-- Phone Push Alerts Card -->
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-5 sm:p-7">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">notifications_active</mat-icon>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-[#1d1d1f]">Instant Phone Push Notifications</h2>
-                  <p class="text-sm text-gray-500">Get breaking news alerts directly on your phone the moment an article is published</p>
+                  <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">Instant Phone Push Alerts</h2>
+                  <p class="text-xs text-gray-500">Alerts via ntfy.sh instant mobile notifications</p>
                 </div>
-              </div>
-
-              <!-- Quick Setup Steps -->
-              <div class="p-6 rounded-[2rem] bg-purple-50/60 border border-purple-100 mb-8 space-y-3">
-                <div class="flex items-center gap-2 text-purple-900 font-bold text-sm">
-                  <mat-icon style="font-size: 20px; width: 20px; height: 20px;">smartphone</mat-icon>
-                  How to receive notifications on your phone (30 Seconds):
-                </div>
-                <ol class="text-xs text-purple-800 space-y-1.5 list-decimal list-inside leading-relaxed font-medium">
-                  <li>Install the free <strong>ntfy</strong> app on your Phone (Available on Google Play Store & iOS App Store), OR open <a [href]="'https://ntfy.sh/' + phoneTopic" target="_blank" class="underline font-bold">ntfy.sh/{{ phoneTopic }}</a> in Safari / Chrome.</li>
-                  <li>In the app, tap <strong>"+" (Subscribe to topic)</strong> and enter topic name: <strong class="bg-white px-2 py-0.5 rounded border border-purple-200 font-mono text-purple-900">{{ phoneTopic }}</strong></li>
-                  <li>Tap <strong>"Send Test Alert"</strong> below &mdash; your phone will ring and vibrate instantly! 🔔</li>
-                </ol>
               </div>
 
               <!-- Topic Settings & Test Dispatch -->
-              <div class="space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div class="space-y-2">
-                    <label for="phoneTopic" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Notification Topic Name</label>
-                    <input id="phoneTopic" [(ngModel)]="phoneTopic" name="phoneTopic" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono font-bold text-sm" placeholder="myfeedlk_kaveen" />
+              <div class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="space-y-1">
+                    <label for="phoneTopic" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Topic Name</label>
+                    <input id="phoneTopic" [(ngModel)]="phoneTopic" name="phoneTopic" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-purple-600 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none" placeholder="myfeedlk_news" />
                   </div>
-                  <div class="space-y-2">
-                    <label for="siteDomain" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Target Website URL (To Open on Tap)</label>
-                    <input id="siteDomain" [(ngModel)]="siteDomain" name="siteDomain" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono font-bold text-sm" placeholder="https://myfeedlk.web.app" />
+                  <div class="space-y-1">
+                    <label for="siteDomain" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Target URL</label>
+                    <input id="siteDomain" [(ngModel)]="siteDomain" name="siteDomain" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-purple-600 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none" placeholder="https://myfeedlk.web.app" />
                   </div>
                 </div>
 
-                <div class="flex justify-end">
-                  <button type="button" (click)="savePhoneSettings()" [disabled]="isSavingPhoneSettings()" class="px-6 py-3 rounded-2xl bg-purple-100 text-purple-800 hover:bg-purple-200 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50">
-                    {{ isSavingPhoneSettings() ? 'Saving...' : 'Save Notification Settings' }}
-                  </button>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                  <button type="button" (click)="sendTestPhoneAlert()" [disabled]="isTestingPhoneAlert() || !phoneTopic.trim()" class="flex-1 py-4 rounded-full bg-purple-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-700 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                <div class="flex flex-col sm:flex-row gap-2.5 pt-2">
+                  <button type="button" (click)="sendTestPhoneAlert()" [disabled]="isTestingPhoneAlert() || !phoneTopic.trim()" class="flex-1 py-2.5 rounded-xl bg-purple-600 text-white font-bold uppercase tracking-wider text-xs hover:bg-purple-700 transition-all shadow-md shadow-purple-600/20 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95">
                     @if (isTestingPhoneAlert()) {
-                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                      <span>Sending Test Alert...</span>
+                      <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      <span>Sending...</span>
                     } @else {
-                      <mat-icon>notifications_active</mat-icon>
-                      <span>Send Test Alert to My Phone</span>
+                      <mat-icon style="font-size: 15px; width: 15px; height: 15px;">notifications_active</mat-icon>
+                      <span>Send Test Phone Alert</span>
                     }
                   </button>
 
-                  <a [href]="'https://ntfy.sh/' + phoneTopic" target="_blank" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
-                    <mat-icon>open_in_new</mat-icon>
-                    <span>Open Channel Web App</span>
-                  </a>
+                  <button type="button" (click)="savePhoneSettings()" [disabled]="isSavingPhoneSettings()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold uppercase tracking-wider text-xs transition-all disabled:opacity-50 active:scale-95">
+                    {{ isSavingPhoneSettings() ? 'Saving...' : 'Save Settings' }}
+                  </button>
                 </div>
 
                 @if (phoneAlertSuccess()) {
-                  <div class="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
-                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
-                    <span class="text-xs font-bold">Test alert sent successfully! Check your phone.</span>
+                  <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                    <span>Test alert sent successfully!</span>
                   </div>
                 }
               </div>
             </div>
 
             <!-- Email Subscribers Broadcast Card -->
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12 overflow-hidden">
-              <div class="flex items-center gap-6 mb-10">
-                <div class="w-16 h-16 rounded-[2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20">
-                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">mail</mat-icon>
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-5 sm:p-7">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-11 h-11 rounded-xl bg-blue-500/10 text-[#007AFF] flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">mail</mat-icon>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-[#1d1d1f]">Email Subscribers Broadcast</h2>
-                  <p class="text-sm text-gray-500">Notify all {{ subscriberService.subscribers().length }} newsletter subscribers</p>
+                  <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">Email Subscribers Broadcast</h2>
+                  <p class="text-xs text-gray-500">Notify all {{ subscriberService.subscribers().length }} subscribers</p>
                 </div>
               </div>
 
-              <form (ngSubmit)="sendBroadcast()" class="space-y-6">
-                <div class="space-y-2">
-                  <label for="broadcastSubject" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Subject</label>
-                  <input id="broadcastSubject" [(ngModel)]="broadcastSubject" name="subject" required class="w-full px-6 py-4 rounded-3xl bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:bg-white transition-all font-black text-lg" placeholder="News Update" />
+              <form (ngSubmit)="sendBroadcast()" class="space-y-3">
+                <div>
+                  <label for="broadcastSubject" class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">Subject</label>
+                  <input id="broadcastSubject" [(ngModel)]="broadcastSubject" name="subject" required class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] text-xs sm:text-sm font-bold text-gray-900 dark:text-white outline-none" placeholder="News Update" />
                 </div>
 
-                <div class="space-y-2">
-                  <label for="broadcastMessage" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-4">Message Content</label>
-                  <textarea id="broadcastMessage" [(ngModel)]="broadcastMessage" name="message" required rows="8" class="w-full px-8 py-6 rounded-[2rem] bg-black/[0.03] border border-black/5 focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:bg-white transition-all font-medium leading-relaxed" placeholder="Write your message to the audience..."></textarea>
+                <div>
+                  <label for="broadcastMessage" class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">Message</label>
+                  <textarea id="broadcastMessage" [(ngModel)]="broadcastMessage" name="message" required rows="5" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-[#007AFF] text-xs sm:text-sm font-medium leading-relaxed text-gray-900 dark:text-white outline-none" placeholder="Write your broadcast..."></textarea>
                 </div>
 
-                <button type="submit" [disabled]="isBroadcasting() || !broadcastSubject || !broadcastMessage" class="w-full py-5 rounded-full bg-blue-600 text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                <button type="submit" [disabled]="isBroadcasting() || !broadcastSubject || !broadcastMessage" class="w-full py-3 rounded-xl bg-[#007AFF] text-white font-bold uppercase tracking-wider text-xs hover:bg-[#0062cc] transition-all shadow-md shadow-[#007AFF]/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                   @if (isBroadcasting()) {
-                    <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Sending Broadcast...
+                    <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Sending Broadcast...</span>
                   } @else {
-                    <mat-icon>send</mat-icon>
-                    Send to All Subscribers
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send</mat-icon>
+                    <span>Send Broadcast</span>
                   }
                 </button>
               </form>
 
               @if (broadcastSuccess()) {
-                <div class="mt-8 p-6 rounded-[2rem] bg-emerald-50 border border-emerald-100 flex items-center gap-4 text-emerald-800 animate-fade-in-up">
-                  <mat-icon class="text-emerald-500">check_circle</mat-icon>
-                  <div>
-                    <div class="font-black text-sm uppercase tracking-widest">Broadcast Sent</div>
-                    <p class="text-xs opacity-80">Notification recorded successfully.</p>
-                  </div>
+                <div class="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                  <span>Broadcast Sent successfully.</span>
                 </div>
               }
             </div>
           </div>
         } @else if (activeTab() === 'whatsapp') {
           <!-- WhatsApp Channel Tab -->
-          <div class="max-w-3xl mx-auto space-y-8">
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
-              <div class="flex items-center gap-6 mb-8">
-                <div class="w-16 h-16 rounded-[2rem] bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
-                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">chat</mat-icon>
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-5 sm:p-7">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">chat</mat-icon>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-[#1d1d1f]">WhatsApp Channel Automation</h2>
-                  <p class="text-sm text-gray-500">Auto-post breaking tech stories directly to your subscribers</p>
+                  <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">WhatsApp Channel Automation</h2>
+                  <p class="text-xs text-gray-500">Auto-post stories to WhatsApp subscribers</p>
                 </div>
               </div>
 
               <!-- Integration Settings -->
-              <div class="p-6 rounded-[2rem] bg-black/[0.02] border border-black/5 mb-8 space-y-4">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-600">WhatsApp Webhook / Channel Settings</h3>
-                <p class="text-xs text-gray-500">Enter your WhatsApp Webhook URL (Zapier, Make, Evolution API, or Baileys service) to enable seamless 1-click & auto publishing:</p>
-                
-                <div class="flex flex-col sm:flex-row gap-3">
-                  <input [(ngModel)]="waWebhookUrl" placeholder="https://hook.eu2.make.com/... or Evolution API" class="flex-1 px-5 py-3.5 rounded-2xl bg-white border border-black/10 focus:ring-2 focus:ring-emerald-600 outline-none text-sm font-mono" />
-                  <button (click)="saveWaSettings()" [disabled]="isSavingWaSettings()" class="px-6 py-3.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shrink-0">
+              <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 mb-6 space-y-3">
+                <h3 class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Webhook Settings</h3>
+                <div class="flex flex-col sm:flex-row gap-2.5">
+                  <input [(ngModel)]="waWebhookUrl" placeholder="https://hook.eu2.make.com/... or Evolution API" class="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-emerald-600 outline-none text-xs font-mono text-gray-900 dark:text-white" />
+                  <button (click)="saveWaSettings()" [disabled]="isSavingWaSettings()" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all disabled:opacity-50 shrink-0 active:scale-95">
                     {{ isSavingWaSettings() ? 'Saving...' : 'Save Webhook' }}
                   </button>
                 </div>
               </div>
 
               <!-- Direct Post Composer -->
-              <div class="space-y-4">
+              <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-bold uppercase tracking-widest text-gray-600">Compose or Broadcast WhatsApp Post</h3>
-                  <button (click)="loadLatestArticleForWa()" class="text-xs text-emerald-600 font-bold hover:underline flex items-center gap-1">
-                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">autorenew</mat-icon> Fill from latest story
+                  <h3 class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Compose Message</h3>
+                  <button (click)="loadLatestArticleForWa()" class="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">autorenew</mat-icon> Load Latest Story
                   </button>
                 </div>
 
-                <textarea [(ngModel)]="waCustomMessage" rows="8" class="w-full px-6 py-4 rounded-2xl bg-black/[0.03] border border-black/10 focus:ring-2 focus:ring-emerald-600 outline-none text-sm font-sans leading-relaxed" placeholder="*🚀 NEW ON MYFEED.LK*&#10;&#10;*Article Title Here*&#10;&#10;Summary of story...&#10;&#10;🔗 Read: https://myfeed.lk/article/..."></textarea>
+                <textarea [(ngModel)]="waCustomMessage" rows="6" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-emerald-600 outline-none text-xs sm:text-sm font-sans leading-relaxed text-gray-900 dark:text-white" placeholder="*🚀 NEW ON MYFEED.LK*&#10;&#10;*Article Title Here*..."></textarea>
 
-                <div class="flex flex-col sm:flex-row gap-4 pt-2">
-                  <button (click)="dispatchWhatsAppPost()" [disabled]="isDispatchingWa() || !waCustomMessage.trim()" class="flex-1 py-4 rounded-full bg-emerald-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                  <button (click)="dispatchWhatsAppPost()" [disabled]="isDispatchingWa() || !waCustomMessage.trim()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold uppercase tracking-wider text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95">
                     @if (isDispatchingWa()) {
-                      <span class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                      <span>Dispatching to Channel...</span>
+                      <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      <span>Dispatching...</span>
                     } @else {
-                      <mat-icon>send</mat-icon>
-                      <span>Auto-Post to Channel</span>
+                      <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send</mat-icon>
+                      <span>Post to Channel</span>
                     }
                   </button>
 
-                  <button (click)="openDirectWhatsAppShare()" [disabled]="!waCustomMessage.trim()" class="px-6 py-4 rounded-full bg-black/[0.05] hover:bg-black/10 text-[#1d1d1f] font-bold uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
-                    <mat-icon>share</mat-icon>
-                    <span>Open in WhatsApp Web</span>
+                  <button (click)="openDirectWhatsAppShare()" [disabled]="!waCustomMessage.trim()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">share</mat-icon>
+                    <span>Open in Web</span>
                   </button>
                 </div>
 
                 @if (waPostSuccess()) {
-                  <div class="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-800 animate-fade-in-up">
-                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
-                    <span class="font-bold text-sm">{{ waSuccessMessage() }}</span>
+                  <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                    <span>{{ waSuccessMessage() }}</span>
                   </div>
                 }
               </div>
@@ -2040,92 +2159,80 @@ export interface PolishedResult {
           </div>
         } @else if (activeTab() === 'users') {
           <!-- Users Management Tab -->
-          <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 overflow-hidden mb-16 p-8 md:p-12">
-            <div class="flex items-center justify-between mb-8">
-              <h2 class="text-2xl font-black text-[#1d1d1f]">User Management</h2>
-              <div class="px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-widest">
-                Total: {{ usersList().length }}
-              </div>
+          <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden mb-8">
+            <div class="p-5 flex items-center justify-between border-b border-black/5 dark:border-white/10">
+              <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                <span>User Management</span>
+                <span class="px-2 py-0.5 bg-[#007AFF]/10 text-[#007AFF] rounded-full text-[11px] font-bold">Total: {{ usersList().length }}</span>
+              </h2>
             </div>
 
             @if (loadingUsers()) {
               <div class="py-12 flex justify-center">
-                <div class="w-8 h-8 rounded-full border-4 border-blue-600/30 border-t-blue-600 animate-spin"></div>
+                <div class="w-8 h-8 rounded-full border-3 border-[#007AFF]/30 border-t-[#007AFF] animate-spin"></div>
               </div>
             } @else {
               <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[800px]">
+                <table class="w-full text-left border-collapse min-w-[700px]">
                   <thead>
-                    <tr class="border-b border-black/5">
-                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">User</th>
-                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Birthday</th>
-                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Last Seen</th>
-                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400">Role</th>
-                      <th class="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
+                    <tr class="bg-gray-50/50 dark:bg-white/5 border-b border-black/5 dark:border-white/10 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+                      <th class="py-3 px-5">User</th>
+                      <th class="py-3 px-5">Birthday</th>
+                      <th class="py-3 px-5">Last Seen</th>
+                      <th class="py-3 px-5">Role</th>
+                      <th class="py-3 px-5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody class="divide-y divide-black/5 dark:divide-white/5">
                     @for (user of usersList(); track user.uid) {
-                      <tr class="border-b border-black/5 hover:bg-black/[0.02] transition-colors group">
-                        <td class="py-4 px-6">
+                      <tr class="hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                        <td class="py-3 px-5">
                           <div class="flex items-center gap-3">
-                            <div class="relative w-10 h-10 shrink-0">
-                              <div class="w-full h-full rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden shadow-inner border border-blue-600/10">
+                            <div class="relative w-9 h-9 shrink-0">
+                              <div class="w-full h-full rounded-xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center font-bold text-xs overflow-hidden">
                                 @if (user.photoURL) {
                                   <img [src]="user.photoURL" alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
                                 } @else {
                                   {{ (user.displayName || user.email || 'U').substring(0,2).toUpperCase() }}
                                 }
                               </div>
-
-                              <!-- Online Status Indicator (Mocking for UI or checking lastSeen if recent, but just adding UI dot) -->
-                              <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full z-10 shadow-sm" title="Online"></div>
-
-                              <!-- Verification Badge -->
-                              @if (user.verified || user.role === 'admin') {
-                                <div class="absolute -top-1.5 -right-1.5 z-10 bg-white rounded-full p-[1px] flex items-center justify-center shadow-sm" title="{{ user.role === 'admin' ? 'Admin' : 'Verified User' }}">
-                                  <mat-icon class="{{ user.role === 'admin' ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ user.role === 'admin' ? 'shield' : 'verified' }}</mat-icon>
-                                </div>
-                              }
                             </div>
-                            <div>
-                              <p class="text-sm font-bold text-[#1d1d1f] flex items-center gap-2">
+                            <div class="min-w-0">
+                              <p class="text-xs sm:text-sm font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5 truncate">
                                 {{ user.displayName || 'Unnamed User' }}
                                 @if (user.banned) {
-                                  <span class="px-2 py-0.5 bg-red-100 text-red-600 rounded text-[9px] uppercase tracking-wider font-bold">Banned</span>
+                                  <span class="px-1.5 py-0.2 bg-rose-500/10 text-rose-600 rounded text-[9px] uppercase tracking-wider font-bold">Banned</span>
                                 }
                               </p>
-                              <p class="text-xs text-gray-500">{{ user.email }}</p>
+                              <p class="text-[11px] text-gray-400 truncate">{{ user.email }}</p>
                             </div>
                           </div>
                         </td>
-                        <td class="py-4 px-6">
-                          <span class="text-sm text-[#1d1d1f] font-mono">{{ user.birthday || 'N/A' }}</span>
+                        <td class="py-3 px-5">
+                          <span class="text-xs text-gray-600 dark:text-gray-300 font-mono">{{ user.birthday || 'N/A' }}</span>
                         </td>
-                        <td class="py-4 px-6">
-                          <span class="text-sm text-gray-500">{{ formatDate(user.lastSeen) }}</span>
+                        <td class="py-3 px-5">
+                          <span class="text-xs text-gray-500">{{ formatDate(user.lastSeen) }}</span>
                         </td>
-                        <td class="py-4 px-6">
-                          <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" 
-                                [class.bg-blue-100]="user.role === 'admin'"
-                                [class.text-blue-700]="user.role === 'admin'"
+                        <td class="py-3 px-5">
+                          <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider" 
+                                [class.bg-blue-500/10]="user.role === 'admin'"
+                                [class.text-blue-600]="user.role === 'admin'"
                                 [class.bg-gray-100]="user.role !== 'admin'"
                                 [class.text-gray-600]="user.role !== 'admin'">
                             {{ user.role }}
                           </span>
                         </td>
-                        <td class="py-4 px-6 text-right">
+                        <td class="py-3 px-5 text-right">
                           <button 
                             (click)="toggleBanStatus(user)"
-                            class="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1.5"
-                            [class.bg-red-50]="!user.banned"
-                            [class.text-red-600]="!user.banned"
-                            [class.hover:bg-red-100]="!user.banned"
-                            [class.bg-emerald-50]="user.banned"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1 active:scale-95"
+                            [class.bg-rose-500/10]="!user.banned"
+                            [class.text-rose-600]="!user.banned"
+                            [class.bg-emerald-500/10]="user.banned"
                             [class.text-emerald-600]="user.banned"
-                            [class.hover:bg-emerald-100]="user.banned"
                             [disabled]="user.role === 'admin'">
-                            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">
                               {{ user.banned ? 'check_circle' : 'block' }}
                             </mat-icon>
                             {{ user.banned ? 'Unban' : 'Ban' }}
@@ -2134,7 +2241,7 @@ export interface PolishedResult {
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="5" class="py-12 text-center text-gray-500">
+                        <td colspan="5" class="py-10 text-center text-gray-400 text-xs">
                           No users found.
                         </td>
                       </tr>
@@ -2147,46 +2254,43 @@ export interface PolishedResult {
         } @else if (activeTab() === 'deploy') {
           <!-- Deploy Tab -->
           <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-[3rem] shadow-xl shadow-black/5 border border-black/5 p-8 sm:p-12">
-              <div class="flex items-center gap-6 mb-10">
-                <div class="w-16 h-16 rounded-[2rem] bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20">
-                  <mat-icon style="font-size: 32px; width: 32px; height: 32px;">rocket_launch</mat-icon>
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-6 sm:p-8">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">rocket_launch</mat-icon>
                 </div>
                 <div>
-                  <h2 class="text-2xl font-black text-[#1d1d1f]">Netlify Deployment</h2>
-                  <p class="text-sm text-gray-500">Trigger a production rebuild</p>
+                  <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">Deployment Hook</h2>
+                  <p class="text-xs text-gray-500">Trigger production build & sync</p>
                 </div>
               </div>
 
               <!-- Settings -->
-              <div class="mb-12 p-8 rounded-[2rem] bg-black/[0.02] border border-black/5">
-                <label for="netlifyHookUrl" class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 ml-2">Netlify Build Hook URL</label>
-                <div class="flex gap-3">
-                  <input id="netlifyHookUrl" [(ngModel)]="netlifyHookUrl" name="netlifyHookUrl" class="flex-1 px-6 py-4 rounded-2xl bg-white border border-black/10 focus:outline-none focus:ring-4 focus:ring-blue-600/10 transition-all text-sm font-medium" placeholder="https://api.netlify.com/build_hooks/..." />
-                  <button (click)="saveDeploySettings()" [disabled]="isSavingSettings()" class="px-6 py-4 rounded-2xl bg-[#1d1d1f] text-white text-xs font-bold uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50">
+              <div class="mb-6 p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-2">
+                <label for="netlifyHookUrl" class="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Build Hook URL</label>
+                <div class="flex gap-2">
+                  <input id="netlifyHookUrl" [(ngModel)]="netlifyHookUrl" name="netlifyHookUrl" class="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#007AFF] text-xs font-mono text-gray-900 dark:text-white" placeholder="https://api.netlify.com/build_hooks/..." />
+                  <button (click)="saveDeploySettings()" [disabled]="isSavingSettings()" class="px-4 py-2 rounded-xl bg-[#1d1d1f] dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 active:scale-95">
                     {{ isSavingSettings() ? 'Saving...' : 'Save' }}
                   </button>
                 </div>
-                <p class="mt-3 text-[10px] text-gray-400 ml-2">Obtain this from Netlify Site Settings > Build & Deploy > Build Hooks</p>
               </div>
 
               <div class="text-center">
-                <p class="text-[#1d1d1f]/60 mb-8 font-medium">Triggering a build will pull the latest Firestore data and update the live site.</p>
-                
-                <button (click)="triggerNetlifyBuild()" [disabled]="isDeploying() || !netlifyHookUrl" class="w-full py-6 rounded-full bg-emerald-600 text-white font-black uppercase tracking-widest text-sm hover:scale-[1.02] transition-all shadow-xl shadow-emerald-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                <button (click)="triggerNetlifyBuild()" [disabled]="isDeploying() || !netlifyHookUrl" class="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold uppercase tracking-wider text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                   @if (isDeploying()) {
-                    <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Deploying to Production...
+                    <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Deploying...
                   } @else {
-                    <mat-icon>cloud_upload</mat-icon>
-                    Trigger Netlify Build
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">cloud_upload</mat-icon>
+                    Trigger Production Build
                   }
                 </button>
 
                 @if (deploySuccess()) {
-                  <div class="mt-8 p-6 rounded-[2rem] bg-emerald-50 border border-emerald-100 flex items-center justify-center gap-4 text-emerald-800 animate-fade-in-up">
-                    <mat-icon class="text-emerald-500">done_all</mat-icon>
-                    <span class="font-black text-sm uppercase tracking-widest">Build Triggered Successfully</span>
+                  <div class="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">done_all</mat-icon>
+                    <span>Build Triggered Successfully</span>
                   </div>
                 }
               </div>
@@ -2194,77 +2298,74 @@ export interface PolishedResult {
           </div>
         } @else if (activeTab() === 'analytics') {
           <!-- Analytics Tab -->
-          <div class="max-w-6xl mx-auto space-y-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="max-w-6xl mx-auto space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- Top Viewed Articles -->
-              <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
-                <div class="p-6 md:p-8 flex items-center gap-4 border-b border-gray-100">
-                  <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <mat-icon>trending_up</mat-icon>
+              <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden">
+                <div class="p-5 flex items-center gap-3 border-b border-black/5 dark:border-white/10">
+                  <div class="w-9 h-9 rounded-xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center shrink-0">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">trending_up</mat-icon>
                   </div>
                   <div>
-                    <h3 class="text-xl font-black text-gray-900">Top Viewed Articles</h3>
-                    <p class="text-sm text-gray-500">Most read stories</p>
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Top Viewed Articles</h3>
+                    <p class="text-xs text-gray-400">Most read stories</p>
                   </div>
                 </div>
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-black/5 dark:divide-white/5">
                   @for (art of topViewedArticles(); track art.id; let i = $index) {
-                    <div class="p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                      <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-black shrink-0">{{ i + 1 }}</div>
+                    <div class="p-4 flex items-center gap-3.5 hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                      <div class="w-6 h-6 rounded-md bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">{{ i + 1 }}</div>
                       <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-[#1d1d1f] truncate text-sm sm:text-base">{{ art.title }}</h4>
-                        <div class="text-xs text-gray-500 mt-1">{{ art.date }}</div>
+                        <h4 class="font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white truncate">{{ art.title }}</h4>
+                        <div class="text-[11px] text-gray-400 mt-0.5">{{ art.date }}</div>
                       </div>
                       <div class="shrink-0 text-right">
-                        <div class="font-black text-blue-600 flex items-center gap-1.5 justify-end">
-                          <mat-icon style="font-size: 16px; width: 16px; height: 16px;">visibility</mat-icon>
+                        <div class="font-bold text-[#007AFF] text-xs flex items-center gap-1 justify-end">
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon>
                           {{ art.views || 0 }}
                         </div>
-                        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Views</div>
                       </div>
                     </div>
                   }
                   @if (topViewedArticles().length === 0) {
-                    <div class="p-8 text-center text-gray-400">No data available yet.</div>
+                    <div class="p-6 text-center text-gray-400 text-xs">No data available yet.</div>
                   }
                 </div>
               </div>
 
               <!-- Top Reacted Articles -->
-              <div class="bg-white rounded-[2.5rem] shadow-sm border border-black/5 overflow-hidden">
-                <div class="p-6 md:p-8 flex items-center gap-4 border-b border-gray-100">
-                  <div class="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                    <mat-icon>local_fire_department</mat-icon>
+              <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden">
+                <div class="p-5 flex items-center gap-3 border-b border-black/5 dark:border-white/10">
+                  <div class="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center shrink-0">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">local_fire_department</mat-icon>
                   </div>
                   <div>
-                    <h3 class="text-xl font-black text-gray-900">Most Engaging Articles</h3>
-                    <p class="text-sm text-gray-500">Based on reader reactions</p>
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Most Engaging Stories</h3>
+                    <p class="text-xs text-gray-400">Based on reader reactions</p>
                   </div>
                 </div>
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-black/5 dark:divide-white/5">
                   @for (art of topReactedArticles(); track art.id; let i = $index) {
-                    <div class="p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                      <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center font-black shrink-0">{{ i + 1 }}</div>
+                    <div class="p-4 flex items-center gap-3.5 hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                      <div class="w-6 h-6 rounded-md bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">{{ i + 1 }}</div>
                       <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-[#1d1d1f] truncate text-sm sm:text-base">{{ art.title }}</h4>
-                        <div class="flex flex-wrap gap-2 mt-2">
-                          @if (art.reactions?.['like']) { <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md flex items-center gap-1"><mat-icon style="font-size: 12px; width: 12px; height: 12px;">thumb_up</mat-icon> {{ art.reactions?.['like'] }}</span> }
-                          @if (art.reactions?.['love']) { <span class="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-md flex items-center gap-1"><mat-icon style="font-size: 12px; width: 12px; height: 12px;">favorite</mat-icon> {{ art.reactions?.['love'] }}</span> }
-                          @if (art.reactions?.['fire']) { <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md flex items-center gap-1"><mat-icon style="font-size: 12px; width: 12px; height: 12px;">local_fire_department</mat-icon> {{ art.reactions?.['fire'] }}</span> }
-                          @if (art.reactions?.['insight']) { <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md flex items-center gap-1"><mat-icon style="font-size: 12px; width: 12px; height: 12px;">lightbulb</mat-icon> {{ art.reactions?.['insight'] }}</span> }
-                          @if (art.reactions?.['rocket']) { <span class="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md flex items-center gap-1"><mat-icon style="font-size: 12px; width: 12px; height: 12px;">rocket_launch</mat-icon> {{ art.reactions?.['rocket'] }}</span> }
+                        <h4 class="font-bold text-xs sm:text-sm text-[#1d1d1f] dark:text-white truncate">{{ art.title }}</h4>
+                        <div class="flex flex-wrap gap-1.5 mt-1">
+                          @if (art.reactions?.['like']) { <span class="text-[10px] font-medium text-blue-600 bg-blue-500/10 px-1.5 py-0.2 rounded flex items-center gap-1"><mat-icon style="font-size: 10px; width: 10px; height: 10px;">thumb_up</mat-icon> {{ art.reactions?.['like'] }}</span> }
+                          @if (art.reactions?.['love']) { <span class="text-[10px] font-medium text-rose-600 bg-rose-500/10 px-1.5 py-0.2 rounded flex items-center gap-1"><mat-icon style="font-size: 10px; width: 10px; height: 10px;">favorite</mat-icon> {{ art.reactions?.['love'] }}</span> }
+                          @if (art.reactions?.['fire']) { <span class="text-[10px] font-medium text-orange-600 bg-orange-500/10 px-1.5 py-0.2 rounded flex items-center gap-1"><mat-icon style="font-size: 10px; width: 10px; height: 10px;">local_fire_department</mat-icon> {{ art.reactions?.['fire'] }}</span> }
                         </div>
                       </div>
                       <div class="shrink-0 text-right">
-                        <div class="font-black text-orange-600 text-lg">
+                        <div class="font-bold text-orange-600 text-sm">
                           {{ art._totalReactions || 0 }}
                         </div>
-                        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Total</div>
+                        <div class="text-[9px] uppercase tracking-wider text-gray-400 font-bold">Total</div>
                       </div>
                     </div>
                   }
                   @if (topReactedArticles().length === 0) {
-                    <div class="p-8 text-center text-gray-400">No reactions yet.</div>
+                    <div class="p-6 text-center text-gray-400 text-xs">No reactions yet.</div>
                   }
                 </div>
               </div>
@@ -2679,7 +2780,10 @@ export class AdminComponent {
 
   // Auto-Pilot 24/7 Engine Signals & State
   autoPilotEnabled = true;
+  autoPilotScheduleMode: 'interval' | 'exact_times' = 'interval';
   autoPilotIntervalMinutes = 60;
+  autoPilotScheduledDailyTimes: string[] = ['08:00', '12:00', '16:00', '20:00'];
+  autoPilotNewTimeInput = '09:00';
   autoPilotMaxArticles = 2;
   autoPilotAutoPublish = true;
   autoPilotNotifyPhone = true;
@@ -4019,7 +4123,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         summary: generated.sinhalaDescription || item.description,
         content: generated.sinhalaFullContent || `<p>${generated.sinhalaDescription}</p>`,
         category: generated.suggestedCategory || 'Tech',
-        imageUrl: generated.imageUrl || item.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+        imageUrl: generated.imageUrl || item.imageUrl || '',
         readTime: generated.readTime || '4 min read',
         date: dateStr,
         authorType: 'ai',
@@ -4119,7 +4223,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
               summary: generated.sinhalaDescription || item.description,
               content: generated.sinhalaFullContent || `<p>${generated.sinhalaDescription}</p>`,
               category: generated.suggestedCategory || 'Tech',
-              imageUrl: generated.imageUrl || item.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+              imageUrl: generated.imageUrl || item.imageUrl || '',
               readTime: generated.readTime || '4 min read',
               date: dateStr,
               authorType: 'ai',
@@ -4304,7 +4408,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         summary: art.sinhalaDescription,
         content: art.sinhalaFullContent,
         category: art.suggestedCategory || 'Tech',
-        imageUrl: art.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+        imageUrl: art.imageUrl || '',
         readTime: art.readTime || '5 min read',
         date: dateStr,
         authorType: 'ai',
@@ -4437,6 +4541,49 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   // AUTO-PILOT 24/7 ENGINE METHODS
   // ==========================================
 
+  addScheduledTime(timeStr?: string) {
+    const t = (timeStr || this.autoPilotNewTimeInput).trim();
+    if (!/^\d{1,2}:\d{2}$/.test(t)) {
+      alert('කරුණාකර නිවැරදි වේලාවක් (උදා: 08:30) ඇතුළත් කරන්න.');
+      return;
+    }
+    const formatted = t.length === 4 ? `0${t}` : t;
+    if (!this.autoPilotScheduledDailyTimes.includes(formatted)) {
+      this.autoPilotScheduledDailyTimes = [...this.autoPilotScheduledDailyTimes, formatted].sort();
+    }
+  }
+
+  removeScheduledTime(timeStr: string) {
+    this.autoPilotScheduledDailyTimes = this.autoPilotScheduledDailyTimes.filter(t => t !== timeStr);
+    if (this.autoPilotScheduledDailyTimes.length === 0) {
+      this.autoPilotScheduledDailyTimes = ['08:00', '12:00', '16:00', '20:00'];
+    }
+  }
+
+  applySchedulePreset(preset: 'morning_evening' | 'four_times' | 'six_times' | 'tech_rush') {
+    if (preset === 'morning_evening') {
+      this.autoPilotScheduledDailyTimes = ['08:30', '19:30'];
+    } else if (preset === 'four_times') {
+      this.autoPilotScheduledDailyTimes = ['08:00', '12:00', '16:00', '20:00'];
+    } else if (preset === 'six_times') {
+      this.autoPilotScheduledDailyTimes = ['07:00', '10:30', '14:00', '17:30', '20:30', '23:00'];
+    } else if (preset === 'tech_rush') {
+      this.autoPilotScheduledDailyTimes = ['09:00', '13:00', '18:00', '21:30'];
+    }
+  }
+
+  formatTimeDisplay(timeStr: string): string {
+    if (!timeStr) return '';
+    const [hStr, mStr] = timeStr.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h) || isNaN(m)) return timeStr;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    const displayM = m.toString().padStart(2, '0');
+    return `${displayH}:${displayM} ${ampm}`;
+  }
+
   async loadAutoPilotStatus() {
     this.isLoadingAutoPilot.set(true);
     try {
@@ -4448,7 +4595,11 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         const data = await res.json();
         if (data.config) {
           this.autoPilotEnabled = data.config.enabled ?? true;
+          this.autoPilotScheduleMode = data.config.scheduleMode || 'interval';
           this.autoPilotIntervalMinutes = data.config.intervalMinutes ?? 60;
+          if (Array.isArray(data.config.scheduledDailyTimes)) {
+            this.autoPilotScheduledDailyTimes = data.config.scheduledDailyTimes;
+          }
           this.autoPilotAutoPublish = data.config.autoPublish ?? true;
           this.autoPilotNotifyPhone = data.config.notifyPhone ?? true;
           this.autoPilotPostWhatsApp = data.config.postWhatsApp ?? true;
@@ -4477,7 +4628,9 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           enabled: this.autoPilotEnabled,
+          scheduleMode: this.autoPilotScheduleMode,
           intervalMinutes: Number(this.autoPilotIntervalMinutes),
+          scheduledDailyTimes: this.autoPilotScheduledDailyTimes,
           autoPublish: this.autoPilotAutoPublish,
           notifyPhone: this.autoPilotNotifyPhone,
           postWhatsApp: this.autoPilotPostWhatsApp,

@@ -1,5 +1,5 @@
 {
-  "hosting": {
+  "hosting": { "site": "myfeedlk",
     "public": "dist/app/browser",
     "ignore": [
       "firebase.json",

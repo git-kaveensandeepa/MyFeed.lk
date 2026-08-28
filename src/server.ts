@@ -14,8 +14,7 @@ import {
 } from 'firebase/firestore';
 
 // Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const g = globalThis as any;
+const g: any = globalThis;
 
 if (typeof g.Buffer === 'undefined') {
   g.Buffer = Buffer;
@@ -112,7 +111,6 @@ const SERVER_RSS_FEEDS = [
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
   { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
   { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI&hl=en-US&gl=US&ceid=US:en' },
-  { name: 'Daily FT Sri Lanka', url: 'https://www.ft.lk/rss/it-telecom-technology' },
   { name: 'Ada Derana', url: 'http://www.adaderana.lk/rss.php' },
   { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
@@ -275,7 +273,7 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
   for (const m of jsonLdMatches) {
     try {
       const data = JSON.parse(m[1]);
-      const findImage = (obj: unknown): string | null => {
+      const findImage = (obj: any): string | null => {
         if (!obj) return null;
         if (typeof obj === 'string' && (obj.startsWith('http') || obj.startsWith('/'))) return obj;
         if (typeof obj === 'object' && obj !== null) {
@@ -461,7 +459,7 @@ async function sendWebPushToAllSubscribers(article: {
         try {
           await webpush.sendNotification(subData, payload);
           sent++;
-        } catch (pushErr: unknown) {
+        } catch (pushErr: any) {
           failed++;
           const errObj = pushErr as { statusCode?: number };
           if (errObj?.statusCode === 404 || errObj?.statusCode === 410) {
@@ -486,7 +484,7 @@ async function sendWebPushToAllSubscribers(article: {
     }
 
     return { total: snap.size, sent, failed };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[WebPush] Error sending push notifications:', err);
     return { total: 0, sent: 0, failed: 0 };
   }
@@ -506,7 +504,9 @@ export interface AutoPilotLog {
 
 export interface AutoPilotConfig {
   enabled: boolean;
+  scheduleMode: 'interval' | 'exact_times'; // 'interval' | 'exact_times'
   intervalMinutes: number;
+  scheduledDailyTimes: string[]; // e.g. ['08:00', '12:30', '16:30', '20:30'] (24-hour format in Asia/Colombo)
   autoPublish: boolean;
   notifyPhone: boolean;
   postWhatsApp: boolean;
@@ -517,7 +517,9 @@ export interface AutoPilotConfig {
 
 const autoPilotConfig: AutoPilotConfig = {
   enabled: true,
+  scheduleMode: 'interval',
   intervalMinutes: 60,
+  scheduledDailyTimes: ['08:00', '12:00', '16:00', '20:00'],
   autoPublish: true,
   notifyPhone: true,
   postWhatsApp: true,
@@ -530,6 +532,68 @@ const autoPilotLogs: AutoPilotLog[] = [];
 let autoPilotNextRunTime = Date.now() + 60 * 60 * 1000;
 let isAutoPilotSyncing = false;
 let autoPilotLastRunTime: string | null = null;
+
+// Helper to calculate the next execution timestamp in Sri Lanka timezone (Asia/Colombo UTC+5:30)
+function calculateNextRunTimestamp(config: AutoPilotConfig): number {
+  if (!config.enabled) return Date.now() + (24 * 60 * 60 * 1000);
+
+  if (config.scheduleMode === 'exact_times' && Array.isArray(config.scheduledDailyTimes) && config.scheduledDailyTimes.length > 0) {
+    // Current time in Colombo
+    const now = new Date();
+    const colomboFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Colombo',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false
+    });
+    const parts = colomboFormatter.formatToParts(now);
+    const colomboDate: Record<string, number> = {};
+    for (const p of parts) {
+      if (p.type !== 'literal') {
+        colomboDate[p.type] = parseInt(p.value, 10);
+      }
+    }
+
+    const currentMinutesOfDay = (colomboDate['hour'] || 0) * 60 + (colomboDate['minute'] || 0);
+
+    // Convert scheduled times into minutes of day
+    const parsedMinutesList = config.scheduledDailyTimes
+      .map(t => {
+        const [h, m] = t.split(':').map(x => parseInt(x, 10));
+        return isNaN(h) || isNaN(m) ? null : { text: t, minutes: h * 60 + m };
+      })
+      .filter((item): item is { text: string; minutes: number } => item !== null)
+      .sort((a, b) => a.minutes - b.minutes);
+
+    if (parsedMinutesList.length > 0) {
+      // Find the next scheduled time today that is at least 1 minute in the future
+      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay);
+
+      let targetMinutes = 0;
+      let daysToAdd = 0;
+
+      if (nextTimeToday) {
+        targetMinutes = nextTimeToday.minutes;
+        daysToAdd = 0;
+      } else {
+        // Wrap around to first scheduled time tomorrow
+        targetMinutes = parsedMinutesList[0].minutes;
+        daysToAdd = 1;
+      }
+
+      const diffMinutes = (daysToAdd * 24 * 60) + (targetMinutes - currentMinutesOfDay);
+      return Date.now() + Math.max(60000, diffMinutes * 60 * 1000);
+    }
+  }
+
+  // Fallback to interval mode
+  const mins = config.intervalMinutes >= 15 ? config.intervalMinutes : 60;
+  return Date.now() + (mins * 60 * 1000);
+}
 
 async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cron' | 'manual_admin' = 'scheduled_cron'): Promise<{ success: boolean; count: number; articles: { title: string; category: string; imageUrl: string; url?: string }[]; message: string }> {
   if (isAutoPilotSyncing) {
@@ -596,7 +660,7 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
       try {
         const res = await fetch(feed.url, {
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          signal: AbortSignal.timeout(7000)
+          signal: AbortSignal.timeout(30000)
         });
         if (res.ok) {
           const xml = await res.text();
@@ -669,7 +733,7 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
       autoPilotLogs.unshift(logEntry);
       if (autoPilotLogs.length > 30) autoPilotLogs.pop();
       autoPilotLastRunTime = timestampStr;
-      autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+      autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
       return { success: true, count: 0, articles: [], message: 'Feeds checked. All up to date.' };
     }
 
@@ -683,7 +747,7 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
           try {
             const pageRes = await fetch(item.url, {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-              signal: AbortSignal.timeout(6000)
+              signal: AbortSignal.timeout(30000)
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
@@ -727,28 +791,43 @@ CRITICAL EDITORIAL GUIDELINES:
 5. 'readTime': e.g. '4 min read'
 6. 'socialShareText': Formatted WhatsApp / Social copy with emojis and summary in Sinhala.`;
 
-        const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                sinhalaTitle: { type: Type.STRING },
-                sinhalaDescription: { type: Type.STRING },
-                sinhalaFullContent: { type: Type.STRING },
-                suggestedCategory: { type: Type.STRING },
-                readTime: { type: Type.STRING },
-                socialShareText: { type: Type.STRING },
-              },
-              required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
-            }
+        let geminiRes;
+        const retries = 3;
+        let delay = 2000;
+        for (let i = 0; i < retries; i++) {
+          try {
+            geminiRes = await ai.models.generateContent({
+              model: 'gemini-3.7-flash',
+              contents: prompt,
+              config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    sinhalaTitle: { type: Type.STRING },
+                    sinhalaDescription: { type: Type.STRING },
+                    sinhalaFullContent: { type: Type.STRING },
+                    suggestedCategory: { type: Type.STRING },
+                    readTime: { type: Type.STRING },
+                    socialShareText: { type: Type.STRING },
+                  },
+                  required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
+                }
+              }
+            });
+            break; // Success
+          } catch (err: any) {
+            const isTransient = err?.status === 429 || err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('429');
+            if (i === retries - 1 || !isTransient) throw err;
+            console.warn(`[Auto-Pilot] Gemini API error (attempt ${i + 1}/${retries}), retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
           }
-        });
+        }
+        if (!geminiRes) throw new Error('Gemini API call failed after retries');
 
         const generated = JSON.parse(geminiRes.text || '{}');
-        const finalImage = originalSourceImage || getServerTopicImage(item.title);
+        const finalImage = originalSourceImage || '';
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const cleanSlug = (generated.sinhalaTitle || item.title).toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
 
@@ -873,7 +952,7 @@ CRITICAL EDITORIAL GUIDELINES:
     autoPilotLogs.unshift(logEntry);
     if (autoPilotLogs.length > 30) autoPilotLogs.pop();
     autoPilotLastRunTime = timestampStr;
-    autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+    autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
 
     return {
       success: true,
@@ -881,7 +960,7 @@ CRITICAL EDITORIAL GUIDELINES:
       articles: publishedArticlesList,
       message: `Auto-pilot synced ${publishedArticlesList.length} news articles.`
     };
-  } catch (err: unknown) {
+  } catch (err: any) {
     const errorObj = err as { message?: string };
     const logEntry: AutoPilotLog = {
       id: `log-${Date.now()}`,
@@ -1024,7 +1103,7 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
           });
           genResponseText = response.text || '';
           break; // Success, exit retry loop
-        } catch (err: unknown) {
+        } catch (err: any) {
           attempt++;
           const errorObj = err as { status?: number | string; message?: string };
           const isRateLimit = errorObj?.status === 429 || errorObj?.status === 'RESOURCE_EXHAUSTED' || errorObj?.message?.includes('429') || errorObj?.message?.includes('RESOURCE_EXHAUSTED');
@@ -1086,7 +1165,7 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
       if (index < articles.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
-    } catch (e: unknown) {
+    } catch (e: any) {
       const err = e as { message?: string };
       console.warn('Translation fallback triggered:', err?.message || e);
       translatedArticles.push({
@@ -1120,7 +1199,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         try {
           cachedNews = await fetchAndTranslateNews();
           lastFetchTime = now;
-        } catch (e: unknown) {
+        } catch (e: any) {
           const err = e as { message?: string };
           console.error('Error fetching news:', e);
           if (!cachedNews) {
@@ -1159,9 +1238,19 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
       try {
         const body = await request.json();
         if (typeof body.enabled === 'boolean') autoPilotConfig.enabled = body.enabled;
+        if (body.scheduleMode === 'interval' || body.scheduleMode === 'exact_times') {
+          autoPilotConfig.scheduleMode = body.scheduleMode;
+        }
         if (typeof body.intervalMinutes === 'number' && body.intervalMinutes >= 15) {
           autoPilotConfig.intervalMinutes = body.intervalMinutes;
-          autoPilotNextRunTime = Date.now() + (autoPilotConfig.intervalMinutes * 60 * 1000);
+        }
+        if (Array.isArray(body.scheduledDailyTimes)) {
+          autoPilotConfig.scheduledDailyTimes = body.scheduledDailyTimes
+            .filter((t: any) => typeof t === 'string' && /^\d{1,2}:\d{2}$/.test(t.trim()))
+            .map((t: string) => t.trim());
+          if (autoPilotConfig.scheduledDailyTimes.length === 0) {
+            autoPilotConfig.scheduledDailyTimes = ['08:00', '12:00', '16:00', '20:00'];
+          }
         }
         if (typeof body.autoPublish === 'boolean') autoPilotConfig.autoPublish = body.autoPublish;
         if (typeof body.notifyPhone === 'boolean') autoPilotConfig.notifyPhone = body.notifyPhone;
@@ -1170,11 +1259,13 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         if (typeof body.waWebhookUrl === 'string') autoPilotConfig.waWebhookUrl = body.waWebhookUrl.trim();
         if (typeof body.maxArticlesPerRun === 'number') autoPilotConfig.maxArticlesPerRun = Math.max(1, Math.min(body.maxArticlesPerRun, 5));
 
+        autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
+
         return new Response(JSON.stringify({ success: true, config: autoPilotConfig, nextRunTime: autoPilotNextRunTime }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (err: unknown) {
+      } catch (err: any) {
         const errorObj = err as { message?: string };
         return new Response(JSON.stringify({ error: errorObj.message || 'Failed to update config' }), {
           status: 500,
@@ -1211,7 +1302,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
           try {
             const res = await fetch(feed.url, {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-              signal: AbortSignal.timeout(6000)
+              signal: AbortSignal.timeout(30000)
             });
             if (res.ok) {
               const xml = await res.text();
@@ -1240,7 +1331,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (err: unknown) {
+      } catch (err: any) {
         const errorObj = err as { message?: string };
         return new Response(JSON.stringify({ error: errorObj.message || 'Failed to fetch trending news' }), {
           status: 500,
@@ -1277,7 +1368,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
           try {
             const pageRes = await fetch(articleUrl, {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-              signal: AbortSignal.timeout(8000)
+              signal: AbortSignal.timeout(30000)
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
@@ -1395,7 +1486,7 @@ SOCIAL COPY ('socialShareText'):
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (genErr: unknown) {
+      } catch (genErr: any) {
         const err = genErr as { message?: string };
         console.error('Error generating full article:', genErr);
         return new Response(JSON.stringify({ error: err.message || 'Article generation failed' }), {
@@ -1453,7 +1544,7 @@ Return a valid JSON object matching the schema with the improved/transformed con
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (polishErr: unknown) {
+      } catch (polishErr: any) {
         const err = polishErr as { message?: string };
         return new Response(JSON.stringify({ error: err.message || 'Polishing failed' }), {
           status: 500,
@@ -1536,7 +1627,7 @@ REQUIREMENTS:
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (batchErr: unknown) {
+      } catch (batchErr: any) {
         const err = batchErr as { message?: string };
         return new Response(JSON.stringify({ error: err.message || 'Batch generation failed' }), {
           status: 500,
@@ -1624,14 +1715,14 @@ REQUIREMENTS:
         const result = JSON.parse(geminiRes.text || '{}');
         const originalSourceImg = extractOriginalImageFromHtml(html, articleUrl);
         result.originalImageUrl = originalSourceImg || '';
-        result.imageUrl = originalSourceImg || getServerTopicImage(result.sinhalaTitle);
+        result.imageUrl = originalSourceImg || '';
         result.sourceUrl = articleUrl;
 
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (genErr: unknown) {
+      } catch (genErr: any) {
         const err = genErr as { message?: string };
         console.error('Error generating AI article from URL:', genErr);
         return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
@@ -1658,7 +1749,7 @@ REQUIREMENTS:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
           },
-          signal: AbortSignal.timeout(8000)
+          signal: AbortSignal.timeout(30000)
         });
 
         if (!pageRes.ok) {
@@ -1688,7 +1779,7 @@ REQUIREMENTS:
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (err: unknown) {
+      } catch (err: any) {
         const e = err as { message?: string };
         return new Response(JSON.stringify({ error: e.message || 'Failed to extract original image' }), {
           status: 500,
@@ -1758,7 +1849,7 @@ REQUIREMENTS:
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (genErr: unknown) {
+      } catch (genErr: any) {
         const err = genErr as { message?: string };
         console.error('Error generating AI long article:', genErr);
         return new Response(JSON.stringify({ error: err.message || 'Generation failed' }), {
@@ -1820,7 +1911,7 @@ Rules:
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (imgErr: unknown) {
+      } catch (imgErr: any) {
         const err = imgErr as { message?: string };
         console.error('Error generating AI image from title:', imgErr);
         return new Response(JSON.stringify({ error: err.message || 'Image generation failed' }), {
@@ -1920,7 +2011,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (waErr: unknown) {
+      } catch (waErr: any) {
         const err = waErr as { message?: string };
         return new Response(JSON.stringify({ error: err.message || 'WhatsApp dispatch error' }), {
           status: 500,
@@ -1979,7 +2070,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (phoneErr: unknown) {
+      } catch (phoneErr: any) {
         const err = phoneErr as { message?: string };
         return new Response(JSON.stringify({ error: err.message || 'Phone notification failed' }), {
           status: 500,
@@ -2064,7 +2155,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
             headers: { 'Content-Type': 'application/json' }
           });
         }
-      } catch (err: unknown) {
+      } catch (err: any) {
         const errorObj = err as { message?: string };
         return new Response(JSON.stringify({ error: errorObj.message || 'Web push failed' }), {
           status: 500,
@@ -2075,7 +2166,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
 
     const result = await angularAppEngine.handle(request, context);
     return result || new Response('Not found', { status: 404 });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Netlify SSR Error:', err);
     return new Response('SSR Error: ' + (err instanceof Error ? err.message : String(err)), { status: 500 });
   }

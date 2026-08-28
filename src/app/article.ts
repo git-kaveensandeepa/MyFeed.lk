@@ -67,61 +67,51 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
             </div>
           }
 
-          <!-- Top Navigation & Action Controls -->
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-12">
-            <div class="flex items-center gap-4">
-              <a routerLink="/" class="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold tracking-widest uppercase text-[#1d1d1f]/60 dark:text-white/60 hover:text-[#1d1d1f] dark:hover:text-white transition-all cursor-pointer group shrink-0">
-                <mat-icon class="group-hover:-translate-x-1 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">keyboard_backspace</mat-icon>
-                <span>Back to Journal</span>
+          <!-- iOS Top Navigation & Action Controls Bar -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 sm:mb-8">
+            <div class="flex items-center gap-2.5">
+              <a routerLink="/" class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-xs font-bold text-[#000000] dark:text-white ios-touch cursor-pointer group shrink-0">
+                <mat-icon class="text-[#007AFF] group-hover:-translate-x-0.5 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">chevron_left</mat-icon>
+                <span>Journal</span>
               </a>
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-blue-300 text-[10px] sm:text-[11px] font-bold tracking-wider">
-                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">visibility</mat-icon>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-[11px] sm:text-xs font-semibold">
+                <mat-icon style="font-size: 13px; width: 13px; height: 13px;">visibility</mat-icon>
                 {{ article.views || 0 }} Views
               </span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <div class="flex flex-wrap items-center gap-2">
               <!-- Social Story Card / Poster Generator Button -->
               <button 
                 (click)="openPosterModal(article)"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-blue-500/20 shrink-0 active:scale-95"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#007AFF] text-white font-bold text-xs shadow-sm hover:bg-[#0062cc] active:scale-95 transition-all ios-touch cursor-pointer"
                 title="Create Social Media Story Card">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">image</mat-icon>
-                <span>Story Poster</span>
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;">image</mat-icon>
+                <span>Poster</span>
               </button>
 
               <!-- WhatsApp Direct Share & Forward Button -->
               <button 
                 (click)="shareToWhatsApp(article)"
                 [disabled]="isSharing()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs transition-all cursor-pointer shrink-0 group active:scale-95 shadow-md shadow-[#25D366]/20 border border-[#25D366]"
-                title="Forward article and image to WhatsApp">
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34C759] text-white font-bold text-xs shadow-sm hover:bg-[#2db24e] active:scale-95 transition-all ios-touch cursor-pointer"
+                title="Forward article to WhatsApp">
                 @if (isSharing()) {
                   <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="animate-spin">sync</mat-icon>
-                  <span>Sharing...</span>
                 } @else {
-                  <svg class="w-4 h-4 fill-current shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                   </svg>
-                  <span>WhatsApp</span>
                 }
-              </button>
-
-              <!-- Share Link -->
-              <button 
-                (click)="copyLink()"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 shrink-0 group active:scale-95"
-                title="Copy page link">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="group-hover:rotate-12 transition-transform">share</mat-icon>
-                <span>{{ copySuccess() ? 'Copied!' : 'Share' }}</span>
+                <span>Share</span>
               </button>
 
               <!-- Bookmark -->
               <button 
                 (click)="bookmarkManager.toggleBookmark(article.id)"
-                class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 shrink-0 active:scale-95"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs ios-touch cursor-pointer border border-black/5 dark:border-white/10"
                 title="Save article to bookmarks">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" [class.text-blue-600]="bookmarkManager.isBookmarked(article.id)">
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;" [class.text-[#007AFF]]="bookmarkManager.isBookmarked(article.id)">
                   {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
                 </mat-icon>
                 <span>{{ bookmarkManager.isBookmarked(article.id) ? 'Saved' : 'Save' }}</span>
@@ -129,39 +119,39 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
             </div>
           </div>
 
-          <header class="mb-8 sm:mb-16 text-center max-w-full overflow-hidden">
-            <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 mb-4 sm:mb-8 text-[10px] sm:text-xs font-bold tracking-widest text-[#1d1d1f]/50 dark:text-white/50 uppercase">
-              <span class="text-blue-600">{{ article.category }}</span>
-              <span class="w-1 h-1 rounded-full bg-[#1d1d1f]/20 dark:bg-white/20"></span>
+          <header class="mb-8 sm:mb-12 text-center max-w-full overflow-hidden">
+            <div class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 mb-3 sm:mb-5 text-[10px] sm:text-xs font-semibold text-[#8e8e93] uppercase tracking-wider">
+              <span class="text-[#007AFF] font-bold">{{ article.category }}</span>
+              <span>&bull;</span>
               <span>{{ article.date }} @if (article.uploadTimeStr) { &bull; {{ article.uploadTimeStr }} }</span>
-              <span class="w-1 h-1 rounded-full bg-[#1d1d1f]/20 dark:bg-white/20"></span>
-              <span class="flex items-center gap-1"><mat-icon style="font-size: 14px; width: 14px; height: 14px;">schedule</mat-icon> {{ article.readTime }}</span>
+              <span>&bull;</span>
+              <span class="flex items-center gap-1 text-[#007AFF]"><mat-icon style="font-size: 13px; width: 13px; height: 13px;">schedule</mat-icon> {{ article.readTime }}</span>
             </div>
             
-            <h1 class="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-4 sm:mb-8 leading-[1.25] sm:leading-[1.1] max-w-4xl mx-auto drop-shadow-sm break-words hyphens-auto">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#000000] dark:text-white mb-3 sm:mb-6 leading-[1.2] max-w-4xl mx-auto break-words">
               {{ article.title }}
             </h1>
             
-            <p class="text-sm sm:text-lg md:text-xl text-[#1d1d1f]/70 dark:text-white/70 font-sans leading-relaxed max-w-3xl mx-auto break-words font-normal">
+            <p class="text-sm sm:text-base md:text-lg text-[#3a3a3c] dark:text-[#aeaeb2] leading-relaxed max-w-3xl mx-auto break-words font-normal">
               {{ article.summary }}
             </p>
           </header>
         </div>
 
         <!-- Featured Image Figure -->
-        <figure class="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-16 md:mb-24 relative group">
-          <div class="w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2.2/1] rounded-2xl sm:rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-white/5 relative shadow-xl sm:shadow-2xl shadow-black/10">
+        <figure class="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-14 relative group">
+          <div class="w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2.2/1] rounded-[22px] sm:rounded-[32px] overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative shadow-sm border border-black/[0.06] dark:border-white/[0.08] ios-card">
             <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="eager"
                  #mainImg (load)="mainImg.classList.remove('opacity-0', 'blur-xl', 'scale-105'); mainImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
                  (error)="onImgError($event, article.title, article.category)"
-                 class="absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-out opacity-0 blur-xl scale-105" />
+                 class="absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out opacity-0 blur-xl scale-105" />
             
             @if (isAdmin()) {
               <button 
                 (click)="openQuickImageModal(article)"
-                class="absolute top-4 right-4 z-20 px-4 py-2 rounded-full bg-black/75 hover:bg-black text-white text-xs font-bold backdrop-blur-md shadow-xl flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer opacity-90 hover:opacity-100">
-                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-amber-400">photo_camera</mat-icon>
-                <span>Change Cover Photo</span>
+                class="absolute top-3.5 right-3.5 z-20 px-3.5 py-1.5 rounded-full bg-black/75 hover:bg-black text-white text-xs font-bold backdrop-blur-md shadow-md flex items-center gap-1.5 transition-all ios-touch cursor-pointer">
+                <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-amber-400">photo_camera</mat-icon>
+                <span>Change Cover</span>
               </button>
             }
           </div>
@@ -169,26 +159,29 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
         <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 max-w-full overflow-hidden">
           <!-- Author / Byline Block with AI Transparency Compliance -->
-          <div class="flex items-center gap-3 sm:gap-5 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-black/5 dark:border-white/10">
+          <div class="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-5 sm:pb-6 border-b border-black/[0.06] dark:border-white/[0.08]">
             @if (article.authorType === 'human') {
-              <img src="/kaveen.jpg" alt="Kaveen Sandeepa" referrerpolicy="no-referrer" class="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover bg-gray-100 dark:bg-white/10 shadow-sm shrink-0" />
+              <img src="/kaveen.jpg" alt="Kaveen Sandeepa" referrerpolicy="no-referrer" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover bg-black/[0.03] dark:bg-white/[0.05] shadow-sm shrink-0" />
               <div class="min-w-0 flex-1">
-                <div class="font-bold text-[#1d1d1f] dark:text-white text-sm sm:text-lg truncate">Written by Kaveen Sandeepa</div>
-                <div class="text-[11px] sm:text-sm font-medium text-[#1d1d1f]/50 dark:text-white/50">Editor-in-Chief &bull; MyFeed.lk</div>
+                <div class="font-bold text-[#000000] dark:text-white text-sm sm:text-base truncate flex items-center gap-1.5">
+                  <span>Kaveen Sandeepa</span>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-[#007AFF]">verified</mat-icon>
+                </div>
+                <div class="text-xs font-normal text-[#8e8e93]">Editor-in-Chief &bull; MyFeed.lk</div>
               </div>
             } @else {
-              <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
-                <mat-icon style="font-size: 22px; width: 22px; height: 22px;">auto_awesome</mat-icon>
+              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] bg-[#007AFF] flex items-center justify-center text-white shadow-sm shrink-0">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">smart_toy</mat-icon>
               </div>
               <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <span class="font-bold text-[#1d1d1f] dark:text-white text-sm sm:text-lg">MyFeed AI Desk</span>
-                  <span class="inline-flex items-center px-2 py-0.2 rounded-full text-[9px] sm:text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-bold text-[#000000] dark:text-white text-sm sm:text-base">MyFeed AI Desk</span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#007AFF]/10 text-[#007AFF]">
                     AI-Assisted
                   </span>
                 </div>
-                <div class="text-[11px] sm:text-sm font-medium text-[#1d1d1f]/60 dark:text-white/60 leading-snug">
-                  Supervised & Edited by MyFeed Editorial Desk
+                <div class="text-xs font-normal text-[#8e8e93] leading-snug">
+                  Supervised &amp; Edited by MyFeed Editorial Team
                 </div>
               </div>
             }
@@ -196,23 +189,23 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
           <!-- Quick Fact-Check & Credibility Status Ribbon -->
           @if (factCheck(); as fc) {
-            <div class="mb-8 p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0"
-                     [class.bg-emerald-600]="fc.score >= 95"
-                     [class.bg-amber-600]="fc.score < 95">
+            <div class="mb-6 p-3.5 sm:p-4 rounded-[18px] bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shadow-xs ios-card">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-[10px] flex items-center justify-center text-white text-xs font-extrabold shadow-xs shrink-0"
+                     [class.bg-[#34C759]]="fc.score >= 95"
+                     [class.bg-[#FF9500]]="fc.score < 95">
                   {{ fc.score }}%
                 </div>
                 <div>
-                  <div class="text-xs font-bold text-[#1d1d1f] dark:text-white flex items-center gap-1.5">
-                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;" [class.text-emerald-500]="fc.score >= 95" [class.text-amber-500]="fc.score < 95">verified_user</mat-icon>
-                    <span>{{ fc.score === 100 ? '100% සත්‍යාපිත මූලාශ්‍රයකි' : fc.statusBadge }}</span>
+                  <div class="text-xs font-bold text-[#000000] dark:text-white flex items-center gap-1">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;" [class.text-[#34C759]]="fc.score >= 95" [class.text-[#FF9500]]="fc.score < 95">verified</mat-icon>
+                    <span>{{ fc.score === 100 ? '100% Verified Source' : fc.statusBadge }}</span>
                   </div>
-                  <div class="text-[11px] text-[#1d1d1f]/60 dark:text-white/60">
+                  <div class="text-[11px] text-[#8e8e93]">
                     @if (fc.sources[0]?.name) {
-                      මූලාශ්‍රය (Source): <span class="font-bold text-blue-600 dark:text-blue-400">{{ fc.sources[0]?.name }}</span>
+                      Source: <span class="font-semibold text-[#007AFF]">{{ fc.sources[0]?.name }}</span>
                     } @else {
-                      MyFeed AI & Editor Verified
+                      MyFeed AI &amp; Editorial Verified
                     }
                   </div>
                 </div>
@@ -221,16 +214,16 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
               <div class="flex items-center gap-2">
                 @if (fc.sources[0]?.url) {
                   <a [href]="fc.sources[0]?.url" target="_blank" rel="noopener noreferrer"
-                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors border border-blue-200/50 dark:border-blue-800/40"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-xs font-bold hover:bg-[#007AFF]/20 transition-colors ios-touch"
                      title="Open original primary source in new tab">
-                    <span>Source Link</span>
-                    <mat-icon style="font-size: 13px; width: 13px; height: 13px;">open_in_new</mat-icon>
+                    <span>Source</span>
+                    <mat-icon style="font-size: 12px; width: 12px; height: 12px;">open_in_new</mat-icon>
                   </a>
                 }
                 <button (click)="scrollToFactCheck()" 
-                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white text-xs font-bold transition-colors cursor-pointer">
-                  <span>Fact Check Report</span>
-                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">arrow_downward</mat-icon>
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white text-xs font-bold transition-colors ios-touch cursor-pointer">
+                  <span>Report</span>
+                  <mat-icon style="font-size: 13px; width: 13px; height: 13px;">arrow_downward</mat-icon>
                 </button>
               </div>
             </div>
@@ -238,94 +231,85 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
           <!-- Article Body Content -->
           <div 
-            class="prose prose-base sm:prose-xl max-w-none text-[#1d1d1f]/80 dark:text-gray-300 leading-[1.8] sm:leading-[1.9] font-serif break-words overflow-hidden [&_h2]:text-xl [&_h2]:sm:text-2xl [&_h2]:font-bold [&_h2]:text-[#1d1d1f] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-5 [&_li]:mb-2.5 [&_strong]:font-bold [&_strong]:text-[#1d1d1f] [&_strong]:dark:text-white"
+            class="prose prose-base sm:prose-lg max-w-none text-[#2c2c2e] dark:text-[#d1d1d6] leading-[1.8] font-sans break-words overflow-hidden [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:text-[#000000] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_li]:mb-2 [&_strong]:font-bold [&_strong]:text-[#000000] [&_strong]:dark:text-white"
             [innerHTML]="article.content">
           </div>
 
           <!-- ======================================================== -->
-          <!-- FACT-CHECK & CREDIBILITY METER (සත්‍යතාව & මූලාශ්‍ර වාර්තාව) -->
+          <!-- FACT-CHECK & CREDIBILITY METER (Apple Inset Style) -->
           <!-- ======================================================== -->
           @if (factCheck(); as fc) {
-            <section id="factCheckSection" class="mt-10 sm:mt-14 rounded-3xl bg-slate-50 dark:bg-[#1e1e1e] border border-black/[0.08] dark:border-white/10 p-6 sm:p-8 shadow-sm relative overflow-hidden">
+            <section id="factCheckSection" class="mt-8 sm:mt-12 rounded-[22px] bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] p-5 sm:p-7 shadow-xs relative overflow-hidden ios-card">
               
               <!-- Top Header & Score -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
-                <div class="flex items-center gap-3.5">
-                  <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0"
-                       [class.bg-emerald-500]="fc.score >= 95"
-                       [class.text-white]="fc.score >= 95"
-                       [class.shadow-emerald-500/20]="fc.score >= 95"
-                       [class.bg-amber-500]="fc.score < 95"
-                       [class.text-white]="fc.score < 95"
-                       [class.shadow-amber-500/20]="fc.score < 95">
-                    <mat-icon style="font-size: 24px; width: 24px; height: 24px;">verified_user</mat-icon>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-black/[0.06] dark:border-white/[0.08]">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-[12px] flex items-center justify-center text-white shadow-sm shrink-0"
+                       [class.bg-[#34C759]]="fc.score >= 95"
+                       [class.bg-[#FF9500]]="fc.score < 95">
+                    <mat-icon style="font-size: 22px; width: 22px; height: 22px;">verified</mat-icon>
                   </div>
                   <div>
                     <div class="flex items-center gap-2">
-                      <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white">
-                        Fact Check &amp; Credibility Meter
+                      <h3 class="text-base font-bold tracking-tight text-[#000000] dark:text-white">
+                        Fact Check &amp; Credibility
                       </h3>
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-black/5 dark:bg-white/10 text-[#1d1d1f]/70 dark:text-white/70">
-                        AI &amp; Editor Verified
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#007AFF]/10 text-[#007AFF]">
+                        Verified
                       </span>
                     </div>
-                    <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-medium">
-                      පුවතේ සත්‍යතාව, මූලාශ්‍ර විනිවිදභාවය සහ විශ්වසනීයත්ව වාර්තාව
+                    <p class="text-xs text-[#8e8e93] font-normal">
+                      Information accuracy and source transparency
                     </p>
                   </div>
                 </div>
 
                 <!-- Score Badge -->
-                <div class="flex items-center gap-3 self-start sm:self-auto bg-white dark:bg-white/[0.05] p-2 pr-4 rounded-2xl border border-black/5 dark:border-white/10 shadow-xs">
-                  <div class="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-xs"
-                       [class.bg-emerald-600]="fc.score >= 95"
-                       [class.bg-amber-600]="fc.score < 95">
+                <div class="flex items-center gap-2.5 self-start sm:self-auto bg-black/[0.03] dark:bg-white/[0.05] p-2 pr-3.5 rounded-[14px]">
+                  <div class="w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-xs text-white"
+                       [class.bg-[#34C759]]="fc.score >= 95"
+                       [class.bg-[#FF9500]]="fc.score < 95">
                     {{ fc.score }}%
                   </div>
                   <div class="text-left">
-                    <div class="text-[11px] font-black uppercase tracking-wider"
-                         [class.text-emerald-600]="fc.score >= 95"
-                         [class.dark:text-emerald-400]="fc.score >= 95"
-                         [class.text-amber-600]="fc.score < 95"
-                         [class.dark:text-amber-400]="fc.score < 95">
+                    <div class="text-[11px] font-bold"
+                         [class.text-[#34C759]]="fc.score >= 95"
+                         [class.text-[#FF9500]]="fc.score < 95">
                       {{ fc.statusBadge }}
                     </div>
-                    <div class="text-[10px] text-[#1d1d1f]/50 dark:text-white/50 font-semibold">
-                      Credibility Trust Score
+                    <div class="text-[10px] text-[#8e8e93]">
+                      Trust Score
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Reason & Transparency Box (Highlighting 100% or Why not 100%) -->
-              <div class="py-5">
-                <div class="text-[11px] font-extrabold uppercase tracking-wider text-[#1d1d1f]/50 dark:text-white/50 mb-2 flex items-center gap-1.5">
-                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">info</mat-icon>
-                  <span>විශ්ලේෂණය සහ හේතුව (Verification Status &amp; Reason):</span>
+              <!-- Reason & Transparency Box -->
+              <div class="py-4">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-[#8e8e93] mb-2 flex items-center gap-1.5">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#007AFF]">info</mat-icon>
+                  <span>Verification Analysis:</span>
                 </div>
 
-                <div class="p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed font-sans font-medium"
-                     [class.bg-emerald-500/[0.06]]="fc.score >= 95"
-                     [class.border-emerald-500/20]="fc.score >= 95"
-                     [class.text-emerald-950]="fc.score >= 95"
-                     [class.dark:text-emerald-200]="fc.score >= 95"
-                     [class.bg-amber-500/[0.06]]="fc.score < 95"
-                     [class.border-amber-500/20]="fc.score < 95"
-                     [class.text-amber-950]="fc.score < 95"
-                     [class.dark:text-amber-200]="fc.score < 95">
+                <div class="p-3.5 rounded-[16px] border text-xs leading-relaxed font-sans font-medium"
+                     [class.bg-[#34C759]/10]="fc.score >= 95"
+                     [class.border-[#34C759]/20]="fc.score >= 95"
+                     [class.text-[#000000]]="fc.score >= 95"
+                     [class.dark:text-[#d1d1d6]]="fc.score >= 95"
+                     [class.bg-[#FF9500]/10]="fc.score < 95"
+                     [class.border-[#FF9500]/20]="fc.score < 95"
+                     [class.text-[#000000]]="fc.score < 95"
+                     [class.dark:text-[#d1d1d6]]="fc.score < 95">
                   @if (fc.score === 100) {
-                    <div class="flex items-start gap-2">
-                      <span class="text-emerald-600 dark:text-emerald-400 font-black shrink-0">✓ 100% තහවුරුයි:</span>
+                    <div class="flex items-start gap-1.5">
+                      <span class="text-[#34C759] font-bold shrink-0">✓ Verified:</span>
                       <span>{{ fc.reason }}</span>
                     </div>
                   } @else {
-                    <div class="flex flex-col gap-1.5">
-                      <div class="flex items-start gap-2">
-                        <span class="text-amber-600 dark:text-amber-400 font-black shrink-0">⚠ 100% නොවීමට හේතුව:</span>
+                    <div class="flex flex-col gap-1">
+                      <div class="flex items-start gap-1.5">
+                        <span class="text-[#FF9500] font-bold shrink-0">⚠ Note:</span>
                         <span>{{ fc.reason }}</span>
-                      </div>
-                      <div class="text-[11px] opacity-80 pl-5">
-                        (නිෂ්පාදන සමාගමේ නිල ප්‍රකාශයක් හෝ අමතර පාර්ශ්වයන්ගේ සනාථ කිරීම් ලද වහාම මෙම ලකුණ 100% දක්වා යාවත්කාලීන කරනු ලැබේ).
                       </div>
                     </div>
                   }
@@ -333,29 +317,29 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
               </div>
 
               <!-- Verified Source Links -->
-              <div class="pt-2 pb-5 border-t border-black/5 dark:border-white/10">
-                <div class="text-[11px] font-extrabold uppercase tracking-wider text-[#1d1d1f]/50 dark:text-white/50 mb-3 flex items-center gap-1.5">
-                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-blue-600 dark:text-blue-400">link</mat-icon>
-                  <span>මූලාශ්‍ර සබැඳි (Verified Source Citations):</span>
+              <div class="pt-2 pb-4 border-t border-black/[0.06] dark:border-white/[0.08]">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-[#8e8e93] mb-2.5 flex items-center gap-1.5">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#007AFF]">link</mat-icon>
+                  <span>Source Citations:</span>
                 </div>
 
-                <div class="flex flex-wrap gap-2.5">
+                <div class="flex flex-wrap gap-2">
                   @for (src of fc.sources; track src.name) {
                     @if (src.url) {
                       <a [href]="src.url" 
                          target="_blank" 
                          rel="noopener noreferrer"
-                         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-600 dark:text-blue-400 font-bold text-xs border border-black/10 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-700 transition-all shadow-xs group">
-                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-blue-500">public</mat-icon>
+                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-black/[0.03] dark:bg-white/[0.05] hover:bg-[#007AFF]/10 text-[#007AFF] font-bold text-xs border border-black/[0.06] dark:border-white/[0.08] transition-all ios-touch group">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#007AFF]">public</mat-icon>
                         <span>{{ src.name }}</span>
                         @if (src.isPrimary) {
-                          <span class="px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-[9px] font-extrabold uppercase">Primary</span>
+                          <span class="px-1 py-0.2 rounded bg-[#007AFF]/20 text-[#007AFF] text-[9px] font-bold uppercase">Primary</span>
                         }
-                        <mat-icon style="font-size: 13px; width: 13px; height: 13px;" class="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-[#1d1d1f]/40 dark:text-white/40">open_in_new</mat-icon>
+                        <mat-icon style="font-size: 12px; width: 12px; height: 12px;" class="text-[#8e8e93]">open_in_new</mat-icon>
                       </a>
                     } @else {
-                      <div class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] text-[#1d1d1f]/70 dark:text-white/70 font-semibold text-xs border border-black/5 dark:border-white/10">
-                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-gray-400">newspaper</mat-icon>
+                      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-black/[0.02] dark:bg-white/[0.04] text-[#8e8e93] font-semibold text-xs border border-black/[0.06] dark:border-white/[0.08]">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#8e8e93]">newspaper</mat-icon>
                         <span>{{ src.name }}</span>
                       </div>
                     }
@@ -363,45 +347,45 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                 </div>
               </div>
 
-              <!-- 3-Pillar Breakdown Bars & Report Correction Button -->
-              <div class="pt-4 border-t border-black/5 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs flex-1">
-                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
-                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
-                      <span>මූලාශ්‍ර විශ්වසනීයත්වය</span>
-                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.sourceReliability }}%</span>
+              <!-- 3-Pillar Breakdown Bars -->
+              <div class="pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs flex-1">
+                  <div class="p-2.5 rounded-[14px] bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.05]">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-semibold text-[#8e8e93]">
+                      <span>Source Reliability</span>
+                      <span class="font-bold text-[#34C759]">{{ fc.metrics.sourceReliability }}%</span>
                     </div>
                     <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                      <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="fc.metrics.sourceReliability"></div>
+                      <div class="h-full bg-[#34C759] rounded-full" [style.width.%]="fc.metrics.sourceReliability"></div>
                     </div>
                   </div>
 
-                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
-                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
-                      <span>තොරතුරු නිරවද්‍යතාව</span>
-                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.factualAccuracy }}%</span>
+                  <div class="p-2.5 rounded-[14px] bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.05]">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-semibold text-[#8e8e93]">
+                      <span>Factual Accuracy</span>
+                      <span class="font-bold text-[#007AFF]">{{ fc.metrics.factualAccuracy }}%</span>
                     </div>
                     <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                      <div class="h-full bg-blue-500 rounded-full" [style.width.%]="fc.metrics.factualAccuracy"></div>
+                      <div class="h-full bg-[#007AFF] rounded-full" [style.width.%]="fc.metrics.factualAccuracy"></div>
                     </div>
                   </div>
 
-                  <div class="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/10">
-                    <div class="flex justify-between items-center mb-1 text-[11px] font-bold text-[#1d1d1f]/70 dark:text-white/70">
-                      <span>සංස්කාරක අධීක්ෂණය</span>
-                      <span class="font-black text-emerald-600 dark:text-emerald-400">{{ fc.metrics.editorialReview }}%</span>
+                  <div class="p-2.5 rounded-[14px] bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.05]">
+                    <div class="flex justify-between items-center mb-1 text-[11px] font-semibold text-[#8e8e93]">
+                      <span>Editorial Review</span>
+                      <span class="font-bold text-[#5856D6]">{{ fc.metrics.editorialReview }}%</span>
                     </div>
                     <div class="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                      <div class="h-full bg-indigo-500 rounded-full" [style.width.%]="fc.metrics.editorialReview"></div>
+                      <div class="h-full bg-[#5856D6] rounded-full" [style.width.%]="fc.metrics.editorialReview"></div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Report Inaccuracy button -->
                 <button (click)="reportInaccuracy()"
-                        class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-[#1d1d1f]/70 dark:text-white/70 hover:text-black dark:hover:text-white text-xs font-bold transition-colors cursor-pointer shrink-0">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">flag</mat-icon>
-                  <span>නිවැරදි කිරීමක් යෝජනා කරන්න (Report/Suggest)</span>
+                        class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-[14px] bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-[#8e8e93] hover:text-[#000000] dark:hover:text-white text-xs font-semibold transition-colors ios-touch cursor-pointer shrink-0">
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">flag</mat-icon>
+                  <span>Report/Suggest</span>
                 </button>
               </div>
 
@@ -409,71 +393,68 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
           }
 
           <!-- Reactions -->
-          <div class="mt-8 sm:mt-12 flex flex-wrap items-center gap-3 sm:gap-4 border-t border-b border-black/5 dark:border-white/10 py-6 sm:py-8">
-            <span class="text-sm font-bold text-[#1d1d1f] dark:text-white uppercase tracking-widest mr-2">React:</span>
+          <div class="mt-6 sm:mt-10 flex flex-wrap items-center gap-2 sm:gap-3 border-t border-b border-black/[0.06] dark:border-white/[0.08] py-4 sm:py-6">
+            <span class="text-xs font-bold text-[#8e8e93] uppercase tracking-wider mr-1">React:</span>
             
-            <button (click)="toggleReaction('like')" [class.bg-blue-100]="currentReaction() === 'like'" [class.dark:bg-blue-900]="currentReaction() === 'like'" [class.border-blue-300]="currentReaction() === 'like'" [class.dark:border-blue-700]="currentReaction() === 'like'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
-              <mat-icon [class.text-blue-600]="currentReaction() === 'like'" [class.dark:text-blue-400]="currentReaction() === 'like'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">thumb_up</mat-icon>
-              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['like'] || 0 }}</span>
+            <button (click)="toggleReaction('like')" [class.bg-blue-100]="currentReaction() === 'like'" [class.dark:bg-blue-950]="currentReaction() === 'like'" [class.border-[#007AFF]]="currentReaction() === 'like'" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1c1c1e] ios-touch cursor-pointer">
+              <mat-icon [class.text-[#007AFF]]="currentReaction() === 'like'" class="text-[#8e8e93]" style="font-size: 17px; width: 17px; height: 17px;">thumb_up</mat-icon>
+              <span class="text-xs font-bold text-[#000000] dark:text-white">{{ article.reactions?.['like'] || 0 }}</span>
             </button>
             
-            <button (click)="toggleReaction('love')" [class.bg-red-100]="currentReaction() === 'love'" [class.dark:bg-red-900]="currentReaction() === 'love'" [class.border-red-300]="currentReaction() === 'love'" [class.dark:border-red-700]="currentReaction() === 'love'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
-              <mat-icon [class.text-red-600]="currentReaction() === 'love'" [class.dark:text-red-400]="currentReaction() === 'love'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">favorite</mat-icon>
-              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['love'] || 0 }}</span>
+            <button (click)="toggleReaction('love')" [class.bg-red-100]="currentReaction() === 'love'" [class.dark:bg-red-950]="currentReaction() === 'love'" [class.border-[#FF2D55]]="currentReaction() === 'love'" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1c1c1e] ios-touch cursor-pointer">
+              <mat-icon [class.text-[#FF2D55]]="currentReaction() === 'love'" class="text-[#8e8e93]" style="font-size: 17px; width: 17px; height: 17px;">favorite</mat-icon>
+              <span class="text-xs font-bold text-[#000000] dark:text-white">{{ article.reactions?.['love'] || 0 }}</span>
             </button>
             
-            <button (click)="toggleReaction('fire')" [class.bg-orange-100]="currentReaction() === 'fire'" [class.dark:bg-orange-900]="currentReaction() === 'fire'" [class.border-orange-300]="currentReaction() === 'fire'" [class.dark:border-orange-700]="currentReaction() === 'fire'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
-              <mat-icon [class.text-orange-600]="currentReaction() === 'fire'" [class.dark:text-orange-400]="currentReaction() === 'fire'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">local_fire_department</mat-icon>
-              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['fire'] || 0 }}</span>
+            <button (click)="toggleReaction('fire')" [class.bg-orange-100]="currentReaction() === 'fire'" [class.dark:bg-orange-950]="currentReaction() === 'fire'" [class.border-[#FF9500]]="currentReaction() === 'fire'" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1c1c1e] ios-touch cursor-pointer">
+              <mat-icon [class.text-[#FF9500]]="currentReaction() === 'fire'" class="text-[#8e8e93]" style="font-size: 17px; width: 17px; height: 17px;">local_fire_department</mat-icon>
+              <span class="text-xs font-bold text-[#000000] dark:text-white">{{ article.reactions?.['fire'] || 0 }}</span>
             </button>
 
-            <button (click)="toggleReaction('insight')" [class.bg-amber-100]="currentReaction() === 'insight'" [class.dark:bg-amber-900]="currentReaction() === 'insight'" [class.border-amber-300]="currentReaction() === 'insight'" [class.dark:border-amber-700]="currentReaction() === 'insight'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
-              <mat-icon [class.text-amber-600]="currentReaction() === 'insight'" [class.dark:text-amber-400]="currentReaction() === 'insight'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">lightbulb</mat-icon>
-              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['insight'] || 0 }}</span>
+            <button (click)="toggleReaction('insight')" [class.bg-amber-100]="currentReaction() === 'insight'" [class.dark:bg-amber-950]="currentReaction() === 'insight'" [class.border-[#FFCC00]]="currentReaction() === 'insight'" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1c1c1e] ios-touch cursor-pointer">
+              <mat-icon [class.text-[#FFCC00]]="currentReaction() === 'insight'" class="text-[#8e8e93]" style="font-size: 17px; width: 17px; height: 17px;">lightbulb</mat-icon>
+              <span class="text-xs font-bold text-[#000000] dark:text-white">{{ article.reactions?.['insight'] || 0 }}</span>
             </button>
             
-            <button (click)="toggleReaction('rocket')" [class.bg-purple-100]="currentReaction() === 'rocket'" [class.dark:bg-purple-900]="currentReaction() === 'rocket'" [class.border-purple-300]="currentReaction() === 'rocket'" [class.dark:border-purple-700]="currentReaction() === 'rocket'" class="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-all active:scale-95 group">
-              <mat-icon [class.text-purple-600]="currentReaction() === 'rocket'" [class.dark:text-purple-400]="currentReaction() === 'rocket'" class="text-gray-500 dark:text-gray-400 group-hover:-translate-y-0.5 transition-transform" style="font-size: 20px; width: 20px; height: 20px;">rocket_launch</mat-icon>
-              <span class="text-sm font-bold text-[#1d1d1f] dark:text-white">{{ article.reactions?.['rocket'] || 0 }}</span>
+            <button (click)="toggleReaction('rocket')" [class.bg-purple-100]="currentReaction() === 'rocket'" [class.dark:bg-purple-950]="currentReaction() === 'rocket'" [class.border-[#AF52DE]]="currentReaction() === 'rocket'" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1c1c1e] ios-touch cursor-pointer">
+              <mat-icon [class.text-[#AF52DE]]="currentReaction() === 'rocket'" class="text-[#8e8e93]" style="font-size: 17px; width: 17px; height: 17px;">rocket_launch</mat-icon>
+              <span class="text-xs font-bold text-[#000000] dark:text-white">{{ article.reactions?.['rocket'] || 0 }}</span>
             </button>
           </div>
 
           <!-- Bottom Action & Sharing Bar for Readers -->
-          <div class="mt-8 sm:mt-12 p-6 sm:p-8 rounded-3xl bg-gray-50 dark:bg-white/[0.04] border border-black/5 dark:border-white/10">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="mt-6 sm:mt-10 p-5 sm:p-6 rounded-[22px] bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] shadow-xs ios-card">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
               <div>
-                <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-1">
+                <h3 class="text-base font-bold tracking-tight text-[#000000] dark:text-white mb-0.5">
                   Share this Story
                 </h3>
-                <p class="text-xs sm:text-sm text-[#1d1d1f]/60 dark:text-white/60">
-                  Forward story summary and link directly to WhatsApp.
+                <p class="text-xs text-[#8e8e93]">
+                  Forward story summary and link directly
                 </p>
               </div>
 
-              <div class="flex flex-wrap items-center gap-3">
+              <div class="flex flex-wrap items-center gap-2">
                 <!-- WhatsApp Forward Button -->
                 <button 
                   (click)="shareToWhatsApp(article)"
                   [disabled]="isSharing()"
-                  class="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#25D366] text-white hover:bg-[#20ba5a] font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-lg shadow-[#25D366]/20 active:scale-95 border border-[#25D366]"
-                  title="Forward article and image to WhatsApp">
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#34C759] text-white hover:bg-[#2db24e] font-bold text-xs transition-all ios-touch cursor-pointer shadow-sm">
                   @if (isSharing()) {
-                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="animate-spin">sync</mat-icon>
-                    <span>Preparing Image...</span>
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="animate-spin">sync</mat-icon>
                   } @else {
-                    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                       <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                     </svg>
-                    <span>Share to WhatsApp</span>
                   }
+                  <span>WhatsApp</span>
                 </button>
 
                 <!-- Facebook Share Button -->
                 <button 
                   (click)="shareToFacebook(article)"
-                  class="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-lg shadow-[#1877F2]/20 active:scale-95 border border-[#1877F2]"
-                  title="Share article on Facebook">
-                  <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] font-bold text-xs transition-all ios-touch cursor-pointer shadow-sm">
+                  <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                     <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
                   </svg>
                   <span>Share</span>
@@ -482,30 +463,30 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                 <!-- Copy Link -->
                 <button 
                   (click)="copyLink()"
-                  class="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer border border-black/5 dark:border-white/10 active:scale-95">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
-                  <span>{{ copySuccess() ? 'Copied Link!' : 'Copy Link' }}</span>
+                  class="inline-flex items-center gap-1 px-3.5 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs transition-all ios-touch cursor-pointer">
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">share</mat-icon>
+                  <span>{{ copySuccess() ? 'Copied!' : 'Copy' }}</span>
                 </button>
               </div>
             </div>
           </div>
 
           <!-- Comments Section -->
-          <div class="mt-14 sm:mt-20 pt-10 sm:pt-14 border-t border-black/5 dark:border-white/10" id="comments">
-            <h3 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-6 flex items-center gap-2">
-              <mat-icon class="text-blue-500">forum</mat-icon>
-              Comments (අදහස්)
-              <span class="text-sm font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full ml-2">
+          <div class="mt-10 sm:mt-14 pt-8 sm:pt-10 border-t border-black/[0.06] dark:border-white/[0.08]" id="comments">
+            <h3 class="text-lg sm:text-xl font-extrabold text-[#000000] dark:text-white mb-5 flex items-center gap-2">
+              <mat-icon class="text-[#007AFF]">forum</mat-icon>
+              <span>Discussion</span>
+              <span class="text-xs font-bold bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-full ml-1">
                 {{ comments().length }}
               </span>
             </h3>
 
             <!-- Add Comment Form -->
-            <div class="mb-10 bg-black/[0.02] dark:bg-white/[0.02] p-5 sm:p-6 rounded-2xl border border-black/5 dark:border-white/5">
+            <div class="mb-8 bg-white dark:bg-[#1c1c1e] p-4 sm:p-5 rounded-[20px] border border-black/[0.06] dark:border-white/[0.08] shadow-xs ios-card">
               @if (authService.isLoggedIn()) {
-                <div class="flex gap-4">
-                  <div class="relative w-10 h-10 shrink-0">
-                    <div class="w-full h-full rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold border border-black/5 dark:border-white/10">
+                <div class="flex gap-3">
+                  <div class="relative w-9 h-9 shrink-0">
+                    <div class="w-full h-full rounded-full overflow-hidden bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-bold border border-black/[0.06] dark:border-white/[0.08]">
                       @if (authService.userProfile()?.photoURL || authService.currentUser()?.photoURL) {
                         <img [src]="authService.userProfile()?.photoURL || authService.currentUser()?.photoURL" alt="You" class="w-full h-full object-cover" referrerpolicy="no-referrer">
                       } @else {
@@ -514,12 +495,12 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                     </div>
                     
                     <!-- Online Status Indicator -->
-                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-[#1c1c1e] rounded-full z-10 shadow-sm" title="Online"></div>
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#34C759] border-2 border-white dark:border-[#1c1c1e] rounded-full z-10" title="Online"></div>
 
                     <!-- Verification / Admin Badge -->
                     @if (authService.userProfile()?.verified || authService.isAdmin()) {
-                      <div class="absolute -top-1 -right-1 z-10 bg-white dark:bg-[#1c1c1e] rounded-full p-[1px] flex items-center justify-center shadow-sm" title="{{ authService.isAdmin() ? 'Admin' : 'Verified User' }}">
-                        <mat-icon class="{{ authService.isAdmin() ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ authService.isAdmin() ? 'shield' : 'verified' }}</mat-icon>
+                      <div class="absolute -top-1 -right-1 z-10 bg-white dark:bg-[#1c1c1e] rounded-full p-[1px] flex items-center justify-center shadow-xs" title="{{ authService.isAdmin() ? 'Admin' : 'Verified User' }}">
+                        <mat-icon class="{{ authService.isAdmin() ? 'text-amber-500' : 'text-[#007AFF]' }}" style="font-size: 13px; width: 13px; height: 13px;">{{ authService.isAdmin() ? 'shield' : 'verified' }}</mat-icon>
                       </div>
                     }
                   </div>
@@ -528,49 +509,49 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                       [(ngModel)]="newCommentText" 
                       rows="3" 
                       placeholder="Share your thoughts about this article..." 
-                      class="w-full bg-white dark:bg-[#1a1a1c] border border-black/10 dark:border-white/10 rounded-xl p-4 text-[#1d1d1f] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow resize-y min-h-[80px]"
+                      class="w-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] rounded-[14px] p-3 text-[#000000] dark:text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF] transition-shadow resize-y min-h-[70px]"
                     ></textarea>
-                    <div class="mt-3 flex justify-end">
+                    <div class="mt-2.5 flex justify-end">
                       <button 
                         (click)="submitComment()" 
                         [disabled]="isSubmittingComment() || !newCommentText().trim()"
-                        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-full transition-all flex items-center gap-2 shadow-sm"
+                        class="px-5 py-2 bg-[#007AFF] hover:bg-[#0062cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-full transition-all flex items-center gap-1.5 shadow-sm ios-touch cursor-pointer"
                       >
                         @if (isSubmittingComment()) {
-                          <mat-icon class="animate-spin" style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
+                          <mat-icon class="animate-spin" style="font-size: 15px; width: 15px; height: 15px;">sync</mat-icon>
                           <span>Posting...</span>
                         } @else {
-                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">send</mat-icon>
-                          <span>Post Comment</span>
+                          <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send</mat-icon>
+                          <span>Post</span>
                         }
                       </button>
                     </div>
                   </div>
                 </div>
               } @else {
-                <div class="text-center py-6">
-                  <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100 dark:border-blue-800/30">
-                    <mat-icon class="text-blue-500" style="font-size: 32px; width: 32px; height: 32px;">lock</mat-icon>
+                <div class="text-center py-5">
+                  <div class="w-12 h-12 bg-[#007AFF]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <mat-icon class="text-[#007AFF]" style="font-size: 26px; width: 26px; height: 26px;">lock</mat-icon>
                   </div>
-                  <h4 class="text-[#1d1d1f] dark:text-white font-bold text-lg mb-2">Join the Conversation</h4>
-                  <p class="text-sm text-[#1d1d1f]/60 dark:text-white/60 mb-6 max-w-sm mx-auto">
-                    Sign in to share your thoughts, ask questions, and interact with other readers.
+                  <h4 class="text-[#000000] dark:text-white font-bold text-base mb-1">Join the Conversation</h4>
+                  <p class="text-xs text-[#8e8e93] mb-4 max-w-sm mx-auto">
+                    Sign in to share your thoughts and interact with other readers.
                   </p>
                   <button 
                     (click)="authService.openAuthModal('login')"
-                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-transform active:scale-95 shadow-md"
+                    class="px-6 py-2.5 bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold text-xs rounded-full transition-transform active:scale-95 shadow-sm ios-touch cursor-pointer"
                   >
-                    Log in to Comment
+                    Log In to Comment
                   </button>
                 </div>
               }
             </div>
 
             <!-- Comments List -->
-            <div class="space-y-6">
+            <div class="space-y-4">
               @for (comment of comments(); track comment.id) {
-                <div class="flex gap-4 group">
-                  <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-gray-200 dark:bg-gray-800 border border-black/5 dark:border-white/5 flex items-center justify-center text-gray-500 font-bold text-sm">
+                <div class="flex gap-3 group">
+                  <div class="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-black/[0.05] dark:bg-white/[0.1] border border-black/[0.05] dark:border-white/[0.05] flex items-center justify-center text-[#8e8e93] font-bold text-xs">
                     @if (comment.authorPhotoURL) {
                       <img [src]="comment.authorPhotoURL" alt="{{comment.authorName}}" class="w-full h-full object-cover" referrerpolicy="no-referrer">
                     } @else {
@@ -578,31 +559,31 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                     }
                   </div>
                   <div class="flex-grow">
-                    <div class="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl rounded-tl-sm p-4 border border-black/[0.02] dark:border-white/[0.02]">
-                      <div class="flex items-center gap-1.5 mb-1.5">
-                        <span class="font-bold text-sm text-[#1d1d1f] dark:text-[#f5f5f7]">{{ comment.authorName }}</span>
+                    <div class="bg-white dark:bg-[#1c1c1e] rounded-[16px] rounded-tl-sm p-3.5 border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
+                      <div class="flex items-center gap-1.5 mb-1">
+                        <span class="font-bold text-xs text-[#000000] dark:text-[#f2f2f7]">{{ comment.authorName }}</span>
                         <!-- Verification / Admin Badge -->
                         @if (comment.authorVerified || comment.authorRole === 'admin') {
                           <div class="flex items-center justify-center" title="{{ comment.authorRole === 'admin' ? 'Admin' : 'Verified User' }}">
-                            <mat-icon class="{{ comment.authorRole === 'admin' ? 'text-amber-500' : 'text-blue-500' }}" style="font-size: 14px; width: 14px; height: 14px;">{{ comment.authorRole === 'admin' ? 'shield' : 'verified' }}</mat-icon>
+                            <mat-icon class="{{ comment.authorRole === 'admin' ? 'text-amber-500' : 'text-[#007AFF]' }}" style="font-size: 13px; width: 13px; height: 13px;">{{ comment.authorRole === 'admin' ? 'shield' : 'verified' }}</mat-icon>
                           </div>
                         }
                         @if (comment.createdAt) {
-                          <span class="text-[10px] text-gray-500 font-medium ml-1">
-                            {{ formatCommentDate(comment.createdAt) | date:'MMM d, y, h:mm a' }}
+                          <span class="text-[10px] text-[#8e8e93] font-medium ml-1">
+                            {{ formatCommentDate(comment.createdAt) | date:'MMM d, h:mm a' }}
                           </span>
                         }
                       </div>
-                      <p class="text-sm text-[#1d1d1f]/80 dark:text-white/80 whitespace-pre-wrap leading-relaxed">
+                      <p class="text-xs sm:text-sm text-[#3a3a3c] dark:text-[#aeaeb2] whitespace-pre-wrap leading-relaxed">
                         {{ comment.text }}
                       </p>
                     </div>
                   </div>
                 </div>
               } @empty {
-                <div class="text-center py-10 bg-black/[0.01] dark:bg-white/[0.01] border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
-                  <mat-icon class="text-gray-400 dark:text-gray-600 mb-3" style="font-size: 40px; width: 40px; height: 40px;">chat_bubble_outline</mat-icon>
-                  <p class="text-sm text-gray-500 font-medium">No comments yet. Be the first to share your thoughts!</p>
+                <div class="text-center py-8 bg-black/[0.01] dark:bg-white/[0.02] border border-dashed border-black/10 dark:border-white/10 rounded-[18px]">
+                  <mat-icon class="text-[#8e8e93] mb-2" style="font-size: 32px; width: 32px; height: 32px;">chat_bubble_outline</mat-icon>
+                  <p class="text-xs text-[#8e8e93] font-medium">No comments yet. Be the first to share your thoughts!</p>
                 </div>
               }
             </div>
@@ -610,67 +591,62 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
           <!-- Related Articles Section (සබැඳි පුවත්) -->
           @if (relatedArticles().length > 0) {
-            <section class="mt-14 sm:mt-20 pt-10 sm:pt-14 border-t border-black/5 dark:border-white/10 animate-fade-in-up">
-              <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8 sm:mb-10">
+            <section class="mt-10 sm:mt-16 pt-8 sm:pt-10 border-t border-black/[0.06] dark:border-white/[0.08]">
+              <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6 sm:mb-8">
                 <div>
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2.5 border border-blue-100 dark:border-blue-900/30">
-                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">auto_stories</mat-icon>
-                    <span>Recommended Stories</span>
+                  <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                    <mat-icon style="font-size: 13px; width: 13px; height: 13px;">auto_stories</mat-icon>
+                    <span>Recommended</span>
                   </div>
-                  <h2 class="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-[#1d1d1f] dark:text-white">
-                    සබැඳි පුවත් <span class="text-[#1d1d1f]/40 dark:text-white/40 font-serif italic text-base sm:text-xl font-normal">&bull; Related Articles</span>
+                  <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[#000000] dark:text-white">
+                    Related Stories
                   </h2>
                 </div>
-                <a routerLink="/" class="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:gap-2 transition-all group shrink-0">
-                  <span>සියලු පුවත් (View All)</span>
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="group-hover:translate-x-1 transition-transform">arrow_forward</mat-icon>
+                <a routerLink="/" class="inline-flex items-center gap-1 text-xs font-bold text-[#007AFF] hover:gap-1.5 transition-all group shrink-0">
+                  <span>View All</span>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="group-hover:translate-x-0.5 transition-transform">arrow_forward</mat-icon>
                 </a>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
                 @for (rel of relatedArticles(); track rel.id; let i = $index) {
-                  <article [routerLink]="['/article', rel.slug || rel.id]" class="group bg-white dark:bg-[#1a1a1a] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-blue-950/20 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer flex flex-col h-full border border-black/5 dark:border-white/10 relative overflow-hidden" [style.animation-delay]="(0.1 + (i * 0.1)) + 's'">
-                    <div class="aspect-[16/10] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 relative mb-4 sm:mb-5 shadow-inner">
+                  <article [routerLink]="['/article', rel.slug || rel.id]" class="group bg-white dark:bg-[#1c1c1e] rounded-[20px] p-3.5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col h-full border border-black/[0.06] dark:border-white/[0.08] relative overflow-hidden ios-card">
+                    <div class="aspect-[16/10] w-full rounded-[14px] overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative mb-3">
                       <img [src]="rel.imageUrl" [alt]="rel.title" referrerpolicy="no-referrer" loading="lazy"
                            #relImg (load)="relImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); relImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
-                           class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-700 ease-out opacity-0 blur-xl scale-110" />
+                           class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-all duration-500 ease-out opacity-0 blur-xl scale-110" />
                       <button 
                         (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(rel.id)"
-                        class="absolute top-3 right-3 z-20 p-2 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md shadow-md text-[#1d1d1f] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/5 dark:border-white/10"
+                        class="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-md shadow-xs text-[#000000] dark:text-white hover:scale-110 transition-transform cursor-pointer border border-black/[0.06] dark:border-white/[0.08]"
                         [title]="bookmarkManager.isBookmarked(rel.id) ? 'Remove bookmark' : 'Bookmark article'">
-                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;" [class.text-blue-600]="bookmarkManager.isBookmarked(rel.id)">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;" [class.text-[#007AFF]]="bookmarkManager.isBookmarked(rel.id)">
                           {{ bookmarkManager.isBookmarked(rel.id) ? 'bookmark' : 'bookmark_border' }}
                         </mat-icon>
                       </button>
                     </div>
 
                     <div class="flex flex-col flex-grow">
-                      <div class="flex flex-wrap items-center gap-2 mb-2 text-[10px] font-bold tracking-wider uppercase text-[#1d1d1f]/40 dark:text-white/40">
-                        <span class="text-blue-600 font-extrabold">{{ rel.category }}</span>
-                        @if (rel.authorType !== 'human') {
-                          <span class="inline-flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded-full text-[9px]">
-                            <mat-icon style="font-size: 10px; width: 10px; height: 10px;">auto_awesome</mat-icon> AI
-                          </span>
-                        }
-                        <span class="w-1 h-1 rounded-full bg-black/10 dark:bg-white/20"></span>
+                      <div class="flex flex-wrap items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-[#8e8e93] uppercase">
+                        <span class="text-[#007AFF] font-bold">{{ rel.category }}</span>
+                        <span>&bull;</span>
                         <span>{{ rel.date }}</span>
                       </div>
 
-                      <h3 class="text-base sm:text-lg font-black tracking-tight text-[#1d1d1f] dark:text-white mb-2 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                      <h3 class="text-sm font-bold tracking-tight text-[#000000] dark:text-white mb-1.5 leading-snug group-hover:text-[#007AFF] transition-colors line-clamp-2">
                         {{ rel.title }}
                       </h3>
 
-                      <p class="text-xs sm:text-sm text-[#1d1d1f]/70 dark:text-white/70 font-sans line-clamp-2 mb-4 flex-grow leading-relaxed font-normal">
+                      <p class="text-xs text-[#3a3a3c] dark:text-[#aeaeb2] font-normal line-clamp-2 mb-3 flex-grow leading-relaxed">
                         {{ rel.summary }}
                       </p>
 
-                      <div class="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/10 text-[10px] sm:text-xs font-bold text-[#1d1d1f]/40 dark:text-white/40 uppercase mt-auto">
+                      <div class="flex items-center justify-between pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] text-[10px] font-semibold text-[#8e8e93] mt-auto">
                         <span class="flex items-center gap-1">
-                          <mat-icon style="font-size: 13px; width: 13px; height: 13px;">schedule</mat-icon>
+                          <mat-icon style="font-size: 12px; width: 12px; height: 12px;">schedule</mat-icon>
                           {{ rel.readTime }}
                         </span>
-                        <span class="text-blue-600 dark:text-blue-400 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                          Read <mat-icon style="font-size: 13px; width: 13px; height: 13px;">arrow_forward</mat-icon>
+                        <span class="text-[#007AFF] font-bold group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
+                          Read <mat-icon style="font-size: 12px; width: 12px; height: 12px;">chevron_right</mat-icon>
                         </span>
                       </div>
                     </div>
@@ -682,13 +658,13 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
           <!-- AI Compliance & Transparency Disclosure Box -->
           @if (article.authorType !== 'human') {
-            <div class="mt-10 sm:mt-14 p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 text-xs sm:text-sm text-blue-950/80 dark:text-blue-200/80 leading-relaxed font-sans break-words overflow-hidden">
-              <div class="flex items-start sm:items-center gap-2 font-bold text-blue-900 dark:text-blue-100 text-xs sm:text-sm uppercase tracking-wider mb-2">
-                <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 sm:mt-0">verified</mat-icon>
-                <span>AI විනිවිදභාවය සහ සංස්කාරක ප්‍රකාශනය (AI Transparency)</span>
+            <div class="mt-8 sm:mt-12 p-4 sm:p-5 rounded-[20px] bg-[#007AFF]/5 border border-[#007AFF]/15 text-xs text-[#000000]/80 dark:text-white/80 leading-relaxed font-sans break-words overflow-hidden">
+              <div class="flex items-center gap-1.5 font-bold text-[#007AFF] text-xs uppercase tracking-wider mb-1.5">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="shrink-0">verified</mat-icon>
+                <span>AI Transparency &amp; Editorial Oversight</span>
               </div>
-              <p class="text-blue-900/70 dark:text-blue-200/70 text-[11px] sm:text-xs leading-relaxed">
-                මෙම තාක්ෂණික පුවත් වාර්තාව MyFeed.lk ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) මාධ්‍ය පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු MyFeed.lk සංස්කාරක මණ්ඩලය (Editorial Team) විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
+              <p class="text-[#3a3a3c] dark:text-[#aeaeb2] text-[11px] leading-relaxed">
+                මෙම තාක්ෂණික පුවත් වාර්තාව MyFeed.lk ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු MyFeed.lk සංස්කාරක මණ්ඩලය (Editorial Team) විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
               </p>
             </div>
           }

@@ -6,15 +6,23 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Noto Sans Sinhala", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Noto Sans Sinhala", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Newsreader", "Abhaya Libre", ui-serif, Georgia, serif;
 }
 
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
 html, body {
-  background-color: #fcfcfd;
-  color: #1d1d1f;
+  background-color: #f2f2f7;
+  color: #000000;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent !important;
   user-select: none !important;
   -webkit-user-select: none !important;
   -moz-user-select: none !important;
@@ -26,6 +34,7 @@ html, body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Allow text selection only in input fields, textareas, and admin dashboard */
@@ -37,11 +46,61 @@ input, textarea, [contenteditable="true"], .admin-panel, .admin-panel *, select 
 
 *, *::before, *::after {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html.dark body {
-  background-color: #121212;
-  color: #f3f4f6;
+  background-color: #000000;
+  color: #f2f2f7;
+}
+
+/* iOS Glassmorphism Material */
+.ios-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+html.dark .ios-glass {
+  background: rgba(28, 28, 30, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* iOS Tab Bar Glass */
+.ios-tab-bar {
+  background: rgba(249, 249, 249, 0.88);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+
+html.dark .ios-tab-bar {
+  background: rgba(22, 22, 24, 0.88);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+/* iOS Squircle Card */
+.ios-card {
+  border-radius: 24px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.ios-card:active {
+  transform: scale(0.985);
+}
+
+/* iOS Button Tap Physics */
+.ios-touch {
+  transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease;
+}
+
+.ios-touch:active {
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 
 img {
@@ -70,7 +129,7 @@ img {
 
 @layer utilities {
   .animate-fade-in-up {
-    animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
   .animate-ticker {
@@ -118,7 +177,7 @@ img {
 @keyframes fade-in-up {
   0% {
     opacity: 0;
-    transform: translateY(24px) scale(0.99);
+    transform: translateY(18px) scale(0.99);
   }
   100% {
     opacity: 1;
@@ -137,10 +196,10 @@ img {
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(37, 99, 235, 0.45);
+    box-shadow: 0 0 25px rgba(0, 122, 255, 0.45);
   }
 }
 
@@ -156,3 +215,4 @@ img {
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
+
