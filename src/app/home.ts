@@ -59,7 +59,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           <span>Sri Lanka Tech Journal &bull; {{ currentDate }}</span>
         </div>
         <h1 class="text-6xl lg:text-7xl font-black tracking-tight text-[#000000] dark:text-white mb-3 leading-[0.95]">
-          MyFeed<span class="text-[#007AFF]">.</span>lk
+          My Feed <span class="text-[#007AFF]">Lk</span>
         </h1>
         <p class="text-base text-[#8e8e93] max-w-2xl mx-auto px-2 leading-relaxed">
           Curated stories in Sinhala & English &bull; Sri Lanka's Modern Tech Edition
@@ -599,9 +599,9 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Set Base SEO tags for Home Page
-    this.titleService.setTitle('MyFeed.lk | Sri Lanka Tech Journal');
+    this.titleService.setTitle('My Feed Lk | Sri Lanka Tech Journal');
     this.metaService.updateTag({ name: 'description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
-    this.metaService.updateTag({ property: 'og:title', content: 'MyFeed.lk | Sri Lanka Tech Journal' });
+    this.metaService.updateTag({ property: 'og:title', content: 'My Feed Lk | Sri Lanka Tech Journal' });
     this.metaService.updateTag({ property: 'og:description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
     this.metaService.updateTag({ property: 'og:type', content: 'website' });
 

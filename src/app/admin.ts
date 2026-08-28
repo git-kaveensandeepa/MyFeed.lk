@@ -2218,14 +2218,29 @@ export interface PolishedResult {
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2.5">
                   <input [(ngModel)]="fbWebhookUrl" placeholder="https://hook.eu1.make.com/... (Make.com Custom Webhook URL)" class="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono text-gray-900 dark:text-white" />
-                  <button (click)="saveFbSettings()" [disabled]="isSavingFbSettings()" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0 active:scale-95">
-                    {{ isSavingFbSettings() ? 'Saving...' : 'Save Webhook' }}
-                  </button>
+                  <div class="flex gap-2">
+                    <button (click)="saveFbSettings()" [disabled]="isSavingFbSettings()" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0 active:scale-95 flex items-center gap-1.5">
+                      <mat-icon style="font-size: 15px; width: 15px; height: 15px;">save</mat-icon>
+                      <span>{{ isSavingFbSettings() ? 'Saving...' : 'Save Webhook' }}</span>
+                    </button>
+                    <button (click)="sendTestFbWebhook()" [disabled]="isTestingFbWebhook() || !fbWebhookUrl.trim()" class="px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold uppercase tracking-wider hover:bg-amber-600 transition-all disabled:opacity-50 shrink-0 active:scale-95 flex items-center gap-1.5">
+                      @if (isTestingFbWebhook()) {
+                        <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <span>Sending...</span>
+                      } @else {
+                        <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send_and_archive</mat-icon>
+                        <span>Send Test Data</span>
+                      }
+                    </button>
+                  </div>
                 </div>
-                <div class="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-gray-600 dark:text-gray-300 space-y-1">
-                  <p class="font-bold text-blue-700 dark:text-blue-400">📌 Make.com හි සකස් කරන ආකාරය:</p>
-                  <p>1. Make.com හි <strong>Custom Webhook</strong> මොඩියුලයේ URL එක මෙහි Paste කර <strong>Save Webhook</strong> ඔබන්න.</p>
-                  <p>2. දෙවන මොඩියුලය ලෙස <strong>Facebook Pages ➡️ Create a Post with Photos</strong> තෝරා URL සඳහා <code>imageUrl</code> ද, Caption සඳහා <code>caption</code> ද ලබාදෙන්න.</p>
+                <div class="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
+                  <p class="font-bold text-blue-700 dark:text-blue-400">📌 Make.com Error එක ("Exceeded maximum wait time") විසඳා ගන්නා අයුරු:</p>
+                  <p>1. Make.com හි <strong>Custom Webhook</strong> මොඩියුලය උඩ Click කර ලැබෙන Webhook URL එක Copy කර ඉහත කොටුවේ Paste කර <strong>Save Webhook</strong> ඔබන්න.</p>
+                  <p>2. Make.com හි වම්පස පහළ ඇති <strong>Run once (Play button)</strong> ඔබන්න. එවිට එය <em>"Waiting for data..."</em> ලෙස දිස්වේ.</p>
+                  <p>3. වහාම මෙහි ඇති <strong>Send Test Data</strong> කහ පාට බොත්තම ඔබන්න. Make.com වෙත Data ගොස් structure එක සාර්ථකව හඳුනාගනී.</p>
+                  <p>4. දෙවන මොඩියුලය ලෙස <strong>Facebook Pages ➡️ Create a Post with Photos</strong> තෝරා URL සඳහා <code>imageUrl</code> ද, Caption සඳහා <code>caption</code> ද තෝරන්න.</p>
+                  <p>5. අවසානයේ Make.com හි පහළ ඇති <strong>Immediately as data arrives (ON)</strong> switch එක ON කරන්න.</p>
                 </div>
               </div>
 
@@ -2893,6 +2908,7 @@ export class AdminComponent {
   fbCustomMessage = '';
   fbSelectedImageUrl = '';
   readonly isSavingFbSettings = signal(false);
+  readonly isTestingFbWebhook = signal(false);
   readonly isDispatchingFb = signal(false);
   readonly fbPostSuccess = signal(false);
   readonly fbSuccessMessage = signal('Post sent to Facebook Page successfully!');
@@ -3806,7 +3822,7 @@ ${article.summary}
 ⏱️ ${article.readTime || '3 min read'}
 🔗 *Read full story:* ${articleUrl}
 
-_Curated with precision by MyFeed.lk Sri Lanka_`;
+_Curated with precision by My Feed Lk Sri Lanka_`;
     this.activeTab.set('whatsapp');
   }
 
@@ -3936,6 +3952,39 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
       alert('Failed to save Facebook settings');
     } finally {
       this.isSavingFbSettings.set(false);
+    }
+  }
+
+  async sendTestFbWebhook() {
+    if (!this.fbWebhookUrl.trim()) {
+      alert('කරුණාකර පළමුව Make.com Webhook URL එක ඇතුළත් කරන්න!');
+      return;
+    }
+    this.isTestingFbWebhook.set(true);
+    try {
+      const res = await fetch('/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'MyFeed.lk Test Breaking News',
+          summary: 'මෙය MyFeed.lk සහ Make.com Facebook Webhook සම්බන්ධතාවය සහ Post structure එක පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.',
+          articleUrl: (this.siteDomain || 'https://myfeedlk.com').trim() + '/news/test-post',
+          category: 'Tech',
+          readTime: '2 min read',
+          imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
+          webhookUrl: this.fbWebhookUrl.trim()
+        })
+      });
+      const result = await res.json();
+      if (res.ok && (result.success || result.mode === 'webhook')) {
+        alert('✅ Test Data සාර්ථකව Make.com වෙත යවන ලදී! දැන් Make.com Scenario එකේ fields auto-detect වී ඇති බව පරීක්ෂා කරන්න.');
+      } else {
+        alert('⚠️ Webhook response: ' + (result.error || JSON.stringify(result)));
+      }
+    } catch (err: any) {
+      alert('Failed to send test webhook: ' + (err?.message || err));
+    } finally {
+      this.isTestingFbWebhook.set(false);
     }
   }
 

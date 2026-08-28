@@ -14,7 +14,8 @@ import {
   writeBatch,
   Unsubscribe,
   query,
-  orderBy
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -581,18 +582,33 @@ export class ArticleService implements OnDestroy {
   readonly loading = this._loading.asReadonly();
 
   constructor() {
-    this.clearLegacyStorage();
+    this.loadFromLocalCache();
     this.initRealtimeArticles();
   }
 
-  private clearLegacyStorage() {
+  private loadFromLocalCache() {
     if (isPlatformBrowser(this.platformId)) {
       try {
-        localStorage.removeItem('myfeed_cached_articles_v3');
-        localStorage.removeItem('myfeed_cached_articles_v2');
-        localStorage.removeItem('myfeed_cached_articles');
+        const cached = localStorage.getItem('myfeed_articles_cache_v4');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this._articles.set(parsed);
+            this._loading.set(false);
+          }
+        }
       } catch {
         // ignore
+      }
+    }
+  }
+
+  private saveToLocalCache(list: Article[]) {
+    if (isPlatformBrowser(this.platformId) && list && list.length > 0) {
+      try {
+        localStorage.setItem('myfeed_articles_cache_v4', JSON.stringify(list));
+      } catch {
+        // ignore storage errors
       }
     }
   }
@@ -623,9 +639,10 @@ export class ArticleService implements OnDestroy {
 
     try {
       const articlesCol = collection(db, 'articles');
+      const articlesQuery = query(articlesCol, limit(60));
 
-      // Realtime listener for Firestore collection
-      this.unsubscribeSnapshot = onSnapshot(articlesCol, (snapshot) => {
+      // Realtime listener for Firestore collection with limit
+      this.unsubscribeSnapshot = onSnapshot(articlesQuery, (snapshot) => {
         const list: Article[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as Record<string, unknown>;
@@ -663,6 +680,7 @@ export class ArticleService implements OnDestroy {
 
         // Strictly set only real Firestore articles
         this._articles.set(list);
+        this.saveToLocalCache(list);
         this._loading.set(false);
       }, (error) => {
         console.warn('Firestore realtime subscription notice:', error);
@@ -677,7 +695,8 @@ export class ArticleService implements OnDestroy {
   private async fallbackGetDocs() {
     try {
       const articlesCol = collection(db, 'articles');
-      const querySnapshot = await getDocs(articlesCol);
+      const articlesQuery = query(articlesCol, limit(60));
+      const querySnapshot = await getDocs(articlesQuery);
       const list: Article[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data() as Record<string, unknown>;
@@ -710,9 +729,13 @@ export class ArticleService implements OnDestroy {
       });
 
       this._articles.set(list);
+      this.saveToLocalCache(list);
     } catch (e) {
-      console.error('Firestore getDocs failed:', e);
-      this._articles.set([]);
+      console.error('Firestore getDocs notice / quota reached:', e);
+      // Fallback: If memory/signal is empty, load cached items from storage
+      if (this._articles().length === 0) {
+        this.loadFromLocalCache();
+      }
     } finally {
       this._loading.set(false);
     }

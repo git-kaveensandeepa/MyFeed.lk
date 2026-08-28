@@ -1,5 +1,5 @@
 {
-  "name": "MyFeed.lk",
+  "name": "My Feed Lk",
   "description": "An Apple-style tech, AI, and local news blog.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
