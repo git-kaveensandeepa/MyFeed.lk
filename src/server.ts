@@ -506,7 +506,7 @@ export interface AutoPilotConfig {
   enabled: boolean;
   scheduleMode: 'interval' | 'exact_times'; // 'interval' | 'exact_times'
   intervalMinutes: number;
-  scheduledDailyTimes: string[]; // e.g. ['08:00', '12:30', '16:30', '20:30'] (24-hour format in Asia/Colombo)
+  scheduledDailyTimes: string[]; // 24-hour format in Asia/Colombo (Sri Lanka Time)
   autoPublish: boolean;
   notifyPhone: boolean;
   postWhatsApp: boolean;
@@ -515,21 +515,37 @@ export interface AutoPilotConfig {
   maxArticlesPerRun: number;
 }
 
+export const DEFAULT_SCHEDULED_TIMES: string[] = [
+  '00:17', // 12:17 AM
+  '01:43', // 1:43 AM
+  '03:08', // 3:08 AM
+  '05:52', // 5:52 AM
+  '07:26', // 7:26 AM
+  '09:41', // 9:41 AM
+  '11:13', // 11:13 AM
+  '12:58', // 12:58 PM
+  '14:34', // 2:34 PM
+  '16:19', // 4:19 PM
+  '18:47', // 6:47 PM
+  '20:22', // 8:22 PM
+  '22:36', // 10:36 PM
+  '23:51'  // 11:51 PM
+];
+
 const autoPilotConfig: AutoPilotConfig = {
   enabled: true,
-  scheduleMode: 'interval',
+  scheduleMode: 'exact_times',
   intervalMinutes: 60,
-  scheduledDailyTimes: ['08:00', '12:00', '16:00', '20:00'],
+  scheduledDailyTimes: [...DEFAULT_SCHEDULED_TIMES],
   autoPublish: true,
   notifyPhone: true,
   postWhatsApp: true,
   phoneTopic: 'myfeedlk_kaveen',
   waWebhookUrl: '',
-  maxArticlesPerRun: 2
+  maxArticlesPerRun: 1
 };
 
 const autoPilotLogs: AutoPilotLog[] = [];
-let autoPilotNextRunTime = Date.now() + 60 * 60 * 1000;
 let isAutoPilotSyncing = false;
 let autoPilotLastRunTime: string | null = null;
 
@@ -538,7 +554,6 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
   if (!config.enabled) return Date.now() + (24 * 60 * 60 * 1000);
 
   if (config.scheduleMode === 'exact_times' && Array.isArray(config.scheduledDailyTimes) && config.scheduledDailyTimes.length > 0) {
-    // Current time in Colombo
     const now = new Date();
     const colomboFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Asia/Colombo',
@@ -548,7 +563,7 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric',
-      hour12: false
+      hourCycle: 'h23'
     });
     const parts = colomboFormatter.formatToParts(now);
     const colomboDate: Record<string, number> = {};
@@ -558,20 +573,23 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
       }
     }
 
-    const currentMinutesOfDay = (colomboDate['hour'] || 0) * 60 + (colomboDate['minute'] || 0);
+    const currentHour = (colomboDate['hour'] ?? 0) % 24;
+    const currentMinute = colomboDate['minute'] ?? 0;
+    const currentSecond = colomboDate['second'] ?? 0;
+    const currentMinutesOfDay = currentHour * 60 + currentMinute;
 
     // Convert scheduled times into minutes of day
     const parsedMinutesList = config.scheduledDailyTimes
       .map(t => {
         const [h, m] = t.split(':').map(x => parseInt(x, 10));
-        return isNaN(h) || isNaN(m) ? null : { text: t, minutes: h * 60 + m };
+        return isNaN(h) || isNaN(m) ? null : { text: t, minutes: (h % 24) * 60 + m };
       })
       .filter((item): item is { text: string; minutes: number } => item !== null)
       .sort((a, b) => a.minutes - b.minutes);
 
     if (parsedMinutesList.length > 0) {
-      // Find the next scheduled time today that is at least 1 minute in the future
-      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay);
+      // Find the next scheduled time today (must be strictly in the future, with at least 5 seconds buffer)
+      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay || (item.minutes === currentMinutesOfDay && currentSecond < 10));
 
       let targetMinutes = 0;
       let daysToAdd = 0;
@@ -586,7 +604,8 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
       }
 
       const diffMinutes = (daysToAdd * 24 * 60) + (targetMinutes - currentMinutesOfDay);
-      return Date.now() + Math.max(60000, diffMinutes * 60 * 1000);
+      const diffMs = (diffMinutes * 60 * 1000) - (currentSecond * 1000);
+      return Date.now() + Math.max(10000, diffMs);
     }
   }
 
@@ -594,6 +613,8 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
   const mins = config.intervalMinutes >= 15 ? config.intervalMinutes : 60;
   return Date.now() + (mins * 60 * 1000);
 }
+
+let autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
 
 async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cron' | 'manual_admin' = 'scheduled_cron'): Promise<{ success: boolean; count: number; articles: { title: string; category: string; imageUrl: string; url?: string }[]; message: string }> {
   if (isAutoPilotSyncing) {
@@ -981,13 +1002,13 @@ CRITICAL EDITORIAL GUIDELINES:
   }
 }
 
-// Background Cron Scheduler (Checks every minute if sync is due)
+// Background Cron Scheduler (Checks every 15 seconds if sync is due)
 setInterval(async () => {
   if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
-    console.log('[Auto-Pilot] Interval reached. Executing scheduled news sync...');
+    console.log('[Auto-Pilot] Scheduled time reached in Sri Lanka Time. Executing 24/7 news sync...');
     await executeAutoPilotSync('scheduled_cron');
   }
-}, 60 * 1000);
+}, 15 * 1000);
 
 let geminiClientInstance: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {

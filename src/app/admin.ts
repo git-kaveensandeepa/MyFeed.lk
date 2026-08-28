@@ -1564,6 +1564,9 @@ export interface PolishedResult {
                           <div class="space-y-1.5 pt-2 border-t border-emerald-200/60">
                             <div class="text-[10px] uppercase font-bold text-emerald-800">Quick 1-Click Presets:</div>
                             <div class="flex flex-wrap gap-1.5">
+                              <button type="button" (click)="applySchedulePreset('fourteen_times')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs">
+                                🌟 14x Round-the-Clock (12:17 AM, 1:43 AM, 3:08 AM, 5:52 AM, 7:26 AM, 9:41 AM, 11:13 AM, 12:58 PM, 2:34 PM, 4:19 PM, 6:47 PM, 8:22 PM, 10:36 PM, 11:51 PM)
+                              </button>
                               <button type="button" (click)="applySchedulePreset('four_times')" class="px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 text-[11px] font-bold transition-all cursor-pointer">
                                 ⚡ 4x Day (08:00 AM, 12:00 PM, 04:00 PM, 08:00 PM)
                               </button>
@@ -2024,7 +2027,7 @@ export interface PolishedResult {
                   </div>
                   <div class="space-y-1">
                     <label for="siteDomain" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Target URL</label>
-                    <input id="siteDomain" [(ngModel)]="siteDomain" name="siteDomain" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-purple-600 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none" placeholder="https://myfeedlk.web.app" />
+                    <input id="siteDomain" [(ngModel)]="siteDomain" name="siteDomain" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-purple-600 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none" placeholder="https://myfeedlk.com" />
                   </div>
                 </div>
 
@@ -2771,7 +2774,7 @@ export class AdminComponent {
 
   // Phone Push Notifications (via ntfy.sh)
   phoneTopic = 'myfeedlk_alerts';
-  siteDomain = 'https://myfeedlk.web.app';
+  siteDomain = 'https://myfeedlk.com';
   autoAlertPhone = true;
   readonly isSavingPhoneSettings = signal(false);
   readonly isTestingPhoneAlert = signal(false);
@@ -2780,11 +2783,26 @@ export class AdminComponent {
 
   // Auto-Pilot 24/7 Engine Signals & State
   autoPilotEnabled = true;
-  autoPilotScheduleMode: 'interval' | 'exact_times' = 'interval';
+  autoPilotScheduleMode: 'interval' | 'exact_times' = 'exact_times';
   autoPilotIntervalMinutes = 60;
-  autoPilotScheduledDailyTimes: string[] = ['08:00', '12:00', '16:00', '20:00'];
+  autoPilotScheduledDailyTimes: string[] = [
+    '00:17', // 12:17 AM
+    '01:43', // 1:43 AM
+    '03:08', // 3:08 AM
+    '05:52', // 5:52 AM
+    '07:26', // 7:26 AM
+    '09:41', // 9:41 AM
+    '11:13', // 11:13 AM
+    '12:58', // 12:58 PM
+    '14:34', // 2:34 PM
+    '16:19', // 4:19 PM
+    '18:47', // 6:47 PM
+    '20:22', // 8:22 PM
+    '22:36', // 10:36 PM
+    '23:51'  // 11:51 PM
+  ];
   autoPilotNewTimeInput = '09:00';
-  autoPilotMaxArticles = 2;
+  autoPilotMaxArticles = 1;
   autoPilotAutoPublish = true;
   autoPilotNotifyPhone = true;
   autoPilotPostWhatsApp = true;
@@ -3728,7 +3746,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   }
 
   getArticleUrl(slugOrId: string): string {
-    const domain = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+    const domain = (this.siteDomain || 'https://myfeedlk.com').trim().replace(/\/+$/, '');
     return slugOrId ? `${domain}/article/${slugOrId}` : domain;
   }
 
@@ -3780,7 +3798,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     this.isSavingPhoneSettings.set(true);
     try {
       const cleanTopic = this.phoneTopic.trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
-      const cleanDomain = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+      const cleanDomain = (this.siteDomain || 'https://myfeedlk.com').trim().replace(/\/+$/, '');
       
       try {
         localStorage.setItem('myfeed_phone_topic', cleanTopic);
@@ -3810,7 +3828,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     this.phoneAlertSuccess.set(false);
 
     try {
-      const targetUrl = (this.siteDomain || 'https://myfeedlk.web.app').trim().replace(/\/+$/, '');
+      const targetUrl = (this.siteDomain || 'https://myfeedlk.com').trim().replace(/\/+$/, '');
       const payload = {
         topic: cleanTopic,
         title: '🔥 Test Alert from MyFeed.lk',
@@ -3915,7 +3933,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
       const cleanTopic = (this.phoneTopic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
       const safeTitle = (data.title ? `📰 ${data.title}` : '📰 MyFeed.lk: New Story').slice(0, 120);
       const safeMessage = (data.summary ? `${data.summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on MyFeed.lk. Tap to read!').slice(0, 800);
-      const safeUrl = (data.articleUrl || this.siteDomain || 'https://myfeedlk.web.app').trim();
+      const safeUrl = (data.articleUrl || this.siteDomain || 'https://myfeedlk.com').trim();
 
       const payload: Record<string, unknown> = {
         topic: cleanTopic,
@@ -4560,8 +4578,13 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     }
   }
 
-  applySchedulePreset(preset: 'morning_evening' | 'four_times' | 'six_times' | 'tech_rush') {
-    if (preset === 'morning_evening') {
+  applySchedulePreset(preset: 'morning_evening' | 'four_times' | 'six_times' | 'tech_rush' | 'fourteen_times') {
+    if (preset === 'fourteen_times') {
+      this.autoPilotScheduledDailyTimes = [
+        '00:17', '01:43', '03:08', '05:52', '07:26', '09:41', '11:13',
+        '12:58', '14:34', '16:19', '18:47', '20:22', '22:36', '23:51'
+      ];
+    } else if (preset === 'morning_evening') {
       this.autoPilotScheduledDailyTimes = ['08:30', '19:30'];
     } else if (preset === 'four_times') {
       this.autoPilotScheduledDailyTimes = ['08:00', '12:00', '16:00', '20:00'];

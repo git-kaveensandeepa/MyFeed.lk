@@ -1275,7 +1275,7 @@ export class ArticleComponent implements OnDestroy {
     if (typeof window === 'undefined') return;
 
     const domain = window.location.origin.includes('localhost') || window.location.origin.includes('run.app')
-      ? 'https://myfeedlk.web.app'
+      ? 'https://myfeedlk.com'
       : window.location.origin;
     const articleUrl = `${domain}/article/${article.slug || article.id}`;
 
@@ -1352,7 +1352,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   shareToFacebook(article: { slug?: string; id: string; title: string }) {
     if (typeof window === 'undefined') return;
     const domain = window.location.origin.includes('localhost') || window.location.origin.includes('run.app')
-      ? 'https://myfeedlk.web.app'
+      ? 'https://myfeedlk.com'
       : window.location.origin;
     const articleUrl = `${domain}/article/${article.slug || article.id}`;
     const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`;
