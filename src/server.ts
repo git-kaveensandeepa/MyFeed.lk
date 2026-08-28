@@ -510,8 +510,10 @@ export interface AutoPilotConfig {
   autoPublish: boolean;
   notifyPhone: boolean;
   postWhatsApp: boolean;
+  postFacebook: boolean;
   phoneTopic: string;
   waWebhookUrl: string;
+  fbWebhookUrl: string;
   maxArticlesPerRun: number;
 }
 
@@ -540,8 +542,10 @@ const autoPilotConfig: AutoPilotConfig = {
   autoPublish: true,
   notifyPhone: true,
   postWhatsApp: true,
+  postFacebook: true,
   phoneTopic: 'myfeedlk_kaveen',
   waWebhookUrl: '',
+  fbWebhookUrl: '',
   maxArticlesPerRun: 1
 };
 
@@ -638,19 +642,22 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
     const existingTitlesSet = new Set<string>();
     const existingUrlsSet = new Set<string>();
     const existingCleanWordsSet: Set<string>[] = [];
+    const recentPublishedStories: { title: string; originalTitle?: string; summary?: string }[] = [];
 
     try {
       const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
       articlesSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data['title']) {
-          const t = (data['title'] as string).toLowerCase().trim();
+        const t = (data['title'] as string || '').toLowerCase().trim();
+        const ot = (data['originalTitle'] as string || '').toLowerCase().trim();
+        const sum = (data['summary'] as string || '').slice(0, 150);
+
+        if (t) {
           existingTitlesSet.add(t);
           const words = new Set(t.replace(/[^\w\s\u0D80-\u0DFF]/g, ' ').split(/\s+/).filter(w => w.length > 3));
           if (words.size > 0) existingCleanWordsSet.push(words);
         }
-        if (data['originalTitle']) {
-          const ot = (data['originalTitle'] as string).toLowerCase().trim();
+        if (ot) {
           existingTitlesSet.add(ot);
           const words = new Set(ot.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3));
           if (words.size > 0) existingCleanWordsSet.push(words);
@@ -659,16 +666,33 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
           const u = (data['sourceUrl'] as string).toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
           existingUrlsSet.add(u);
         }
+
+        if (t || ot) {
+          recentPublishedStories.push({
+            title: data['title'] || '',
+            originalTitle: data['originalTitle'] || undefined,
+            summary: sum || undefined
+          });
+        }
       });
+
       // Also check drafts so we don't duplicate existing drafts
       const draftsSnap = await serverGetDocs(serverCollection(db, 'drafts'));
       draftsSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data['title']) existingTitlesSet.add((data['title'] as string).toLowerCase().trim());
-        if (data['originalTitle']) existingTitlesSet.add((data['originalTitle'] as string).toLowerCase().trim());
+        const t = (data['title'] as string || '').toLowerCase().trim();
+        const ot = (data['originalTitle'] as string || '').toLowerCase().trim();
+        if (t) existingTitlesSet.add(t);
+        if (ot) existingTitlesSet.add(ot);
         if (data['sourceUrl']) {
           const u = (data['sourceUrl'] as string).toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
           existingUrlsSet.add(u);
+        }
+        if (t || ot) {
+          recentPublishedStories.push({
+            title: data['title'] || '',
+            originalTitle: data['originalTitle'] || undefined
+          });
         }
       });
     } catch (dbReadErr) {
@@ -693,53 +717,78 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
       }
     }
 
-    // 3. Strict Filter to ensure NO existing or already published news is regenerated
-    const candidateArticles = rawFeedArticles.filter(item => {
+    // 3. Strict Multi-Tier Filter:
+    // (a) Deduplicate candidates within the fetched batch itself (cross-feed deduplication)
+    // (b) Deduplicate against existing Firestore articles & drafts
+    const seenBatchKeywords: string[][] = [];
+    const candidateArticles: ServerArticleItem[] = [];
+
+    for (const item of rawFeedArticles) {
       const titleLower = item.title.toLowerCase().trim();
       const cleanItemUrl = (item.url || '').toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
 
       // Direct URL check
       if (cleanItemUrl && (existingUrlsSet.has(cleanItemUrl) || Array.from(existingUrlsSet).some(u => cleanItemUrl.includes(u) || u.includes(cleanItemUrl)))) {
-        return false;
+        continue;
       }
 
       // Direct Title check
       if (existingTitlesSet.has(titleLower)) {
-        return false;
+        continue;
       }
 
-      // Substring check
+      // Substring check against existing database titles
+      let isSubstringDuplicate = false;
       for (const existing of existingTitlesSet) {
         if (existing.length > 12) {
           const snippetA = titleLower.substring(0, Math.min(25, titleLower.length));
           const snippetB = existing.substring(0, Math.min(25, existing.length));
           if (titleLower.includes(snippetB) || existing.includes(snippetA)) {
-            return false;
+            isSubstringDuplicate = true;
+            break;
           }
         }
       }
+      if (isSubstringDuplicate) continue;
 
-      // Semantic Word Overlap check (if > 60% of significant words match an existing story)
-      const itemWords = titleLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3);
+      // Extract significant English words (>3 chars)
+      const itemWords = titleLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !['with', 'from', 'this', 'that', 'have', 'more', 'about', 'after', 'will', 'what', 'into', 'your', 'news'].includes(w));
+
+      // Overlap check against database existing titles
       if (itemWords.length >= 3) {
+        let isWordOverlapDuplicate = false;
         for (const existingWords of existingCleanWordsSet) {
           let matches = 0;
           for (const w of itemWords) {
             if (existingWords.has(w)) matches++;
           }
-          const overlapRatio = matches / itemWords.length;
-          if (overlapRatio >= 0.6) {
-            return false; // High duplicate probability
+          if (matches / itemWords.length >= 0.5) {
+            isWordOverlapDuplicate = true;
+            break;
           }
         }
+        if (isWordOverlapDuplicate) continue;
       }
 
-      return true;
-    });
+      // Cross-feed batch deduplication (prevent picking 2 articles from 2 different feeds covering same topic in same run)
+      let isBatchDuplicate = false;
+      for (const seenWords of seenBatchKeywords) {
+        let batchMatches = 0;
+        for (const w of itemWords) {
+          if (seenWords.includes(w)) batchMatches++;
+        }
+        if (itemWords.length > 0 && batchMatches / itemWords.length >= 0.45) {
+          isBatchDuplicate = true;
+          break;
+        }
+      }
+      if (isBatchDuplicate) continue;
 
-    const toProcess = candidateArticles.slice(0, autoPilotConfig.maxArticlesPerRun || 2);
+      seenBatchKeywords.push(itemWords);
+      candidateArticles.push(item);
+    }
 
-    if (toProcess.length === 0) {
+    if (candidateArticles.length === 0) {
       const logEntry: AutoPilotLog = {
         id: `log-${Date.now()}`,
         timestamp: timestampStr,
@@ -758,8 +807,20 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
       return { success: true, count: 0, articles: [], message: 'Feeds checked. All up to date.' };
     }
 
-    // 4. Generate in-depth Sinhala journalistic articles & Auto-Publish
-    for (const item of toProcess) {
+    // Prepare recent published stories string for Gemini AI Semantic Validation Shield
+    const recentStoriesSummaryText = recentPublishedStories
+      .slice(-35)
+      .map((s, idx) => `${idx + 1}. [Sinhala: ${s.title}] ${s.originalTitle ? `(Original: ${s.originalTitle})` : ''} ${s.summary ? `- ${s.summary.slice(0, 100)}` : ''}`)
+      .join('\n');
+
+    const maxToPublish = autoPilotConfig.maxArticlesPerRun || 1;
+
+    // 4. Generate in-depth Sinhala journalistic articles & Auto-Publish with AI Semantic Duplicate Shield
+    for (const item of candidateArticles) {
+      if (publishedArticlesList.length >= maxToPublish) {
+        break; // Reached quota for this scheduled run
+      }
+
       try {
         let originalSourceImage = item.imageUrl || '';
         let sourceHtml = '';
@@ -787,7 +848,15 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
         }
 
         const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for MyFeed.lk (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
-Write an in-depth, prestigious, highly engaging technology news article in fluent, professional Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) based on this breaking story.
+Your job is to examine this incoming breaking story and write an in-depth, prestigious, highly engaging technology news article in fluent, professional Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්).
+
+=== CRITICAL AI SEMANTIC DEDUPLICATION SHIELD ===
+Check the incoming story against our recently published articles list:
+${recentStoriesSummaryText ? recentStoriesSummaryText : 'No prior articles recorded.'}
+
+DEDUPLICATION MANDATE:
+- If this incoming story covers the SAME core news announcement, event, study, product launch, or topic that is ALREADY covered in the list above (even if from a different RSS source, or with different words), you MUST set "isDuplicate": true and provide "duplicateReason".
+- If it is a completely fresh, distinct, and unique story, set "isDuplicate": false.
 
 INPUT STORY:
 - Headline: ${item.title}
@@ -796,7 +865,7 @@ INPUT STORY:
 - Source URL: ${item.url}
 ${sourceHtml ? `- Web Excerpt: ${sourceHtml.substring(0, 4000)}` : ''}
 
-CRITICAL EDITORIAL GUIDELINES:
+EDITORIAL GUIDELINES (when isDuplicate is false):
 1. 'sinhalaTitle': An enticing, high-journalistic headline in Sinhala.
 2. 'sinhalaDescription': A punchy, 2-3 sentence overview in Sinhala.
 3. 'sinhalaFullContent': Full-length article (500-800 words) with clean HTML:
@@ -825,6 +894,8 @@ CRITICAL EDITORIAL GUIDELINES:
                 responseSchema: {
                   type: Type.OBJECT,
                   properties: {
+                    isDuplicate: { type: Type.BOOLEAN },
+                    duplicateReason: { type: Type.STRING },
                     sinhalaTitle: { type: Type.STRING },
                     sinhalaDescription: { type: Type.STRING },
                     sinhalaFullContent: { type: Type.STRING },
@@ -832,7 +903,7 @@ CRITICAL EDITORIAL GUIDELINES:
                     readTime: { type: Type.STRING },
                     socialShareText: { type: Type.STRING },
                   },
-                  required: ['sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
+                  required: ['isDuplicate', 'sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
                 }
               }
             });
@@ -848,6 +919,13 @@ CRITICAL EDITORIAL GUIDELINES:
         if (!geminiRes) throw new Error('Gemini API call failed after retries');
 
         const generated = JSON.parse(geminiRes.text || '{}');
+
+        // If AI detects this is a duplicate of a previously published story, skip it safely!
+        if (generated.isDuplicate) {
+          console.log(`[Auto-Pilot] 🛡️ AI Duplicate Shield filtered out story: "${item.title}". Reason: ${generated.duplicateReason || 'Already covered recently'}`);
+          continue;
+        }
+
         const finalImage = originalSourceImage || '';
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const cleanSlug = (generated.sinhalaTitle || item.title).toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -879,6 +957,11 @@ CRITICAL EDITORIAL GUIDELINES:
           imageUrl: finalImage,
           url: articleSiteUrl
         });
+
+        // Add to local sets in case of multi-item run
+        existingTitlesSet.add((newDocPayload.title || '').toLowerCase().trim());
+        existingTitlesSet.add((item.title || '').toLowerCase().trim());
+        if (item.url) existingUrlsSet.add(item.url.toLowerCase().trim());
 
         // 5. Send instant Phone Push Alert via ntfy.sh (using JSON body to fully support UTF-8 Sinhala & emojis)
         if (autoPilotConfig.notifyPhone && autoPilotConfig.phoneTopic) {
@@ -938,7 +1021,31 @@ CRITICAL EDITORIAL GUIDELINES:
           }
         }
 
-        // 7. Auto-alert all registered Web Push Subscribers
+        // 7. Post to Facebook Webhook if configured
+        if (autoPilotConfig.postFacebook && autoPilotConfig.fbWebhookUrl) {
+          try {
+            const fbBody = {
+              title: newDocPayload.title,
+              summary: newDocPayload.summary,
+              category: newDocPayload.category,
+              readTime: newDocPayload.readTime,
+              imageUrl: finalImage,
+              articleUrl: articleSiteUrl,
+              slug: newDocPayload.slug,
+              customSnippet: generated.socialShareText,
+              caption: `📰 ${newDocPayload.title}\n\n${newDocPayload.summary}\n\n🔗 සම්පූර්ණ විස්තරය කියවන්න: ${articleSiteUrl}\n\n#MyFeedLK #TechNews #SriLanka`
+            };
+            await fetch(autoPilotConfig.fbWebhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(fbBody)
+            });
+          } catch (fbErr) {
+            console.warn('[Auto-Pilot] Facebook dispatch error:', fbErr);
+          }
+        }
+
+        // 8. Auto-alert all registered Web Push Subscribers
         try {
           await sendWebPushToAllSubscribers({
             title: newDocPayload.title,
@@ -1209,6 +1316,51 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
   try {
     const url = new URL(request.url);
     
+    // Custom API Route for Single Latest News (for Make.com / Zapier / Social Media Webhooks)
+    if (url.pathname === '/api/latest-news') {
+      try {
+        const db = getServerDb();
+        const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
+        const allArticles: any[] = [];
+        articlesSnap.forEach(doc => {
+          allArticles.push({ id: doc.id, ...doc.data() });
+        });
+
+        allArticles.sort((a, b) => {
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (new Date(a.publishedAt || 0).getTime());
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (new Date(b.publishedAt || 0).getTime());
+          return timeB - timeA;
+        });
+
+        const latest = allArticles[0] || {};
+        const baseUrl = 'https://myfeedlk.com';
+        const articleLink = latest.slug ? `${baseUrl}/article/${latest.slug}` : (latest.id ? `${baseUrl}/article/${latest.id}` : baseUrl);
+
+        return new Response(JSON.stringify({
+          id: latest.id || '',
+          title: latest.title || '',
+          summary: latest.summary || latest.description || '',
+          imageUrl: latest.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80',
+          link: articleLink,
+          slug: latest.slug || '',
+          category: latest.category || 'Tech',
+          publishedAt: latest.publishedAt || new Date().toISOString()
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=30, s-maxage=30'
+          }
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ error: e?.message || 'Failed to fetch latest news' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
     // Custom API Route for News
     if (url.pathname === '/api/news') {
       const now = Date.now();
@@ -1232,6 +1384,69 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Public RSS Feed for Social Media Automation (Make.com, Zapier, Buffer, IFTTT)
+    if ((url.pathname === '/api/rss' || url.pathname === '/api/rss/' || url.pathname === '/rss.xml' || url.pathname === '/feed.xml' || url.pathname === '/rss') && (request.method === 'GET' || request.method === 'HEAD')) {
+      try {
+        const db = getServerDb();
+        const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
+        const allArticles: any[] = [];
+        articlesSnap.forEach(doc => {
+          const data = doc.data();
+          allArticles.push({ id: doc.id, ...data });
+        });
+
+        // Sort descending by timestamp or publishedAt
+        allArticles.sort((a, b) => {
+          const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (new Date(a.publishedAt || 0).getTime());
+          const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (new Date(b.publishedAt || 0).getTime());
+          return timeB - timeA;
+        });
+
+        const baseUrl = 'https://myfeedlk.com';
+        const topArticles = allArticles.slice(0, 20);
+
+        const rssItemsXml = topArticles.map(art => {
+          const itemUrl = art.slug ? `${baseUrl}/article/${art.slug}` : (art.id ? `${baseUrl}/article/${art.id}` : baseUrl);
+          const imgUrl = art.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80';
+          const pubDate = art.publishedAt ? new Date(art.publishedAt).toUTCString() : new Date().toUTCString();
+
+          return `    <item>
+      <title><![CDATA[${art.title || ''}]]></title>
+      <link>${itemUrl}</link>
+      <guid isPermaLink="true">${itemUrl}</guid>
+      <pubDate>${pubDate}</pubDate>
+      <description><![CDATA[${art.summary || art.description || ''}]]></description>
+      <enclosure url="${imgUrl}" length="0" type="image/jpeg" />
+      <media:content url="${imgUrl}" medium="image" type="image/jpeg" />
+    </item>`;
+        }).join('\n');
+
+        const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>MyFeed.lk - Breaking Sri Lanka &amp; Global Tech News</title>
+    <link>${baseUrl}</link>
+    <description>ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය</description>
+    <language>si-LK</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="${baseUrl}/api/rss" rel="self" type="application/rss+xml" />
+${rssItemsXml}
+  </channel>
+</rss>`;
+
+        return new Response(rssXml, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/xml; charset=utf-8',
+            'Cache-Control': 'public, max-age=60, s-maxage=60'
+          }
+        });
+      } catch (rssErr) {
+        console.error('RSS generation error:', rssErr);
+        return new Response('Failed to generate RSS feed', { status: 500 });
+      }
     }
 
     
@@ -1276,8 +1491,10 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         if (typeof body.autoPublish === 'boolean') autoPilotConfig.autoPublish = body.autoPublish;
         if (typeof body.notifyPhone === 'boolean') autoPilotConfig.notifyPhone = body.notifyPhone;
         if (typeof body.postWhatsApp === 'boolean') autoPilotConfig.postWhatsApp = body.postWhatsApp;
+        if (typeof body.postFacebook === 'boolean') autoPilotConfig.postFacebook = body.postFacebook;
         if (typeof body.phoneTopic === 'string') autoPilotConfig.phoneTopic = body.phoneTopic.trim();
         if (typeof body.waWebhookUrl === 'string') autoPilotConfig.waWebhookUrl = body.waWebhookUrl.trim();
+        if (typeof body.fbWebhookUrl === 'string') autoPilotConfig.fbWebhookUrl = body.fbWebhookUrl.trim();
         if (typeof body.maxArticlesPerRun === 'number') autoPilotConfig.maxArticlesPerRun = Math.max(1, Math.min(body.maxArticlesPerRun, 5));
 
         autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
@@ -1305,7 +1522,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
       });
     }
 
-    // 1. Trending Tech News Feed for Admin Auto-Crawler
+    // 1. Trending Tech News Feed for Admin Auto-Crawler (with Cross-Feed Deduplication)
     if (url.pathname === '/api/admin/trending-news' && request.method === 'GET') {
       try {
         const trendingItems: {
@@ -1319,6 +1536,8 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
           categoryHint: string;
         }[] = [];
 
+        const seenTrendingKeywords: string[][] = [];
+
         for (const feed of SERVER_RSS_FEEDS) {
           try {
             const res = await fetch(feed.url, {
@@ -1329,6 +1548,23 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
               const xml = await res.text();
               const parsed = parseServerRss(xml, feed.name);
               for (const item of parsed.slice(0, 4)) {
+                const words = item.title.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !['with', 'from', 'this', 'that', 'have', 'more', 'about', 'after', 'will', 'what'].includes(w));
+                
+                // Cross-feed duplicate check
+                let isDup = false;
+                for (const seen of seenTrendingKeywords) {
+                  let matches = 0;
+                  for (const w of words) {
+                    if (seen.includes(w)) matches++;
+                  }
+                  if (words.length > 0 && matches / words.length >= 0.5) {
+                    isDup = true;
+                    break;
+                  }
+                }
+                if (isDup) continue;
+                seenTrendingKeywords.push(words);
+
                 const isAi = item.title.toLowerCase().includes('ai') || item.title.toLowerCase().includes('gpt') || feed.name.includes('AI');
                 const isLocal = feed.name.includes('Sri Lanka') || feed.name.includes('Derana') || feed.name.includes('FT');
                 trendingItems.push({
@@ -2035,6 +2271,102 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
       } catch (waErr: any) {
         const err = waErr as { message?: string };
         return new Response(JSON.stringify({ error: err.message || 'WhatsApp dispatch error' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Automated Facebook Page Auto-Post API
+    if (url.pathname === '/api/facebook/post' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, summary, articleUrl, category, readTime, customMessage, imageUrl, webhookUrl } = body;
+        
+        const fbWebhookUrl = webhookUrl || autoPilotConfig.fbWebhookUrl || process.env['FACEBOOK_WEBHOOK_URL'];
+        const fbPageAccessToken = process.env['FACEBOOK_PAGE_ACCESS_TOKEN'] || process.env['FB_PAGE_TOKEN'];
+        const fbPageId = process.env['FACEBOOK_PAGE_ID'] || process.env['FB_PAGE_ID'];
+
+        const formattedPost = customMessage || `📰 ${title || 'MyFeed.lk Breaking News'}
+
+${summary || ''}
+
+🔗 සම්පූර්ණ විස්තරය කියවන්න: ${articleUrl || 'https://myfeed.lk'}
+
+#MyFeedLK #TechNews #SriLanka #${(category || 'Tech').replace(/\s+/g, '')}`;
+
+        // 1. If custom Webhook is configured (Make.com, Zapier, n8n, Webhook Relay)
+        if (fbWebhookUrl) {
+          const webhookRes = await fetch(fbWebhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: formattedPost,
+              caption: formattedPost,
+              message: formattedPost,
+              image: imageUrl || '',
+              imageUrl: imageUrl || '',
+              photoUrl: imageUrl || '',
+              title: title || '',
+              summary: summary || '',
+              url: articleUrl || '',
+              articleUrl: articleUrl || '',
+              category: category || 'Tech',
+              readTime: readTime || ''
+            })
+          });
+          return new Response(JSON.stringify({ success: true, mode: 'webhook', status: webhookRes.status }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 2. If Official Meta Facebook Graph API Page Access Token is provided
+        if (fbPageAccessToken && fbPageId) {
+          let fbApiUrl = `https://graph.facebook.com/v19.0/${fbPageId}/feed`;
+          let fbPayload: Record<string, any> = {
+            message: formattedPost,
+            access_token: fbPageAccessToken
+          };
+
+          if (imageUrl) {
+            fbApiUrl = `https://graph.facebook.com/v19.0/${fbPageId}/photos`;
+            fbPayload = {
+              url: imageUrl,
+              caption: formattedPost,
+              access_token: fbPageAccessToken
+            };
+          }
+
+          const fbApiRes = await fetch(fbApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fbPayload)
+          });
+
+          const fbResult = await fbApiRes.json();
+          return new Response(JSON.stringify({ success: fbApiRes.ok, result: fbResult }), {
+            status: fbApiRes.status,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // 3. Fallback response with formatted payload and web sharer URL
+        const directShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl || 'https://myfeedlk.com')}&quote=${encodeURIComponent(formattedPost)}`;
+        return new Response(JSON.stringify({
+          success: true,
+          mode: 'formatted_payload',
+          message: 'Post formatted and ready for Facebook dispatch',
+          formattedText: formattedPost,
+          imageUrl: imageUrl || '',
+          directShareUrl
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (fbErr: any) {
+        const err = fbErr as { message?: string };
+        return new Response(JSON.stringify({ error: err.message || 'Facebook dispatch error' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });

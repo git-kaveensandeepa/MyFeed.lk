@@ -279,6 +279,19 @@ export interface PolishedResult {
           </button>
 
           <button 
+            (click)="setActiveTab('facebook')"
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            [class.bg-white]="activeTab() === 'facebook'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'facebook'"
+            [class.text-blue-600]="activeTab() === 'facebook'"
+            [class.shadow-sm]="activeTab() === 'facebook'"
+            [class.text-gray-600]="activeTab() !== 'facebook'"
+            [class.dark:text-gray-400]="activeTab() !== 'facebook'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-600">share</mat-icon>
+            <span>Facebook Page</span>
+          </button>
+
+          <button 
             (click)="setActiveTab('deploy')"
             class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             [class.bg-white]="activeTab() === 'deploy'"
@@ -605,6 +618,13 @@ export interface PolishedResult {
                     Auto-Post to WhatsApp Channel
                   </label>
                 </div>
+                <div class="flex items-center gap-3">
+                  <input type="checkbox" id="autoPostFacebook" [(ngModel)]="autoPostFacebook" name="autoPostFacebook" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600">
+                  <label for="autoPostFacebook" class="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider cursor-pointer flex items-center gap-1.5">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
+                    Auto-Post to Facebook Page
+                  </label>
+                </div>
               </div>
               
               <div class="flex flex-col sm:flex-row gap-3 mt-4">
@@ -786,8 +806,12 @@ export interface PolishedResult {
                               }
                             </button>
                             <!-- WhatsApp -->
-                            <button (click)="openWhatsAppModal(article)" class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="WhatsApp">
+                            <button (click)="openWhatsAppModal(article)" class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="WhatsApp Channel">
                               <mat-icon style="font-size: 16px; width: 16px; height: 16px;">chat</mat-icon>
+                            </button>
+                            <!-- Facebook -->
+                            <button (click)="openFacebookModal(article)" class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="Facebook Page">
+                              <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
                             </button>
                             <!-- Quick Image -->
                             <button (click)="openQuickImageModal(article)" class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center transition-all active:scale-95 cursor-pointer" title="Change Image">
@@ -1627,6 +1651,18 @@ export interface PolishedResult {
                         </label>
                       </div>
 
+                      <!-- Facebook Page Auto Post -->
+                      <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div>
+                          <div class="text-sm font-bold text-gray-900">Facebook Page Auto-Post</div>
+                          <div class="text-xs text-gray-500">Send post & original cover photo to Facebook webhook</div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" [(ngModel)]="autoPilotPostFacebook" class="sr-only peer">
+                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
                       <!-- Save Configuration Button -->
                       <button 
                         type="button" 
@@ -2160,6 +2196,86 @@ export interface PolishedResult {
               </div>
             </div>
           </div>
+        } @else if (activeTab() === 'facebook') {
+          <!-- Facebook Page Tab -->
+          <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 p-5 sm:p-7">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">share</mat-icon>
+                </div>
+                <div>
+                  <h2 class="text-base font-bold text-[#1d1d1f] dark:text-white">Facebook Page Automation</h2>
+                  <p class="text-xs text-gray-500">Auto-post stories and full cover photos directly to your Facebook Page</p>
+                </div>
+              </div>
+
+              <!-- Integration Settings -->
+              <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 mb-6 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Facebook Webhook Settings (Make.com / Zapier / Relay)</h3>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">Facebook Dedicated</span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2.5">
+                  <input [(ngModel)]="fbWebhookUrl" placeholder="https://hook.eu1.make.com/... (Make.com Custom Webhook URL)" class="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-blue-600 outline-none text-xs font-mono text-gray-900 dark:text-white" />
+                  <button (click)="saveFbSettings()" [disabled]="isSavingFbSettings()" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all disabled:opacity-50 shrink-0 active:scale-95">
+                    {{ isSavingFbSettings() ? 'Saving...' : 'Save Webhook' }}
+                  </button>
+                </div>
+                <div class="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                  <p class="font-bold text-blue-700 dark:text-blue-400">📌 Make.com හි සකස් කරන ආකාරය:</p>
+                  <p>1. Make.com හි <strong>Custom Webhook</strong> මොඩියුලයේ URL එක මෙහි Paste කර <strong>Save Webhook</strong> ඔබන්න.</p>
+                  <p>2. දෙවන මොඩියුලය ලෙස <strong>Facebook Pages ➡️ Create a Post with Photos</strong> තෝරා URL සඳහා <code>imageUrl</code> ද, Caption සඳහා <code>caption</code> ද ලබාදෙන්න.</p>
+                </div>
+              </div>
+
+              <!-- Direct Post Composer -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Compose Facebook Post</h3>
+                  <button (click)="loadLatestArticleForFb()" class="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px;">autorenew</mat-icon> Load Latest Story
+                  </button>
+                </div>
+
+                @if (fbSelectedImageUrl) {
+                  <div class="relative w-full h-44 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-black/5 dark:border-white/10">
+                    <img [src]="fbSelectedImageUrl" alt="Cover Image" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                    <div class="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1">
+                      <mat-icon style="font-size: 12px; width: 12px; height: 12px;">photo</mat-icon>
+                      <span>Original Cover Photo Attached</span>
+                    </div>
+                  </div>
+                }
+
+                <textarea [(ngModel)]="fbCustomMessage" rows="6" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-blue-600 outline-none text-xs sm:text-sm font-sans leading-relaxed text-gray-900 dark:text-white" placeholder="📰 Article Title Here...&#10;&#10;Summary details...&#10;&#10;🔗 Read more: https://myfeedlk.com/...&#10;&#10;#MyFeedLK #TechNews #SriLanka"></textarea>
+
+                <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                  <button (click)="dispatchFacebookPost()" [disabled]="isDispatchingFb() || !fbCustomMessage.trim()" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold uppercase tracking-wider text-xs hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95">
+                    @if (isDispatchingFb()) {
+                      <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      <span>Posting to Facebook...</span>
+                    } @else {
+                      <mat-icon style="font-size: 15px; width: 15px; height: 15px;">send</mat-icon>
+                      <span>Post to Facebook Page</span>
+                    }
+                  </button>
+
+                  <button (click)="openDirectFacebookShare()" [disabled]="!fbCustomMessage.trim()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-bold uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                    <mat-icon style="font-size: 15px; width: 15px; height: 15px;">open_in_new</mat-icon>
+                    <span>Open in Facebook</span>
+                  </button>
+                </div>
+
+                @if (fbPostSuccess()) {
+                  <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold animate-fade-in">
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon>
+                    <span>{{ fbSuccessMessage() }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         } @else if (activeTab() === 'users') {
           <!-- Users Management Tab -->
           <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden mb-8">
@@ -2668,7 +2784,7 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
+  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
   
   // Auto Studio signals & state
   readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish' | 'autopilot'>('trending');
@@ -2771,6 +2887,17 @@ export class AdminComponent {
   readonly waPostSuccess = signal(false);
   readonly waSuccessMessage = signal('Post sent to WhatsApp Channel successfully!');
   autoPostWhatsApp = true;
+
+  // Facebook Page Automation signals & state
+  fbWebhookUrl = '';
+  fbCustomMessage = '';
+  fbSelectedImageUrl = '';
+  readonly isSavingFbSettings = signal(false);
+  readonly isDispatchingFb = signal(false);
+  readonly fbPostSuccess = signal(false);
+  readonly fbSuccessMessage = signal('Post sent to Facebook Page successfully!');
+  autoPostFacebook = true;
+  autoPilotPostFacebook = true;
 
   // Phone Push Notifications (via ntfy.sh)
   phoneTopic = 'myfeedlk_alerts';
@@ -2886,6 +3013,7 @@ export class AdminComponent {
         this.analyticsService.listenToTodayVisitors();
         this.loadDeploySettings();
         this.loadWaSettings();
+        this.loadFbSettings();
         this.loadPhoneSettings();
         this.loadWebPushSubscribersCount();
         this.loadAutoPilotStatus();
@@ -3418,6 +3546,19 @@ export class AdminComponent {
           });
         }
 
+        // Auto-post to Facebook Page if enabled
+        if (this.autoPostFacebook) {
+          this.triggerFacebookPagePost({
+            title: this.formTitle,
+            summary: this.formSummary,
+            category: this.formCategory,
+            readTime: this.formReadTime,
+            imageUrl: this.formImageUrl,
+            articleUrl,
+            slug: payload.slug
+          });
+        }
+
         // Auto-alert Phone if enabled (ntfy.sh push alert)
         if (this.autoAlertPhone) {
           await this.triggerPhonePushNotification({
@@ -3742,6 +3883,156 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   openDirectWhatsAppShare() {
     if (!this.waCustomMessage.trim()) return;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(this.waCustomMessage)}`;
+    window.open(url, '_blank');
+  }
+
+  async loadFbSettings() {
+    try {
+      const localFbHook = localStorage.getItem('myfeed_fb_webhook_url');
+      if (localFbHook) {
+        this.fbWebhookUrl = localFbHook;
+      }
+      const docRef = doc(db, 'settings', 'facebook');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data['webhookUrl']) {
+          this.fbWebhookUrl = data['webhookUrl'];
+        }
+      }
+    } catch (error) {
+      console.error('Error loading Facebook settings', error);
+    }
+  }
+
+  async saveFbSettings() {
+    this.isSavingFbSettings.set(true);
+    try {
+      try {
+        localStorage.setItem('myfeed_fb_webhook_url', this.fbWebhookUrl);
+      } catch (storageErr) {
+        console.warn('LocalStorage save error:', storageErr);
+      }
+
+      await setDoc(doc(db, 'settings', 'facebook'), {
+        webhookUrl: this.fbWebhookUrl,
+        updatedAt: serverTimestamp()
+      });
+
+      // Also sync to server autopilot config
+      await fetch('/api/admin/autopilot/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fbWebhookUrl: this.fbWebhookUrl
+        })
+      }).catch((fetchErr) => {
+        console.warn('Sync autopilot fb config error:', fetchErr);
+      });
+
+      alert('Facebook webhook settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving Facebook settings', error);
+      alert('Failed to save Facebook settings');
+    } finally {
+      this.isSavingFbSettings.set(false);
+    }
+  }
+
+  openFacebookModal(article: Article) {
+    const articleUrl = this.getArticleUrl(article.slug || article.id);
+    this.fbSelectedImageUrl = article.imageUrl || '';
+    this.fbCustomMessage = `📰 ${article.title}
+
+${article.summary}
+
+🔗 සම්පූර්ණ විස්තරය කියවන්න: ${articleUrl}
+
+#MyFeedLK #TechNews #SriLanka #${(article.category || 'Tech').replace(/\s+/g, '')}`;
+    this.activeTab.set('facebook');
+  }
+
+  loadLatestArticleForFb() {
+    const articles = this.articleService.articles();
+    if (articles.length > 0) {
+      this.openFacebookModal(articles[0]);
+    }
+  }
+
+  async triggerFacebookPagePost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string; imageUrl?: string; slug?: string }) {
+    try {
+      await fetch('/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          webhookUrl: this.fbWebhookUrl
+        })
+      });
+    } catch (err) {
+      console.warn('Auto Facebook dispatch background error:', err);
+    }
+  }
+
+  async triggerFacebookDispatch(data: { id: string; title: string; summary: string; imageUrl?: string; url: string; category: string; customSnippet?: string }) {
+    try {
+      await fetch('/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          summary: data.summary,
+          imageUrl: data.imageUrl,
+          articleUrl: data.url,
+          category: data.category,
+          customMessage: data.customSnippet,
+          webhookUrl: this.fbWebhookUrl
+        })
+      });
+    } catch (err) {
+      console.warn('Facebook dispatch warning:', err);
+    }
+  }
+
+  async dispatchFacebookPost() {
+    if (!this.fbCustomMessage.trim()) return;
+
+    this.isDispatchingFb.set(true);
+    this.fbPostSuccess.set(false);
+
+    try {
+      const res = await fetch('/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customMessage: this.fbCustomMessage,
+          imageUrl: this.fbSelectedImageUrl,
+          webhookUrl: this.fbWebhookUrl
+        })
+      });
+
+      const data = await res.json();
+      if (data.mode === 'webhook') {
+        this.fbSuccessMessage.set('Dispatched successfully to Facebook Webhook endpoint!');
+      } else if (data.mode === 'formatted_payload') {
+        this.fbSuccessMessage.set('Post prepared! You can also click "Open in Facebook" for web posting.');
+      } else {
+        this.fbSuccessMessage.set('Post published to Facebook Page successfully!');
+      }
+
+      this.fbPostSuccess.set(true);
+      setTimeout(() => this.fbPostSuccess.set(false), 6000);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      alert('Facebook dispatch failed: ' + (err.message || String(e)));
+    } finally {
+      this.isDispatchingFb.set(false);
+    }
+  }
+
+  openDirectFacebookShare() {
+    if (!this.fbCustomMessage.trim()) return;
+    const url = `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(this.fbCustomMessage)}`;
     window.open(url, '_blank');
   }
 
@@ -4175,6 +4466,19 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         });
       }
 
+      // 4.1. Dispatch Facebook if enabled
+      if (this.autoPostFacebook && this.fbWebhookUrl) {
+        this.triggerFacebookDispatch({
+          id: docRef.id,
+          title: newArticlePayload.title || '',
+          summary: newArticlePayload.summary || '',
+          imageUrl: newArticlePayload.imageUrl || '',
+          url: articleUrl,
+          category: newArticlePayload.category || 'Tech',
+          customSnippet: generated.socialShareText
+        });
+      }
+
       // 5. Dispatch Web Push to all browser subscribers
       this.triggerWebPushNotification({
         title: newArticlePayload.title || '',
@@ -4265,6 +4569,19 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
             // WhatsApp Webhook
             if (this.autoPostWhatsApp && this.waWebhookUrl) {
               this.triggerWhatsAppDispatch({
+                id: docRef.id,
+                title: newArticlePayload.title || '',
+                summary: newArticlePayload.summary || '',
+                imageUrl: newArticlePayload.imageUrl || '',
+                url: articleUrl,
+                category: newArticlePayload.category || 'Tech',
+                customSnippet: generated.socialShareText
+              });
+            }
+
+            // Facebook Webhook
+            if (this.autoPostFacebook && this.fbWebhookUrl) {
+              this.triggerFacebookDispatch({
                 id: docRef.id,
                 title: newArticlePayload.title || '',
                 summary: newArticlePayload.summary || '',
@@ -4626,6 +4943,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           this.autoPilotAutoPublish = data.config.autoPublish ?? true;
           this.autoPilotNotifyPhone = data.config.notifyPhone ?? true;
           this.autoPilotPostWhatsApp = data.config.postWhatsApp ?? true;
+          this.autoPilotPostFacebook = data.config.postFacebook ?? true;
           this.autoPilotMaxArticles = data.config.maxArticlesPerRun ?? 2;
         }
         if (data.logs) {
@@ -4657,8 +4975,10 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
           autoPublish: this.autoPilotAutoPublish,
           notifyPhone: this.autoPilotNotifyPhone,
           postWhatsApp: this.autoPilotPostWhatsApp,
+          postFacebook: this.autoPilotPostFacebook,
           phoneTopic: this.phoneTopic,
           waWebhookUrl: this.waWebhookUrl,
+          fbWebhookUrl: this.fbWebhookUrl,
           maxArticlesPerRun: Number(this.autoPilotMaxArticles)
         })
       });
@@ -4751,7 +5071,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
   readonly usersList = signal<UserProfile[]>([]);
   readonly loadingUsers = signal<boolean>(false);
 
-  setActiveTab(tabName: 'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'deploy' | 'ads' | 'analytics' | 'users') {
+  setActiveTab(tabName: 'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users') {
     this.activeTab.set(tabName);
     if (tabName === 'users') {
       this.fetchUsers();
