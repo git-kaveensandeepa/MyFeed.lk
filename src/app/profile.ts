@@ -829,16 +829,16 @@ import { SubscriberService } from './subscriber.service';
 
             <div class="space-y-3.5 text-xs text-[#3a3a3c] dark:text-[#d1d1d6] leading-relaxed">
               <div>
-                <h4 class="font-bold text-[#000000] dark:text-white mb-1">1. User Privacy &amp; Data Collection</h4>
+                <h4 class="font-bold text-[#000000] dark:text-white mb-1">1. User Privacy &amp; Advertising Standards</h4>
                 <p class="text-[#8e8e93] text-[11px]">
-                  MyFeed.lk values your privacy. We store only essential authentication credentials and reading preferences (such as bookmarks and theme preference) locally and securely on Google Firebase. We never sell personal data to third parties.
+                  MyFeed.lk (www.myfeedlk.com) values your privacy. We store essential authentication credentials and local preferences securely. We use Google AdSense to serve non-intrusive, relevant advertisements. Google may use DART cookies to serve ads based on browsing activity. You can customize ad settings via Google Ads Preferences.
                 </p>
               </div>
 
               <div>
                 <h4 class="font-bold text-[#000000] dark:text-white mb-1">2. AI Transparency &amp; Content Ethics</h4>
                 <p class="text-[#8e8e93] text-[11px]">
-                  All AI-assisted articles feature transparent metadata disclosures and source citations. Readers can inspect the primary news sources and trust scores attached to every story.
+                  All AI-assisted articles feature transparent metadata disclosures, original source citations, and editorial verification to maintain maximum journalistic integrity in Sinhala and English.
                 </p>
               </div>
 
@@ -850,9 +850,9 @@ import { SubscriberService } from './subscriber.service';
               </div>
 
               <div>
-                <h4 class="font-bold text-[#000000] dark:text-white mb-1">4. Intellectual Property</h4>
+                <h4 class="font-bold text-[#000000] dark:text-white mb-1">4. Full Legal Disclosures</h4>
                 <p class="text-[#8e8e93] text-[11px]">
-                  All original written content, graphics, and branding are copyrighted by MyFeed.lk. External brand names and logos referenced in news items belong to their respective proprietors.
+                  For our comprehensive policies, read our full <a routerLink="/privacy" (click)="closeTermsModal()" class="text-[#007AFF] underline font-semibold">Privacy Policy</a> and <a routerLink="/terms" (click)="closeTermsModal()" class="text-[#007AFF] underline font-semibold">Terms &amp; Conditions</a>.
                 </p>
               </div>
             </div>
