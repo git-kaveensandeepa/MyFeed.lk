@@ -428,7 +428,7 @@ export function extractDomain(urlStr?: string): { name: string; domain: string }
       domain: hostname 
     };
   } catch {
-    return { name: 'Verified Global Media', domain: 'myfeed.lk' };
+    return { name: 'Verified Global Media', domain: 'myfeedlk.com' };
   }
 }
 

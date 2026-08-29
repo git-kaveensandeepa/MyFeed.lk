@@ -10,6 +10,9 @@ import {
   addDoc as serverAddDoc, 
   getDocs as serverGetDocs, 
   serverTimestamp as serverTimestampDoc,
+  doc as serverDoc,
+  setDoc as serverSetDoc,
+  updateDoc as serverUpdateDoc,
   type Firestore
 } from 'firebase/firestore';
 
@@ -553,34 +556,92 @@ const autoPilotLogs: AutoPilotLog[] = [];
 let isAutoPilotSyncing = false;
 let autoPilotLastRunTime: string | null = null;
 
+// Colombo / Sri Lanka Timezone Helpers (Asia/Colombo UTC+5:30)
+export function getColomboDateTimeParts(): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  dateString: string;
+  timeString: string;
+  formattedSinhalaDate: string;
+} {
+  const now = new Date();
+  const colomboFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Colombo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    weekday: 'long',
+    hourCycle: 'h23'
+  });
+  const parts = colomboFormatter.formatToParts(now);
+  const p: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      p[part.type] = part.value;
+    }
+  }
+  const year = parseInt(p['year'] || '2026', 10);
+  const month = parseInt(p['month'] || '1', 10);
+  const day = parseInt(p['day'] || '1', 10);
+  const hour = parseInt(p['hour'] || '0', 10);
+  const minute = parseInt(p['minute'] || '0', 10);
+  const second = parseInt(p['second'] || '0', 10);
+  const weekday = p['weekday'] || 'Today';
+
+  const sinhalaMonths = ['', 'ජනවාරි', 'පෙබරවාරි', 'මාර්තු', 'අප්‍රේල්', 'මැයි', 'ජූනි', 'ජූලි', 'අගෝස්තු', 'සැප්තැම්බර්', 'ඔක්තෝබර්', 'නොවැම්බර්', 'දෙසැම්බර්'];
+  const sinhalaDays: Record<string, string> = {
+    'Monday': 'සඳුදා',
+    'Tuesday': 'අඟහරුවාදා',
+    'Wednesday': 'බදාදා',
+    'Thursday': 'බ්‍රහස්පතින්දා',
+    'Friday': 'සිකුරාදා',
+    'Saturday': 'සෙනසුරාදා',
+    'Sunday': 'ඉරිදා'
+  };
+
+  const monthSinhala = sinhalaMonths[month] || `මාසය ${month}`;
+  const daySinhala = sinhalaDays[weekday] || weekday;
+  const formattedSinhalaDate = `${year} ${monthSinhala} ${day} • ${daySinhala} (${weekday} Morning)`;
+
+  const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+  return { year, month, day, hour, minute, second, dateString, timeString, formattedSinhalaDate };
+}
+
+// Next Occurrence Ms helper
+function getNextOccurrenceMs(targetTime: string): { nextMs: number; nextTimeString: string; diffSeconds: number } {
+  const parts = targetTime.split(':').map(x => parseInt(x, 10));
+  const targetHour = isNaN(parts[0]) ? 3 : parts[0] % 24;
+  const targetMinute = isNaN(parts[1]) ? 30 : parts[1] % 60;
+
+  const colombo = getColomboDateTimeParts();
+  const currentMinutes = colombo.hour * 60 + colombo.minute;
+  const targetMinutes = targetHour * 60 + targetMinute;
+
+  let diffMinutes = targetMinutes - currentMinutes;
+  if (diffMinutes <= 0 && colombo.second >= 5) {
+    diffMinutes += 24 * 60; // Wrap around to tomorrow
+  }
+  const diffSeconds = Math.max(10, (diffMinutes * 60) - colombo.second);
+  const nextMs = Date.now() + (diffSeconds * 1000);
+  return { nextMs, nextTimeString: `${String(targetHour).padStart(2, '0')}:${String(targetMinute).padStart(2, '0')}`, diffSeconds };
+}
+
 // Helper to calculate the next execution timestamp in Sri Lanka timezone (Asia/Colombo UTC+5:30)
 function calculateNextRunTimestamp(config: AutoPilotConfig): number {
   if (!config.enabled) return Date.now() + (24 * 60 * 60 * 1000);
 
   if (config.scheduleMode === 'exact_times' && Array.isArray(config.scheduledDailyTimes) && config.scheduledDailyTimes.length > 0) {
-    const now = new Date();
-    const colomboFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Colombo',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-      hourCycle: 'h23'
-    });
-    const parts = colomboFormatter.formatToParts(now);
-    const colomboDate: Record<string, number> = {};
-    for (const p of parts) {
-      if (p.type !== 'literal') {
-        colomboDate[p.type] = parseInt(p.value, 10);
-      }
-    }
-
-    const currentHour = (colomboDate['hour'] ?? 0) % 24;
-    const currentMinute = colomboDate['minute'] ?? 0;
-    const currentSecond = colomboDate['second'] ?? 0;
-    const currentMinutesOfDay = currentHour * 60 + currentMinute;
+    const colombo = getColomboDateTimeParts();
+    const currentMinutesOfDay = colombo.hour * 60 + colombo.minute;
 
     // Convert scheduled times into minutes of day
     const parsedMinutesList = config.scheduledDailyTimes
@@ -593,7 +654,7 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
 
     if (parsedMinutesList.length > 0) {
       // Find the next scheduled time today (must be strictly in the future, with at least 5 seconds buffer)
-      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay || (item.minutes === currentMinutesOfDay && currentSecond < 10));
+      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay || (item.minutes === currentMinutesOfDay && colombo.second < 10));
 
       let targetMinutes = 0;
       let daysToAdd = 0;
@@ -608,7 +669,7 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
       }
 
       const diffMinutes = (daysToAdd * 24 * 60) + (targetMinutes - currentMinutesOfDay);
-      const diffMs = (diffMinutes * 60 * 1000) - (currentSecond * 1000);
+      const diffMs = (diffMinutes * 60 * 1000) - (colombo.second * 1000);
       return Date.now() + Math.max(10000, diffMs);
     }
   }
@@ -617,6 +678,87 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
   const mins = config.intervalMinutes >= 15 ? config.intervalMinutes : 60;
   return Date.now() + (mins * 60 * 1000);
 }
+
+// =========================================================================
+// AUTOMATED AI AUDIO PIPELINE (3:30 AM Generate -> 4:00 AM Daily Publish)
+// =========================================================================
+
+export interface AudioPipelineConfig {
+  enabled: boolean;
+  generateTime: string; // Default: '03:30' (Asia/Colombo)
+  publishTime: string;  // Default: '04:00' (Asia/Colombo)
+  autoPublish: boolean;
+  narratorName: string;
+  narratorRole: string;
+  defaultAudioUrl: string;
+  autoNotifyWebPush: boolean;
+  autoNotifyPhone: boolean;
+  phoneTopic: string;
+}
+
+export interface AudioChapterItem {
+  timeFormatted: string;
+  seconds: number;
+  title: string;
+  category?: string;
+  summary?: string;
+  articleId?: string;
+}
+
+export interface AudioPipelineDraft {
+  id: string;
+  editionNumber: number;
+  title: string;
+  subTitle: string;
+  date: string;
+  dateFormatted: string;
+  windowStart: string;
+  windowEnd: string;
+  audioUrl: string;
+  durationSeconds: number;
+  durationFormatted: string;
+  narratorName: string;
+  narratorRole: string;
+  summarySinhala: string;
+  fullNarrationScriptSinhala: string;
+  keyStoriesCount: number;
+  chapters: AudioChapterItem[];
+  generatedAt: string;
+  status: 'ready_for_publish' | 'published';
+}
+
+export interface AudioPipelineLog {
+  id: string;
+  timestamp: string;
+  type: 'generate' | 'publish' | 'error' | 'manual';
+  status: 'success' | 'warning' | 'error';
+  message: string;
+  editionId?: string;
+  articlesCount?: number;
+  editionTitle?: string;
+}
+
+export const audioPipelineConfig: AudioPipelineConfig = {
+  enabled: true,
+  generateTime: '03:30', // Daily 3:30 AM Sri Lanka Time
+  publishTime: '04:00',  // Daily 4:00 AM Sri Lanka Time
+  autoPublish: true,
+  narratorName: 'Kaveen Sandeepa & MyFeed AI Studio',
+  narratorRole: 'Editor-in-Chief & AI Audio Studio',
+  defaultAudioUrl: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=news-ambient-112199.mp3',
+  autoNotifyWebPush: true,
+  autoNotifyPhone: true,
+  phoneTopic: 'myfeedlk_kaveen'
+};
+
+let currentAudioDraft: AudioPipelineDraft | null = null;
+const audioPipelineLogs: AudioPipelineLog[] = [];
+let isAudioGenerating = false;
+let isAudioPublishing = false;
+let lastAudioGeneratedDate: string | null = null;
+let lastAudioGeneratedTime: string | null = null;
+let lastAudioPublishedDate: string | null = null;
+let lastAudioPublishedTime: string | null = null;
 
 let autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
 
@@ -949,7 +1091,8 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
         };
 
         const docRef = await serverAddDoc(serverCollection(db, targetCollection), newDocPayload);
-        const articleSiteUrl = `https://myfeed.lk/article/${cleanSlug || docRef.id}`;
+        const baseSiteUrl = (process.env['SITE_URL'] || 'https://myfeedlk.com').replace(/\/+$/, '');
+        const articleSiteUrl = `${baseSiteUrl}/article/${cleanSlug || docRef.id}`;
 
         publishedArticlesList.push({
           title: newDocPayload.title,
@@ -1103,17 +1246,585 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
     };
     autoPilotLogs.unshift(logEntry);
     if (autoPilotLogs.length > 30) autoPilotLogs.pop();
-    return { success: false, count: 0, articles: [], message: errorObj.message || 'Auto-pilot sync failed' };
+    return {
+      success: false,
+      count: 0,
+      articles: [],
+      message: `Auto-pilot failed: ${errorObj.message || String(err)}`
+    };
   } finally {
     isAutoPilotSyncing = false;
   }
 }
 
-// Background Cron Scheduler (Checks every 15 seconds if sync is due)
+// =========================================================================
+// GEMINI AI VOICE OVER SYNTHESIS & WAV ENCODER
+// =========================================================================
+
+export function pcmToWav(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const dataSize = pcmBuffer.length;
+  const headerSize = 44;
+  const totalSize = headerSize + dataSize;
+  const wavHeader = Buffer.alloc(headerSize);
+
+  // RIFF Chunk Descriptor
+  wavHeader.write('RIFF', 0);
+  wavHeader.writeUInt32LE(totalSize - 8, 4);
+  wavHeader.write('WAVE', 8);
+
+  // fmt sub-chunk
+  wavHeader.write('fmt ', 12);
+  wavHeader.writeUInt32LE(16, 16); // Subchunk1Size (16 for standard PCM)
+  wavHeader.writeUInt16LE(1, 20);  // AudioFormat (1 for PCM)
+  wavHeader.writeUInt16LE(numChannels, 22);
+  wavHeader.writeUInt32LE(sampleRate, 24);
+  wavHeader.writeUInt32LE(byteRate, 28);
+  wavHeader.writeUInt16LE(blockAlign, 32);
+  wavHeader.writeUInt16LE(bitsPerSample, 34);
+
+  // data sub-chunk
+  wavHeader.write('data', 36);
+  wavHeader.writeUInt32LE(dataSize, 40);
+
+  return Buffer.concat([wavHeader, pcmBuffer]);
+}
+
+export function ensureWavBuffer(buffer: Buffer, sampleRate = 24000): Buffer {
+  if (buffer.length > 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WAVE') {
+    return buffer;
+  }
+  return pcmToWav(buffer, sampleRate);
+}
+
+// In-Memory Cached Audio Files for Instant Streaming
+export const generatedAudioStore = new Map<string, {
+  buffer: Buffer;
+  contentType: string;
+  createdAt: number;
+  title: string;
+  voiceName: string;
+  durationSeconds: number;
+}>();
+
+export async function synthesizeAiVoiceScript(
+  text: string,
+  title = 'MyFeed Morning Tech Wrap',
+  voiceName = 'Puck'
+): Promise<{ success: boolean; audioId: string; audioUrl: string; durationSeconds: number; durationFormatted: string } | null> {
+  const ai = getGeminiClient();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY is not configured on the server');
+  }
+
+  const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleanText) {
+    throw new Error('No narration text provided for speech synthesis');
+  }
+
+  // Split into manageable spoken blocks for high quality & stability
+  const sentences = cleanText.split(/(?<=[.!?\n])\s+/).filter(s => s.trim().length > 5);
+  const chunks: string[] = [];
+  let cur = '';
+  for (const s of sentences) {
+    if ((cur + ' ' + s).length > 700 && cur.length > 0) {
+      chunks.push(cur.trim());
+      cur = s;
+    } else {
+      cur = cur ? `${cur} ${s}` : s;
+    }
+  }
+  if (cur.trim()) chunks.push(cur.trim());
+
+  // Synthesize all spoken chunks to produce the full news segment
+  const targetChunks = chunks;
+  const pcmSegments: Buffer[] = [];
+
+  for (let i = 0; i < targetChunks.length; i++) {
+    const chunk = targetChunks[i];
+    try {
+      const speechRes = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-tts-preview',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `You are the chief broadcaster and official voice for MyFeed.lk Sri Lanka.
+Read and speak the following news text naturally in fluent, energetic radio/podcast style (fluent Sinhala with clear English technical words):
+
+${chunk}`
+              }
+            ]
+          }
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceName || 'Puck'
+              }
+            }
+          }
+        }
+      });
+
+      const candidates = speechRes.candidates;
+      if (candidates && candidates[0]?.content?.parts) {
+        for (const part of candidates[0].content.parts) {
+          if (part.inlineData && part.inlineData.data) {
+            const rawPcm = Buffer.from(part.inlineData.data, 'base64');
+            if (rawPcm.length > 0) {
+              pcmSegments.push(rawPcm);
+              break;
+            }
+          }
+        }
+      }
+    } catch (segErr) {
+      console.warn(`[TTS] Warning generating chunk ${i + 1}/${targetChunks.length}:`, segErr);
+    }
+  }
+
+  if (pcmSegments.length === 0) {
+    throw new Error('Gemini Speech Engine did not produce audio segments. Please verify your GEMINI_API_KEY.');
+  }
+
+  const combinedPcm = Buffer.concat(pcmSegments);
+  const wavBuffer = pcmToWav(combinedPcm, 24000, 1, 16);
+  const audioId = `voice-${Date.now()}`;
+  
+  // Calculate duration (24,000 samples/sec * 2 bytes/sample = 48,000 bytes/sec)
+  const durationSeconds = Math.max(10, Math.round(combinedPcm.length / 48000));
+  const mins = Math.floor(durationSeconds / 60);
+  const secs = durationSeconds % 60;
+  const durationFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+  generatedAudioStore.set(audioId, {
+    buffer: wavBuffer,
+    contentType: 'audio/wav',
+    createdAt: Date.now(),
+    title,
+    voiceName,
+    durationSeconds
+  });
+
+  return {
+    success: true,
+    audioId,
+    audioUrl: `/api/audio/file/${audioId}.wav`,
+    durationSeconds,
+    durationFormatted
+  };
+}
+
+// =========================================================================
+// AUTOMATED AI AUDIO PIPELINE GENERATOR & PUBLISHER METHODS
+// =========================================================================
+
+export async function executeMorningAudioGeneration(triggerType: 'scheduled' | 'manual' = 'scheduled'): Promise<{ success: boolean; draft?: AudioPipelineDraft; message: string }> {
+  if (isAudioGenerating) {
+    return { success: false, message: 'Audio generation is already running in background' };
+  }
+  isAudioGenerating = true;
+  const colombo = getColomboDateTimeParts();
+  const timestampStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'short' });
+
+  try {
+    const ai = getGeminiClient();
+    if (!ai) {
+      throw new Error('GEMINI_API_KEY is not configured on the server');
+    }
+
+    const db = getServerDb();
+
+    // 1. Fetch top recent articles from Firestore (Last 24 hours)
+    const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
+    const allArticles: any[] = [];
+    articlesSnap.forEach(d => {
+      const data = d.data();
+      allArticles.push({ id: d.id, ...data });
+    });
+
+    // Sort descending by timestamp or publishedAt
+    allArticles.sort((a, b) => {
+      const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (new Date(a.publishedAt || 0).getTime());
+      const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (new Date(b.publishedAt || 0).getTime());
+      return timeB - timeA;
+    });
+
+    // Pick top 6-8 articles
+    let topArticles = allArticles.slice(0, 8);
+    if (topArticles.length === 0) {
+      // Fallback to RSS articles if DB is empty
+      const rssArticles = await fetchAndTranslateNews();
+      topArticles = rssArticles.slice(0, 6) as any[];
+    }
+
+    // Format 24-hr window dates in Sri Lanka Time
+    const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const yesterdayCol = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Colombo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(yesterdayDate);
+    const [yM, yD, yY] = yesterdayCol.split('/');
+    const windowStart = `${yY}/${yM}/${yD} 04:00 AM`;
+    const windowEnd = `${colombo.year}/${String(colombo.month).padStart(2, '0')}/${String(colombo.day).padStart(2, '0')} 04:00 AM`;
+
+    const articleContext = topArticles.map((art, idx) => 
+      `${idx + 1}. [${art.category || 'Tech'}] ${art.title}\nSummary: ${art.summary || (art.content ? String(art.content).slice(0, 160) : '')}\nArticle ID: ${art.id || ''}`
+    ).join('\n\n');
+
+    // Count existing audio editions to determine edition number
+    const editionsSnap = await serverGetDocs(serverCollection(db, 'audio_editions'));
+    const editionNumber = editionsSnap.size + 1;
+
+    const audioPrompt = `You are the Lead Morning Audio Producer and Sinhala Voice Broadcaster for MyFeed.lk (Sri Lanka's premier technology news media).
+Every morning, MyFeed publishes the "MyFeed Daily Morning Tech Wrap" (පසුගිය පැය 24 පුවත් විනාඩි 15න්) — a curated, high-impact 15-minute audio briefing for morning commuters across Sri Lanka.
+
+Target Time Window: ${windowStart} to ${windowEnd} (Past 24 Hours)
+Date: ${colombo.formattedSinhalaDate}
+Edition Number: #${editionNumber}
+
+Top Articles published in past 24 hours:
+${articleContext}
+
+Generate a complete, broadcast-ready JSON document adhering strictly to this format:
+{
+  "title": "MyFeed Daily Morning Tech Wrap",
+  "subTitle": "පසුගිය පැය 24 පුවත් විනාඩි 15න් • Morning Commute Explainer",
+  "summarySinhala": "3 to 4 sentence clear, executive-level Sinhala overview summarizing the top tech breakthroughs and local tech updates in this edition.",
+  "fullNarrationScriptSinhala": "Complete, natural, broadcast-quality radio/podcast voice script in Sinhala (with technical terms pronounced clearly) containing:\n1. Energetic morning greeting to commuters on the road, public transport, or home preparing for work.\n2. In-depth, analytical breakdown of each top story with Sri Lankan developer/tech ecosystem context.\n3. Quick Market & AI landscape wrap-up.\n4. Energetic sign-off and reminder of the next 4:00 AM edition.",
+  "durationFormatted": "15:15",
+  "durationSeconds": 915,
+  "keyStoriesCount": ${topArticles.length},
+  "chapters": [
+    {
+      "timeFormatted": "00:00",
+      "seconds": 0,
+      "title": "🌅 Commute Opening & 24-Hr Overview",
+      "category": "Highlights",
+      "summary": "උදෑසන ආරම්භය සහ ප්‍රධාන සිරස්තල පෙරදසුන"
+    }
+  ]
+}
+
+Important Rules for Chapters:
+- Spread 6 to 8 chapters smoothly across the 15 minutes (e.g. 00:00, 01:30, 04:15, 07:00, 09:45, 12:15, 14:10).
+- Chapter titles should be crisp, engaging, and in Sinhala/English mix appropriate for tech audiences.
+- Link the articleId from the provided list if matching a specific story.
+- Respond ONLY with valid JSON.`;
+
+    const aiRes = await ai.models.generateContent({
+      model: 'gemini-3.7-flash',
+      contents: audioPrompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            subTitle: { type: Type.STRING },
+            summarySinhala: { type: Type.STRING },
+            fullNarrationScriptSinhala: { type: Type.STRING },
+            durationFormatted: { type: Type.STRING },
+            durationSeconds: { type: Type.INTEGER },
+            keyStoriesCount: { type: Type.INTEGER },
+            chapters: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  timeFormatted: { type: Type.STRING },
+                  seconds: { type: Type.INTEGER },
+                  title: { type: Type.STRING },
+                  category: { type: Type.STRING },
+                  summary: { type: Type.STRING }
+                }
+              }
+            }
+          },
+          required: ['title', 'subTitle', 'summarySinhala', 'fullNarrationScriptSinhala', 'chapters']
+        },
+        temperature: 0.3
+      }
+    });
+
+    const rawText = aiRes.text || '{}';
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+    }
+
+    const draft: AudioPipelineDraft = {
+      id: `draft-${Date.now()}`,
+      editionNumber,
+      title: parsed.title || 'MyFeed Daily Morning Tech Wrap',
+      subTitle: parsed.subTitle || 'පසුගිය පැය 24 පුවත් විනාඩි 15න් • Morning Commute Explainer',
+      date: colombo.dateString,
+      dateFormatted: colombo.formattedSinhalaDate,
+      windowStart,
+      windowEnd,
+      audioUrl: audioPipelineConfig.defaultAudioUrl || 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=news-ambient-112199.mp3',
+      durationSeconds: parsed.durationSeconds || 915,
+      durationFormatted: parsed.durationFormatted || '15:15',
+      narratorName: audioPipelineConfig.narratorName || 'Kaveen Sandeepa & MyFeed AI Studio',
+      narratorRole: audioPipelineConfig.narratorRole || 'Editor-in-Chief & AI Audio Studio',
+      summarySinhala: parsed.summarySinhala || 'පසුගිය පැය 24 තුළ පළවූ ප්‍රධාන තාක්ෂණික පුවත් පිළිබඳ විනාඩි 15ක සම්පූර්ණ විග්‍රහය.',
+      fullNarrationScriptSinhala: parsed.fullNarrationScriptSinhala || '',
+      keyStoriesCount: topArticles.length,
+      chapters: Array.isArray(parsed.chapters) && parsed.chapters.length > 0 ? parsed.chapters : [
+        { timeFormatted: '00:00', seconds: 0, title: '🌅 Commute Opening & Highlights Overview', category: 'Highlights' },
+        { timeFormatted: '02:00', seconds: 120, title: 'Top AI & Global Tech Breakthroughs', category: 'AI' },
+        { timeFormatted: '06:30', seconds: 390, title: 'Sri Lanka Tech & Local Developments', category: 'Local' },
+        { timeFormatted: '11:00', seconds: 660, title: 'Developer & Industry Insights', category: 'Dev' },
+        { timeFormatted: '14:00', seconds: 840, title: '📊 Tech Outlook & Commute Sign-off', category: 'Wrap-up' }
+      ],
+      generatedAt: new Date().toISOString(),
+      status: 'ready_for_publish'
+    };
+
+    // Auto-synthesize Gemini Voice Over for the generated Sinhala script
+    try {
+      const speechScript = draft.fullNarrationScriptSinhala || draft.summarySinhala;
+      if (speechScript) {
+        const voiceRes = await synthesizeAiVoiceScript(speechScript, draft.title, 'Puck');
+        if (voiceRes && voiceRes.audioUrl) {
+          draft.audioUrl = voiceRes.audioUrl;
+          console.log(`[Audio-Pipeline] Gemini AI Voice Over synthesized: ${voiceRes.audioUrl} (${voiceRes.durationFormatted})`);
+        }
+      }
+    } catch (ttsErr) {
+      console.warn('[Audio-Pipeline] Automatic AI Voice synthesis warning, keeping default audio fallback:', ttsErr);
+    }
+
+    currentAudioDraft = draft;
+    lastAudioGeneratedDate = colombo.dateString;
+    lastAudioGeneratedTime = timestampStr;
+
+    // Cache draft in Firestore
+    try {
+      await serverSetDoc(serverDoc(db, 'audio_pipeline_drafts', 'latest_draft'), {
+        ...draft,
+        updatedAt: serverTimestampDoc()
+      }, { merge: true });
+    } catch (saveErr) {
+      console.warn('Failed to cache draft in Firestore:', saveErr);
+    }
+
+    const logEntry: AudioPipelineLog = {
+      id: `alog-${Date.now()}`,
+      timestamp: timestampStr,
+      type: triggerType === 'manual' ? 'manual' : 'generate',
+      status: 'success',
+      message: `Successfully synthesized Morning Edition #${editionNumber} (${draft.chapters.length} chapters, ${topArticles.length} stories). Ready for 4:00 AM publish.`,
+      editionTitle: draft.title,
+      articlesCount: topArticles.length
+    };
+    audioPipelineLogs.unshift(logEntry);
+    if (audioPipelineLogs.length > 30) audioPipelineLogs.pop();
+
+    console.log(`[Audio-Pipeline] Morning Edition #${editionNumber} generated successfully at 3:30 AM.`);
+    return { success: true, draft, message: 'Audio edition generated and prepared for 4:00 AM publication' };
+
+  } catch (err: any) {
+    const errorObj = err as { message?: string };
+    const logEntry: AudioPipelineLog = {
+      id: `alog-${Date.now()}`,
+      timestamp: timestampStr,
+      type: 'error',
+      status: 'error',
+      message: `Audio generation failed: ${errorObj.message || String(err)}`
+    };
+    audioPipelineLogs.unshift(logEntry);
+    if (audioPipelineLogs.length > 30) audioPipelineLogs.pop();
+    console.error('[Audio-Pipeline] Generation error:', err);
+    return { success: false, message: errorObj.message || 'Audio generation failed' };
+  } finally {
+    isAudioGenerating = false;
+  }
+}
+
+export async function executeMorningAudioPublish(triggerType: 'scheduled' | 'manual' = 'scheduled'): Promise<{ success: boolean; editionId?: string; message: string }> {
+  if (isAudioPublishing) {
+    return { success: false, message: 'Audio publishing is already in progress' };
+  }
+  isAudioPublishing = true;
+  const timestampStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'short' });
+  const colombo = getColomboDateTimeParts();
+
+  try {
+    const db = getServerDb();
+
+    // If no draft exists in memory, attempt to load from Firestore
+    if (!currentAudioDraft) {
+      try {
+        const snap = await serverGetDocs(serverCollection(db, 'audio_pipeline_drafts'));
+        snap.forEach(d => {
+          if (d.id === 'latest_draft') {
+            currentAudioDraft = d.data() as AudioPipelineDraft;
+          }
+        });
+      } catch (e) {
+        console.warn('Draft load failed:', e);
+      }
+    }
+
+    if (!currentAudioDraft) {
+      console.log('[Audio-Pipeline] No draft found. Generating fresh draft before publishing...');
+      const genRes = await executeMorningAudioGeneration(triggerType);
+      if (!genRes.success || !genRes.draft) {
+        throw new Error('Failed to auto-generate draft before publishing: ' + genRes.message);
+      }
+    }
+
+    const draft = currentAudioDraft!;
+    const editionId = `edition-${Date.now()}`;
+
+    // 1. Unset isFeatured on older editions
+    try {
+      const existingEditions = await serverGetDocs(serverCollection(db, 'audio_editions'));
+      for (const edDoc of existingEditions.docs) {
+        const edData = edDoc.data();
+        if (edData['isFeatured']) {
+          await serverUpdateDoc(serverDoc(db, 'audio_editions', edDoc.id), { isFeatured: false });
+        }
+      }
+    } catch (featErr) {
+      console.warn('Error clearing featured audio editions:', featErr);
+    }
+
+    // 2. Write new morning edition to audio_editions collection
+    const editionData = {
+      id: editionId,
+      editionNumber: draft.editionNumber,
+      title: draft.title,
+      subTitle: draft.subTitle,
+      date: draft.date,
+      dateFormatted: draft.dateFormatted,
+      windowStart: draft.windowStart,
+      windowEnd: draft.windowEnd,
+      audioUrl: draft.audioUrl,
+      durationSeconds: draft.durationSeconds,
+      durationFormatted: draft.durationFormatted,
+      narratorName: draft.narratorName,
+      narratorRole: draft.narratorRole,
+      summarySinhala: draft.summarySinhala,
+      fullNarrationScriptSinhala: draft.fullNarrationScriptSinhala || '',
+      keyStoriesCount: draft.keyStoriesCount,
+      chapters: draft.chapters,
+      isFeatured: true,
+      listenCount: 0,
+      publishedAt: new Date().toISOString()
+    };
+
+    await serverSetDoc(serverDoc(db, 'audio_editions', editionId), editionData);
+
+    draft.status = 'published';
+    lastAudioPublishedDate = colombo.dateString;
+    lastAudioPublishedTime = timestampStr;
+
+    // 3. Send Web Push Notification to all active subscribers
+    if (audioPipelineConfig.autoNotifyWebPush) {
+      try {
+        await sendWebPushToAllSubscribers({
+          title: `🎙️ MyFeed Morning Audio Brief (#${draft.editionNumber})`,
+          summary: `අද උදෑසන විනාඩි 15ක ශ්‍රව්‍ය පුවත් සංග්‍රහය (4:00 AM) දැන් සූදානම්! කාර්යාලයට යන අතරතුර සවන් දෙන්න.`,
+          articleUrl: `/`,
+          category: 'Audio'
+        });
+      } catch (pushErr) {
+        console.warn('Web push for audio brief failed:', pushErr);
+      }
+    }
+
+    // 4. Send Phone notification if configured
+    if (audioPipelineConfig.autoNotifyPhone && audioPipelineConfig.phoneTopic) {
+      try {
+        const cleanTopic = (audioPipelineConfig.phoneTopic.trim().replace(/[^a-zA-Z0-9_-]/g, '')) || 'myfeedlk_kaveen';
+        const phonePayload: Record<string, unknown> = {
+          topic: cleanTopic,
+          title: `🎙️ 4:00 AM Audio Brief Published!`,
+          message: `MyFeed Morning Tech Wrap (#${draft.editionNumber}) is now LIVE with ${draft.chapters.length} chapters.\n\n🔗 Tap to listen →`,
+          click: 'https://myfeedlk.web.app',
+          priority: 4,
+          tags: ['headphones', 'microphone', 'newspaper']
+        };
+
+        await fetch('https://ntfy.sh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(phonePayload)
+        });
+      } catch (phoneErr) {
+        console.warn('Phone notification for audio brief failed:', phoneErr);
+      }
+    }
+
+    const logEntry: AudioPipelineLog = {
+      id: `alog-${Date.now()}`,
+      timestamp: timestampStr,
+      type: 'publish',
+      status: 'success',
+      message: `🚀 Published Edition #${draft.editionNumber} to app at 4:00 AM. Featured commute mode active!`,
+      editionId,
+      editionTitle: draft.title,
+      articlesCount: draft.keyStoriesCount
+    };
+    audioPipelineLogs.unshift(logEntry);
+    if (audioPipelineLogs.length > 30) audioPipelineLogs.pop();
+
+    console.log(`[Audio-Pipeline] Published Morning Edition #${draft.editionNumber} (ID: ${editionId}) successfully.`);
+    return { success: true, editionId, message: 'Morning Audio Edition published successfully' };
+
+  } catch (err: any) {
+    const errorObj = err as { message?: string };
+    const logEntry: AudioPipelineLog = {
+      id: `alog-${Date.now()}`,
+      timestamp: timestampStr,
+      type: 'error',
+      status: 'error',
+      message: `Audio publishing failed: ${errorObj.message || String(err)}`
+    };
+    audioPipelineLogs.unshift(logEntry);
+    if (audioPipelineLogs.length > 30) audioPipelineLogs.pop();
+    console.error('[Audio-Pipeline] Publishing error:', err);
+    return { success: false, message: errorObj.message || 'Audio publishing failed' };
+  } finally {
+    isAudioPublishing = false;
+  }
+}
+
+// Background Cron Scheduler (Checks every 15 seconds)
 setInterval(async () => {
+  // 1. AutoPilot 24/7 News Sync
   if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
     console.log('[Auto-Pilot] Scheduled time reached in Sri Lanka Time. Executing 24/7 news sync...');
     await executeAutoPilotSync('scheduled_cron');
+  }
+
+  // 2. Automated AI Audio Pipeline (3:30 AM Generate -> 4:00 AM Daily Publish)
+  if (audioPipelineConfig.enabled) {
+    const colombo = getColomboDateTimeParts();
+
+    // Check 3:30 AM generation
+    if (colombo.timeString === audioPipelineConfig.generateTime && lastAudioGeneratedDate !== colombo.dateString && !isAudioGenerating) {
+      console.log(`[Audio-Pipeline] Daily 3:30 AM generation triggered in Sri Lanka Time (${colombo.dateString})...`);
+      await executeMorningAudioGeneration('scheduled');
+    }
+
+    // Check 4:00 AM publication
+    if (colombo.timeString === audioPipelineConfig.publishTime && lastAudioPublishedDate !== colombo.dateString && audioPipelineConfig.autoPublish && !isAudioPublishing) {
+      console.log(`[Audio-Pipeline] Daily 4:00 AM publication triggered in Sri Lanka Time (${colombo.dateString})...`);
+      await executeMorningAudioPublish('scheduled');
+    }
   }
 }, 15 * 1000);
 
@@ -1520,6 +2231,197 @@ ${rssItemsXml}
         status: result.success ? 200 : 500,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // ==========================================
+    // AUTOMATED AI AUDIO PIPELINE ENDPOINTS (3:30 AM -> 4:00 AM)
+    // ==========================================
+
+    // Audio Pipeline Status & Current Draft
+    if (url.pathname === '/api/admin/audio-pipeline/status' && request.method === 'GET') {
+      const colombo = getColomboDateTimeParts();
+      const nextGen = getNextOccurrenceMs(audioPipelineConfig.generateTime);
+      const nextPub = getNextOccurrenceMs(audioPipelineConfig.publishTime);
+
+      return new Response(JSON.stringify({
+        config: audioPipelineConfig,
+        currentDraft: currentAudioDraft,
+        logs: audioPipelineLogs,
+        isGenerating: isAudioGenerating,
+        isPublishing: isAudioPublishing,
+        colomboTime: colombo.timeString,
+        colomboDate: colombo.dateString,
+        colomboFormatted: colombo.formattedSinhalaDate,
+        nextGenerateMs: nextGen.nextMs,
+        nextGenerateFormatted: nextGen.nextTimeString,
+        nextPublishMs: nextPub.nextMs,
+        nextPublishFormatted: nextPub.nextTimeString,
+        lastGeneratedDate: lastAudioGeneratedDate,
+        lastGeneratedTime: lastAudioGeneratedTime,
+        lastPublishedDate: lastAudioPublishedDate,
+        lastPublishedTime: lastAudioPublishedTime
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Audio Pipeline Config Update
+    if (url.pathname === '/api/admin/audio-pipeline/config' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        if (typeof body.enabled === 'boolean') audioPipelineConfig.enabled = body.enabled;
+        if (typeof body.generateTime === 'string' && /^\d{1,2}:\d{2}$/.test(body.generateTime.trim())) {
+          audioPipelineConfig.generateTime = body.generateTime.trim();
+        }
+        if (typeof body.publishTime === 'string' && /^\d{1,2}:\d{2}$/.test(body.publishTime.trim())) {
+          audioPipelineConfig.publishTime = body.publishTime.trim();
+        }
+        if (typeof body.autoPublish === 'boolean') audioPipelineConfig.autoPublish = body.autoPublish;
+        if (typeof body.narratorName === 'string') audioPipelineConfig.narratorName = body.narratorName.trim();
+        if (typeof body.narratorRole === 'string') audioPipelineConfig.narratorRole = body.narratorRole.trim();
+        if (typeof body.defaultAudioUrl === 'string') audioPipelineConfig.defaultAudioUrl = body.defaultAudioUrl.trim();
+        if (typeof body.autoNotifyWebPush === 'boolean') audioPipelineConfig.autoNotifyWebPush = body.autoNotifyWebPush;
+        if (typeof body.autoNotifyPhone === 'boolean') audioPipelineConfig.autoNotifyPhone = body.autoNotifyPhone;
+        if (typeof body.phoneTopic === 'string') audioPipelineConfig.phoneTopic = body.phoneTopic.trim();
+
+        return new Response(JSON.stringify({ success: true, config: audioPipelineConfig }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: any) {
+        const errorObj = err as { message?: string };
+        return new Response(JSON.stringify({ error: errorObj.message || 'Failed to update audio pipeline config' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Manual Generate Trigger (Admin or External Cron)
+    if (url.pathname === '/api/admin/audio-pipeline/generate-now' && (request.method === 'GET' || request.method === 'POST')) {
+      const result = await executeMorningAudioGeneration('manual');
+      return new Response(JSON.stringify(result), {
+        status: result.success ? 200 : 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Manual Publish Trigger (Admin or External Cron)
+    if (url.pathname === '/api/admin/audio-pipeline/publish-now' && (request.method === 'GET' || request.method === 'POST')) {
+      const result = await executeMorningAudioPublish('manual');
+      return new Response(JSON.stringify(result), {
+        status: result.success ? 200 : 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ==========================================
+    // GEMINI AI VOICE OVER AUDIO STREAMING & SYNTHESIS ENDPOINTS
+    // ==========================================
+
+    // Instant High-Fidelity Audio File Stream (with HTTP 206 Partial Content / Range support)
+    if (url.pathname.startsWith('/api/audio/file/') && request.method === 'GET') {
+      const fileKey = url.pathname.replace('/api/audio/file/', '').replace(/\.wav$/i, '');
+      const audioEntry = generatedAudioStore.get(fileKey);
+
+      if (!audioEntry) {
+        // If not in memory store, fallback to redirect or 404
+        return new Response(JSON.stringify({ error: 'Audio file expired or not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const buffer = audioEntry.buffer;
+      const totalBytes = buffer.length;
+      const rangeHeader = request.headers.get('range') || request.headers.get('Range');
+
+      if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10) || 0;
+        const end = parts[1] ? parseInt(parts[1], 10) : totalBytes - 1;
+        const clampedEnd = Math.min(end, totalBytes - 1);
+        const chunk = buffer.subarray(start, clampedEnd + 1);
+
+        return new Response(new Uint8Array(chunk) as unknown as BodyInit, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${clampedEnd}/${totalBytes}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunk.length.toString(),
+            'Content-Type': audioEntry.contentType || 'audio/wav',
+            'Cache-Control': 'public, max-age=86400',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+
+      return new Response(new Uint8Array(buffer) as unknown as BodyInit, {
+        status: 200,
+        headers: {
+          'Content-Type': audioEntry.contentType || 'audio/wav',
+          'Content-Length': totalBytes.toString(),
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
+    // Direct Gemini AI Voice Over Synthesis Trigger
+    if (url.pathname === '/api/audio/generate-voice' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const script = body.script || body.text || currentAudioDraft?.fullNarrationScriptSinhala || currentAudioDraft?.summarySinhala || '';
+        const title = body.title || currentAudioDraft?.title || 'MyFeed Morning Tech Wrap';
+        const voiceName = body.voiceName || 'Puck';
+
+        if (!script || script.trim().length === 0) {
+          return new Response(JSON.stringify({ error: 'No narration text provided for AI voice synthesis' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const voiceRes = await synthesizeAiVoiceScript(script, title, voiceName);
+        if (!voiceRes) {
+          return new Response(JSON.stringify({ error: 'Failed to synthesize speech with Gemini AI' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // If active draft exists, sync it
+        if (currentAudioDraft) {
+          currentAudioDraft.audioUrl = voiceRes.audioUrl;
+          currentAudioDraft.durationSeconds = voiceRes.durationSeconds;
+          currentAudioDraft.durationFormatted = voiceRes.durationFormatted;
+
+          try {
+            const db = getServerDb();
+            await serverSetDoc(serverDoc(db, 'audio_pipeline_drafts', 'latest_draft'), {
+              ...currentAudioDraft,
+              updatedAt: serverTimestampDoc()
+            }, { merge: true });
+          } catch (draftErr) {
+            console.warn('Failed to sync updated draft audio in Firestore:', draftErr);
+          }
+        }
+
+        return new Response(JSON.stringify({
+          ...voiceRes
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (voiceErr: any) {
+        console.error('Error generating AI voice over:', voiceErr);
+        return new Response(JSON.stringify({ error: voiceErr?.message || 'AI Voice Over generation failed' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // 1. Trending Tech News Feed for Admin Auto-Crawler (with Cross-Feed Deduplication)
@@ -2197,7 +3099,7 @@ Rules:
 ${summary}
 
 ⏱️ ${readTime || '3 min read'}
-🔗 *Read full story:* ${articleUrl || 'https://myfeed.lk'}
+🔗 *Read full story:* ${articleUrl || (process.env['SITE_URL'] || 'https://myfeedlk.com')}
 
 _Curated with precision by MyFeed.lk Sri Lanka_`;
 
@@ -2291,7 +3193,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
 
 ${summary || ''}
 
-🔗 සම්පූර්ණ විස්තරය කියවන්න: ${articleUrl || 'https://myfeed.lk'}
+🔗 සම්පූර්ණ විස්තරය කියවන්න: ${articleUrl || (process.env['SITE_URL'] || 'https://myfeedlk.com')}
 
 #MyFeedLK #TechNews #SriLanka #${(category || 'Tech').replace(/\s+/g, '')}`;
 

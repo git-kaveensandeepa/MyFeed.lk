@@ -29,6 +29,15 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
+    match /audio_pipeline_drafts/{document} {
+      allow read, write: if true;
+    }
+
+    match /audio_editions/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /autopilot_logs/{document} {
       allow read, write: if true;
     }

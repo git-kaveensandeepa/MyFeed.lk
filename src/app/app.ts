@@ -12,11 +12,13 @@ import {WebPushService} from './web-push.service';
 import {AnalyticsService} from './analytics.service';
 import {AuthService} from './auth.service';
 import {AuthModalComponent} from './auth-modal.component';
+import {AudioMiniPlayerComponent} from './audio-mini-player.component';
+import {AudioService} from './audio.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink, RouterLinkActive, AuthModalComponent],
+  imports: [MatIconModule, RouterOutlet, RouterLink, RouterLinkActive, AuthModalComponent, AudioMiniPlayerComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
@@ -28,6 +30,7 @@ import {AuthModalComponent} from './auth-modal.component';
 })
 export class App implements OnInit {
   readonly authService = inject(AuthService);
+  readonly audioService = inject(AudioService);
   readonly searchService = inject(SearchService);
   readonly subscriberService = inject(SubscriberService);
   readonly themeManager = inject(ThemeManager);
@@ -170,7 +173,7 @@ export class App implements OnInit {
 
     const category = categoryLabels[this.feedbackCategory()] || 'Feedback';
     const message = this.feedbackMessage().trim() || 'No additional comment provided.';
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://myfeed.lk';
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://myfeedlk.com';
 
     const text = `*MyFeed.lk Feedback & Support*\n\n📌 *Category:* ${category}\n💬 *Message:* ${message}\n🔗 *Page URL:* ${currentUrl}\n\n_Sent via MyFeed.lk Support Portal_`;
 

@@ -1226,7 +1226,7 @@ export class ArticleComponent implements OnDestroy {
 
         ctx.fillStyle = '#38bdf8';
         ctx.font = 'bold 28px sans-serif';
-        ctx.fillText('Read full story on myfeed.lk', 80, 1300);
+        ctx.fillText('Read full story on myfeedlk.com', 80, 1300);
 
         ctx.fillStyle = '#64748b';
         ctx.font = '500 24px sans-serif';

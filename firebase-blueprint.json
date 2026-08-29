@@ -43,6 +43,22 @@
         "active": { "type": "boolean" }
       },
       "required": ["email"]
+    },
+    "AudioEdition": {
+      "title": "Audio Morning Edition",
+      "description": "Daily 15-minute tech wrap audio episodes covering 24-hour news windows.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "windowStart": { "type": "string" },
+        "windowEnd": { "type": "string" },
+        "audioUrl": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "narratorName": { "type": "string" },
+        "summarySinhala": { "type": "string" }
+      },
+      "required": ["title", "audioUrl", "windowStart", "windowEnd"]
     }
   },
   "firestore": {
@@ -57,6 +73,14 @@
     "/subscribers/{subscriberId}": {
       "schema": "Subscriber",
       "description": "Newsletter subscribers."
+    },
+    "/audio_editions/{editionId}": {
+      "schema": "AudioEdition",
+      "description": "Daily morning 15-minute audio briefings."
+    },
+    "/audio_pipeline_drafts/{draftId}": {
+      "schema": "AudioEdition",
+      "description": "Auto-synthesized morning edition pipeline drafts."
     }
   }
 }

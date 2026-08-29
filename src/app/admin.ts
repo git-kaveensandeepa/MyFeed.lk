@@ -7,6 +7,7 @@ import {ArticleService, Article, getCuratedTopicImages, FactCheckData, extractDo
 import {SubscriberService} from './subscriber.service';
 import {AdManagerService, Ad} from './ad-manager.service';
 import {AnalyticsService} from './analytics.service';
+import {AudioService, MorningEdition, ChapterMark} from './audio.service';
 import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc, getDocs, updateDoc} from 'firebase/firestore';
 import {db, auth} from './firebase';
 import {signInWithEmailAndPassword, signOut, onAuthStateChanged, User} from 'firebase/auth';
@@ -211,6 +212,19 @@ export interface PolishedResult {
             <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-indigo-500">auto_awesome</mat-icon>
             <span>✨ AI Studio</span>
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+          </button>
+
+          <button 
+            (click)="setActiveTab('audio')"
+            class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 relative"
+            [class.bg-white]="activeTab() === 'audio'"
+            [class.dark:bg-[#2c2c2e]]="activeTab() === 'audio'"
+            [class.text-blue-600]="activeTab() === 'audio'"
+            [class.shadow-sm]="activeTab() === 'audio'"
+            [class.text-gray-600]="activeTab() !== 'audio'"
+            [class.dark:text-gray-400]="activeTab() !== 'audio'">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-blue-500">podcasts</mat-icon>
+            <span>🎙️ Morning Audio</span>
           </button>
 
           <button 
@@ -2505,6 +2519,645 @@ export interface PolishedResult {
               </div>
             </div>
           </div>
+        } @else if (activeTab() === 'audio') {
+          <!-- Audio Briefs Tab (24-Hour 15-Minute Morning Commute Explainer) -->
+          <div class="max-w-6xl mx-auto space-y-8">
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10 relative overflow-hidden">
+              <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+              <div class="relative z-10 max-w-2xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-black uppercase tracking-wider mb-3">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">commute</mat-icon>
+                  Morning Commute Audio Studio (15-Min Daily)
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">පසුගිය පැය 24 පුවත් විනාඩි 15න්</h2>
+                <p class="text-white/80 text-xs sm:text-sm leading-relaxed">
+                  සෑම උදෑසනකම රැකියාවට හෝ ගමන් බිමන් යන ශ්‍රී ලාංකිකයන් වෙනුවෙන් (4:00 AM – 4:00 AM) කාලයේ වෙබ් අඩවියේ පළවූ සියලුම ප්‍රධාන තාක්ෂණික පුවත් එක්තැන් කළ විනාඩි 15ක ශ්‍රව්‍ය සංග්‍රහය මෙතැනින් කළමනාකරණය කරන්න.
+                </p>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Morning Editions</span>
+                  <mat-icon class="text-blue-500" style="font-size: 20px; width: 20px; height: 20px;">library_music</mat-icon>
+                </div>
+                <div class="text-3xl font-black text-[#1d1d1f] dark:text-white">{{ audioService.editions().length }}</div>
+                <p class="text-[11px] text-gray-400 mt-1">Total recorded daily wraps</p>
+              </div>
+
+              <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Commute Listens</span>
+                  <mat-icon class="text-emerald-500" style="font-size: 20px; width: 20px; height: 20px;">headphones</mat-icon>
+                </div>
+                <div class="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  {{ totalAudioListens() }}
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1">Plays across car mode & web</p>
+              </div>
+
+              <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl p-5 border border-black/5 dark:border-white/10 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Active Today</span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                </div>
+                <div class="text-sm font-bold text-[#1d1d1f] dark:text-white truncate">
+                  {{ audioService.latestEdition()?.title || 'No active brief' }}
+                </div>
+                <p class="text-[11px] text-blue-500 font-semibold mt-1">
+                  {{ audioService.latestEdition()?.timeWindowText || '4:00 AM - 4:00 AM' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Toast Notification for Audio Pipeline -->
+            @if (audioPipelineToast()) {
+              <div class="p-4 rounded-2xl bg-indigo-600 text-white shadow-xl flex items-center justify-between gap-3 animate-fade-in">
+                <div class="flex items-center gap-2.5 font-bold text-xs sm:text-sm">
+                  <mat-icon style="font-size: 20px; width: 20px; height: 20px;">info</mat-icon>
+                  <span>{{ audioPipelineToast() }}</span>
+                </div>
+                <button (click)="audioPipelineToast.set(null)" class="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all cursor-pointer">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
+                </button>
+              </div>
+            }
+
+            <!-- 🤖 AUTOMATED AI AUDIO PIPELINE CONTROL CENTER (3:30 AM -> 4:00 AM) -->
+            <div class="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-indigo-500/20 dark:border-indigo-500/30 shadow-xl shadow-indigo-500/5 space-y-6">
+              <!-- Top Banner & Colombo Clock -->
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 shrink-0">
+                    <mat-icon style="font-size: 26px; width: 26px; height: 26px;">podcasts</mat-icon>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="text-xl font-black text-[#1d1d1f] dark:text-white">Automated AI Audio Pipeline</h3>
+                      <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] font-bold">
+                        3:30 AM → 4:00 AM Daily
+                      </span>
+                      @if (audioPipelineStatus()?.enabled) {
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1">
+                          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Active Scheduled
+                        </span>
+                      } @else {
+                        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[11px] font-bold">
+                          Paused
+                        </span>
+                      }
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                      Asia/Colombo Timezone Automated 24-Hour (4 AM - 4 AM) News Audio Synthesis & Push Broadcast
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center gap-2 flex-wrap self-start lg:self-auto">
+                  <button 
+                    type="button" 
+                    (click)="triggerAudioDraftGenerationNow()" 
+                    [disabled]="isGeneratingAudioDraft() || audioPipelineStatus()?.isGenerating"
+                    class="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                    @if (isGeneratingAudioDraft() || audioPipelineStatus()?.isGenerating) {
+                      <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Synthesizing (3:30 AM)...</span>
+                    } @else {
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">bolt</mat-icon>
+                      <span>⚡ Generate Draft (3:30 AM)</span>
+                    }
+                  </button>
+
+                  <button 
+                    type="button" 
+                    (click)="triggerAudioPublishNow()" 
+                    [disabled]="isPublishingAudioEdition() || audioPipelineStatus()?.isPublishing"
+                    class="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                    @if (isPublishingAudioEdition() || audioPipelineStatus()?.isPublishing) {
+                      <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Publishing (4:00 AM)...</span>
+                    } @else {
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">rocket_launch</mat-icon>
+                      <span>🚀 Publish Live (4:00 AM)</span>
+                    }
+                  </button>
+
+                  <button 
+                    type="button" 
+                    (click)="loadAudioPipelineStatus()" 
+                    [disabled]="loadingAudioPipeline()"
+                    class="p-2.5 rounded-2xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-700 dark:text-gray-300 transition-all cursor-pointer">
+                    <mat-icon [class.animate-spin]="loadingAudioPipeline()" style="font-size: 18px; width: 18px; height: 18px;">refresh</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Two-Step Pipeline Schedule Card -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Step 1: 3:30 AM Generation -->
+                <div class="p-5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-800/40 relative overflow-hidden">
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-indigo-600/30">
+                        1
+                      </div>
+                      <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                          Step 1: Daily Synthesis
+                        </div>
+                        <div class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <span>03:30 AM</span>
+                          <span class="text-xs text-gray-500 font-normal">(Sri Lanka Time)</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-[10px] uppercase font-bold text-gray-400">Next Gen In</div>
+                      <div class="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">
+                        {{ audioPipelineNextGenCountdown() }}
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    පසුගිය පැය 24 (4:00 AM – 4:00 AM) පළවූ සියලුම පුවත් ස්වයංක්‍රීයව එක්තැන් කර, Gemini AI මගින් විනාඩි 15ක Sinhala Voice Briefing පිටපත සහ Timestamped Chapters සාදයි.
+                  </p>
+                </div>
+
+                <!-- Step 2: 4:00 AM Publish -->
+                <div class="p-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 relative overflow-hidden">
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white text-xs font-black flex items-center justify-center shadow-md shadow-emerald-600/30">
+                        2
+                      </div>
+                      <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                          Step 2: Commute Broadcast
+                        </div>
+                        <div class="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <span>04:00 AM</span>
+                          <span class="text-xs text-gray-500 font-normal">(Sri Lanka Time)</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-[10px] uppercase font-bold text-gray-400">Next Publish In</div>
+                      <div class="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">
+                        {{ audioPipelineNextPubCountdown() }}
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                    සකස් කළ ශ්‍රව්‍ය සංග්‍රහය වෙබ් අඩවියේ Featured Morning Edition ලෙස Live කර, සියලුම Subscriber ලා වෙත Instant Web Push සහ Phone Notification යවයි.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Ready Draft Preview (If Available) -->
+              @if (audioPipelineStatus()?.draftSummary; as draft) {
+                <div class="p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200/60 dark:border-blue-800/40 space-y-3">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/5 dark:border-white/10">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider">
+                        Latest Generated Draft
+                      </span>
+                      <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ draft.title }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button 
+                        (click)="generateAiVoiceOver(draft.fullNarrationScriptSinhala || draft.summarySinhala)"
+                        [disabled]="isSynthesizingVoice()"
+                        class="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer disabled:opacity-50">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">mic</mat-icon>
+                        <span>{{ isSynthesizingVoice() ? 'Generating Voice...' : '🎙️ Synthesize AI Voice' }}</span>
+                      </button>
+                      <button 
+                        (click)="applyDraftToForm(draft)" 
+                        class="px-3 py-1 rounded-xl bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 text-blue-700 dark:text-blue-300 text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">edit_note</mat-icon>
+                        <span>Load in Form Below</span>
+                      </button>
+                      <button 
+                        (click)="triggerAudioPublishNow()" 
+                        [disabled]="isPublishingAudioEdition()"
+                        class="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer disabled:opacity-50">
+                        <mat-icon style="font-size: 14px; width: 14px; height: 14px;">publish</mat-icon>
+                        <span>Publish This Draft Now</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <span class="text-gray-400 text-[10px] uppercase font-bold block">Duration</span>
+                      <span class="font-bold text-gray-800 dark:text-gray-200">{{ draft.durationFormatted }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 text-[10px] uppercase font-bold block">Chapters</span>
+                      <span class="font-bold text-gray-800 dark:text-gray-200">{{ draft.chaptersCount }} markers</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 text-[10px] uppercase font-bold block">Narrator</span>
+                      <span class="font-bold text-gray-800 dark:text-gray-200 truncate block">{{ draft.narratorName }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 text-[10px] uppercase font-bold block">Audio Source</span>
+                      <a [href]="draft.audioUrl" target="_blank" class="text-blue-600 hover:underline font-mono truncate block">Preview Link ↗</a>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Pipeline Settings & Toggles -->
+              <div class="p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-4">
+                <div class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Pipeline Automation Preferences</span>
+                  <span class="text-[11px] text-gray-400 font-normal">Auto-saved to Cloud Configuration</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <!-- Toggle 1: Enabled -->
+                  <label class="flex items-center gap-2.5 p-3 rounded-xl bg-white dark:bg-[#2c2c2e] border border-black/5 dark:border-white/5 cursor-pointer hover:border-indigo-500/50 transition-all">
+                    <input 
+                      type="checkbox" 
+                      [checked]="audioPipelineStatus()?.enabled" 
+                      (change)="saveAudioPipelineConfig({ enabled: $any($event.target).checked })"
+                      class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+                    <div class="text-xs">
+                      <span class="font-bold block text-gray-900 dark:text-white">Pipeline Active</span>
+                      <span class="text-[10px] text-gray-500">Run automatically</span>
+                    </div>
+                  </label>
+
+                  <!-- Toggle 2: Auto-Publish -->
+                  <label class="flex items-center gap-2.5 p-3 rounded-xl bg-white dark:bg-[#2c2c2e] border border-black/5 dark:border-white/5 cursor-pointer hover:border-emerald-500/50 transition-all">
+                    <input 
+                      type="checkbox" 
+                      [checked]="audioPipelineStatus()?.autoPublish" 
+                      (change)="saveAudioPipelineConfig({ autoPublish: $any($event.target).checked })"
+                      class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                    <div class="text-xs">
+                      <span class="font-bold block text-gray-900 dark:text-white">Auto-Publish at 4 AM</span>
+                      <span class="text-[10px] text-gray-500">Publish without manual click</span>
+                    </div>
+                  </label>
+
+                  <!-- Toggle 3: Web Push -->
+                  <label class="flex items-center gap-2.5 p-3 rounded-xl bg-white dark:bg-[#2c2c2e] border border-black/5 dark:border-white/5 cursor-pointer hover:border-blue-500/50 transition-all">
+                    <input 
+                      type="checkbox" 
+                      [checked]="audioPipelineStatus()?.autoWebPush" 
+                      (change)="saveAudioPipelineConfig({ autoWebPush: $any($event.target).checked })"
+                      class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <div class="text-xs">
+                      <span class="font-bold block text-gray-900 dark:text-white">Web Push on Publish</span>
+                      <span class="text-[10px] text-gray-500">Browser push to listeners</span>
+                    </div>
+                  </label>
+
+                  <!-- Toggle 4: Phone Alert -->
+                  <label class="flex items-center gap-2.5 p-3 rounded-xl bg-white dark:bg-[#2c2c2e] border border-black/5 dark:border-white/5 cursor-pointer hover:border-purple-500/50 transition-all">
+                    <input 
+                      type="checkbox" 
+                      [checked]="audioPipelineStatus()?.autoPhonePush" 
+                      (change)="saveAudioPipelineConfig({ autoPhonePush: $any($event.target).checked })"
+                      class="w-4 h-4 text-purple-600 rounded focus:ring-purple-500">
+                    <div class="text-xs">
+                      <span class="font-bold block text-gray-900 dark:text-white">Phone Alerts (ntfy)</span>
+                      <span class="text-[10px] text-gray-500">Direct mobile broadcast</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Pipeline Execution History & Audit Logs -->
+              <div class="space-y-3 pt-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <mat-icon class="text-indigo-600" style="font-size: 18px; width: 18px; height: 18px;">history</mat-icon>
+                    <span class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Audio Pipeline Execution Logs</span>
+                  </div>
+                  <span class="text-[11px] text-gray-400 font-mono">{{ (audioPipelineStatus()?.logs || []).length }} events recorded</span>
+                </div>
+
+                @if (!audioPipelineStatus()?.logs || audioPipelineStatus()?.logs?.length === 0) {
+                  <div class="p-6 text-center text-gray-400 text-xs rounded-2xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                    No execution events recorded yet. Click "⚡ Generate Draft (3:30 AM)" to run an immediate test.
+                  </div>
+                } @else {
+                  <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    @for (log of audioPipelineStatus()?.logs; track log.timestamp) {
+                      <div class="p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                           [class.bg-emerald-50]="log.status === 'success'"
+                           [class.border-emerald-200]="log.status === 'success'"
+                           [class.dark:bg-emerald-950/20]="log.status === 'success'"
+                           [class.dark:border-emerald-800/40]="log.status === 'success'"
+                           [class.bg-red-50]="log.status === 'error'"
+                           [class.border-red-200]="log.status === 'error'"
+                           [class.dark:bg-red-950/20]="log.status === 'error'"
+                           [class.dark:border-red-800/40]="log.status === 'error'">
+                        <div class="flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="log.status === 'success'" [class.bg-red-500]="log.status === 'error'"></span>
+                          <span class="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[10px]">{{ log.step }}</span>
+                          <span class="text-gray-700 dark:text-gray-300">{{ log.message }}</span>
+                        </div>
+                        <span class="text-[11px] text-gray-500 font-mono shrink-0">{{ log.timestamp }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Create / Edit Form -->
+            <div class="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 dark:border-white/10 shadow-sm">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-black/5 dark:border-white/10 mb-6 gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                    <mat-icon style="font-size: 22px; width: 22px; height: 22px;">mic</mat-icon>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-black text-[#1d1d1f] dark:text-white">නව Morning Edition එකක් එක් කරන්න</h3>
+                    <p class="text-xs text-gray-500">Publish 24-Hour 15-Minute Audio Brief</p>
+                  </div>
+                </div>
+
+                <button 
+                  type="button" 
+                  (click)="autoPopulateChaptersFromArticles()" 
+                  class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">auto_fix_high</mat-icon>
+                  <span>Auto-Fill Chapters From Latest News</span>
+                </button>
+              </div>
+
+              <form (ngSubmit)="saveMorningEdition()" class="space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label for="adminAudioTitleInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Edition Title / නම</label>
+                    <input 
+                      id="adminAudioTitleInput"
+                      type="text" 
+                      [(ngModel)]="audioEditionTitle" 
+                      name="audioEditionTitle" 
+                      required 
+                      placeholder="MyFeed Morning Tech Wrap" 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div>
+                    <label for="adminAudioTimeWindowInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Time Window / ආවරණය වන කාලය</label>
+                    <input 
+                      id="adminAudioTimeWindowInput"
+                      type="text" 
+                      [(ngModel)]="audioTimeWindowText" 
+                      name="audioTimeWindowText" 
+                      required 
+                      placeholder="2026/08/26 4:00 AM – 2026/08/27 4:00 AM" 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <!-- AI Voice Over Generation Studio -->
+                <div class="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-blue-50/80 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-blue-950/30 border border-indigo-200/60 dark:border-indigo-800/40 space-y-4">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">graphic_eq</mat-icon>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">🎙️ Gemini AI Voice Over Studio (Sinhala / English)</h4>
+                        <p class="text-[11px] text-gray-500">Generate studio-quality spoken audio from your script using Gemini 2.5 Speech</p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <!-- Voice Selector -->
+                      <select 
+                        [(ngModel)]="selectedTtsVoice" 
+                        name="selectedTtsVoice"
+                        class="px-3 py-1.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-indigo-200 dark:border-indigo-800/60 text-xs font-bold text-gray-800 dark:text-gray-200 outline-none cursor-pointer">
+                        <option value="Puck">👦 Puck (Energetic Male)</option>
+                        <option value="Kore">👩 Kore (Warm Studio Female)</option>
+                        <option value="Fenrir">🎙️ Fenrir (Deep Resonance)</option>
+                        <option value="Charon">📻 Charon (Classic Radio)</option>
+                        <option value="Aoede">🌸 Aoede (Smooth Narrative)</option>
+                      </select>
+
+                      <button 
+                        type="button" 
+                        (click)="generateAiVoiceOver()" 
+                        [disabled]="isSynthesizingVoice()"
+                        class="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                        @if (isSynthesizingVoice()) {
+                          <mat-icon class="animate-spin" style="font-size: 14px; width: 14px; height: 14px;">sync</mat-icon>
+                          <span>Synthesizing Voice...</span>
+                        } @else {
+                          <mat-icon style="font-size: 14px; width: 14px; height: 14px;">auto_awesome</mat-icon>
+                          <span>Generate Voice Over</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (ttsPreviewAudioUrl()) {
+                    <div class="p-3 rounded-xl bg-white/90 dark:bg-black/40 border border-indigo-200 dark:border-indigo-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">✨ Generated Voice Ready for Commute Player</span>
+                      </div>
+                      <audio controls [src]="ttsPreviewAudioUrl()" class="h-8 max-w-xs"></audio>
+                    </div>
+                  }
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div class="sm:col-span-2">
+                    <label for="adminAudioUrlInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Audio MP3 Direct URL / Stream Link</label>
+                    <input 
+                      id="adminAudioUrlInput"
+                      type="url" 
+                      [(ngModel)]="audioUrlInput" 
+                      name="audioUrlInput" 
+                      required 
+                      placeholder="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3" 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div>
+                    <label for="adminAudioDurationInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Duration (e.g. 15:15)</label>
+                    <input 
+                      id="adminAudioDurationInput"
+                      type="text" 
+                      [(ngModel)]="audioDurationFormatted" 
+                      name="audioDurationFormatted" 
+                      required 
+                      placeholder="15:15" 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label for="adminAudioNarratorInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Narrator / Host Name</label>
+                    <input 
+                      id="adminAudioNarratorInput"
+                      type="text" 
+                      [(ngModel)]="audioNarrator" 
+                      name="audioNarrator" 
+                      required 
+                      placeholder="Kaveen Sandeepa & MyFeed Audio Studio" 
+                      class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div>
+                    <span class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Set as Featured / Default Daily</span>
+                    <div class="flex items-center gap-3 pt-2">
+                      <label for="adminAudioIsFeaturedInput" class="relative inline-flex items-center cursor-pointer">
+                        <input id="adminAudioIsFeaturedInput" type="checkbox" [(ngModel)]="audioIsFeatured" name="audioIsFeatured" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                      <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Set as today's active commute brief</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="adminAudioSummaryInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Brief Summary (Sinhala)</label>
+                  <textarea 
+                    id="adminAudioSummaryInput"
+                    rows="2" 
+                    [(ngModel)]="audioSummarySinhala" 
+                    name="audioSummarySinhala" 
+                    placeholder="පසුගිය පැය 24 තුළ වාර්තා වූ ප්‍රධාන පුවත් පිළිබඳ සංක්ෂිප්ත සටහන..."
+                    class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div>
+                  <label for="adminAudioFullScriptInput" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Full Voice Over Script (Sinhala)</label>
+                  <textarea 
+                    id="adminAudioFullScriptInput"
+                    rows="8" 
+                    [(ngModel)]="audioFullScriptSinhala" 
+                    name="audioFullScriptSinhala" 
+                    placeholder="Complete broadcast script to be synthesized into audio..."
+                    class="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Chapters Section -->
+                <div class="p-5 rounded-2xl bg-gray-50/80 dark:bg-white/5 border border-black/5 dark:border-white/10">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                      <mat-icon class="text-blue-500" style="font-size: 18px; width: 18px; height: 18px;">format_list_numbered</mat-icon>
+                      <span class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Audio Chapters & News Timestamps ({{ audioChapters.length }})</span>
+                    </div>
+                    <button type="button" (click)="addChapterRow()" class="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold flex items-center gap-1 transition-all">
+                      <mat-icon style="font-size: 16px; width: 16px; height: 16px;">add</mat-icon>
+                      <span>Add Chapter</span>
+                    </button>
+                  </div>
+
+                  <div class="space-y-3">
+                    @for (chap of audioChapters; track $index; let i = $index) {
+                      <div class="flex flex-col sm:flex-row items-center gap-2.5 p-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-black/5 dark:border-white/10 shadow-xs">
+                        <div class="w-24 shrink-0">
+                          <input 
+                            type="number" 
+                            [(ngModel)]="chap.time" 
+                            [name]="'chap_time_' + i" 
+                            placeholder="Secs" 
+                            class="w-full px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-mono text-center font-bold" />
+                        </div>
+                        <div class="flex-1 min-w-0 w-full">
+                          <input 
+                            type="text" 
+                            [(ngModel)]="chap.title" 
+                            [name]="'chap_title_' + i" 
+                            placeholder="Chapter title in Sinhala or English" 
+                            class="w-full px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-semibold" />
+                        </div>
+                        <button type="button" (click)="removeChapterRow(i)" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
+                          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_outline</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                  <button 
+                    type="submit" 
+                    [disabled]="isSavingAudioEdition() || !audioEditionTitle || !audioUrlInput" 
+                    class="px-8 py-3.5 bg-[#007AFF] hover:bg-[#0062cc] disabled:opacity-50 text-white rounded-2xl font-bold text-sm transition-all shadow-md shadow-[#007AFF]/20 flex items-center gap-2 cursor-pointer active:scale-[0.98]">
+                    @if (isSavingAudioEdition()) {
+                      <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Publishing Edition...</span>
+                    } @else {
+                      <mat-icon style="font-size: 18px; width: 18px; height: 18px;">publish</mat-icon>
+                      <span>Publish Morning Audio Edition</span>
+                    }
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Existing Editions List -->
+            <div class="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 dark:border-white/10 shadow-sm">
+              <div class="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/10 mb-6">
+                <h3 class="text-base font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                  <mat-icon class="text-blue-500" style="font-size: 20px; width: 20px; height: 20px;">queue_music</mat-icon>
+                  <span>Published Morning Editions ({{ audioService.editions().length }})</span>
+                </h3>
+              </div>
+
+              <div class="space-y-4">
+                @for (ed of audioService.editions(); track ed.id) {
+                  <div class="p-5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-start gap-4 flex-1 min-w-0">
+                      <button (click)="audioService.playEdition(ed)" class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30 hover:scale-105 transition-transform shrink-0 cursor-pointer">
+                        <mat-icon style="font-size: 24px; width: 24px; height: 24px;">
+                          {{ audioService.currentEdition()?.id === ed.id && audioService.isPlaying() ? 'pause' : 'play_arrow' }}
+                        </mat-icon>
+                      </button>
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                          <span class="font-bold text-sm sm:text-base text-[#1d1d1f] dark:text-white">{{ ed.title }}</span>
+                          <span class="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold">{{ ed.durationFormatted }}</span>
+                          @if (ed.isFeatured) {
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">Active Today</span>
+                          }
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-1">{{ ed.summary }}</p>
+                        <div class="flex items-center gap-3 text-[11px] text-gray-400">
+                          <span class="flex items-center gap-1"><mat-icon style="font-size: 14px; width: 14px; height: 14px;">calendar_today</mat-icon> {{ ed.timeWindowText }}</span>
+                          <span class="flex items-center gap-1"><mat-icon style="font-size: 14px; width: 14px; height: 14px;">headphones</mat-icon> {{ ed.listenCount }} listens</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      <button (click)="audioService.playEdition(ed)" class="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-1 cursor-pointer">
+                        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">play_circle</mat-icon>
+                        <span>Listen</span>
+                      </button>
+                      <button (click)="deleteAudioEdition(ed.id)" class="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer">
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+                @if (audioService.editions().length === 0) {
+                  <div class="p-8 text-center text-gray-400 text-sm">
+                    No morning editions published yet. Fill in the form above to publish your first daily brief.
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
         }
       }
 
@@ -2794,12 +3447,68 @@ export class AdminComponent {
   readonly articleService = inject(ArticleService);
   readonly subscriberService = inject(SubscriberService);
   readonly analyticsService = inject(AnalyticsService);
+  readonly audioService = inject(AudioService);
   adService = inject(AdManagerService);
   
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
+  readonly activeTab = signal<'articles' | 'auto-studio' | 'audio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
+  
+  // Audio Studio Signals & State
+  audioEditionTitle = 'MyFeed Morning Tech Wrap';
+  audioTimeWindowText = '2026/08/26 4:00 AM – 2026/08/27 4:00 AM';
+  audioUrlInput = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=news-ambient-112199.mp3';
+  audioDurationFormatted = '15:15';
+  audioNarrator = 'Kaveen Sandeepa & MyFeed Audio Studio';
+  audioSummarySinhala = 'පසුගිය පැය 24 (4:00 AM සිට 4:00 AM) තුළ MyFeed.lk හි පළවූ තාක්ෂණික පුවත් පිළිබඳ විනාඩි 15ක සම්පූර්ණ විග්‍රහය.';
+  audioFullScriptSinhala = '';
+  audioIsFeatured = true;
+  audioChapters: ChapterMark[] = [
+    { time: 0, title: 'Introduction & Morning Headlines' },
+    { time: 90, title: 'Top Sri Lanka Tech & Business Stories' },
+    { time: 380, title: 'Global AI & Smartphone Announcements' },
+    { time: 660, title: 'Market, Telecom & Startup Insights' },
+    { time: 840, title: 'Editor Wrap-up & Commute Forecast' }
+  ];
+  readonly isSavingAudioEdition = signal(false);
+
+  // Automated AI Audio Pipeline (3:30 AM Generate -> 4:00 AM Publish) Signals
+  readonly audioPipelineStatus = signal<{
+    enabled: boolean;
+    generationTimeColombo: string;
+    publishTimeColombo: string;
+    autoPublish: boolean;
+    autoWebPush: boolean;
+    autoPhonePush: boolean;
+    narratorName: string;
+    currentTimeColombo: string;
+    nextGenerationColombo: string;
+    nextPublishColombo: string;
+    isGenerating: boolean;
+    isPublishing: boolean;
+    hasDraft: boolean;
+    draftSummary: any;
+    logs: any[];
+    config: any;
+  } | null>(null);
+  readonly loadingAudioPipeline = signal<boolean>(false);
+  readonly isGeneratingAudioDraft = signal<boolean>(false);
+  readonly isPublishingAudioEdition = signal<boolean>(false);
+  readonly isSavingAudioConfig = signal<boolean>(false);
+  readonly audioPipelineToast = signal<string | null>(null);
+  readonly audioPipelineNextGenCountdown = signal<string>('--:--');
+  readonly audioPipelineNextPubCountdown = signal<string>('--:--');
+  private audioPipelineCountdownInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Gemini AI Voice Synthesizer Signals
+  readonly isSynthesizingVoice = signal<boolean>(false);
+  selectedTtsVoice = 'Puck';
+  readonly ttsPreviewAudioUrl = signal<string | null>(null);
+
+  readonly totalAudioListens = computed(() => {
+    return this.audioService.editions().reduce((sum, ed) => sum + (ed.listenCount || 0), 0);
+  });
   
   // Auto Studio signals & state
   readonly autoStudioSubTab = signal<'trending' | 'topic' | 'url' | 'polish' | 'autopilot'>('trending');
@@ -2964,7 +3673,7 @@ export class AdminComponent {
   readonly isTriggeringAutoPilot = signal(false);
   readonly isSavingAutoPilotConfig = signal(false);
   readonly isLoadingAutoPilot = signal(false);
-  cronWebhookUrl = 'https://myfeed.lk/api/cron/sync-news';
+  cronWebhookUrl = 'https://myfeedlk.com/api/cron/sync-news';
   private autoPilotNextTargetTime = Date.now() + 60 * 60 * 1000;
   private autoPilotCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -3034,6 +3743,8 @@ export class AdminComponent {
         this.loadWebPushSubscribersCount();
         this.loadAutoPilotStatus();
         this.startAutoPilotCountdown();
+        this.loadAudioPipelineStatus();
+        this.startAudioPipelineCountdown();
       }
     });
   }
@@ -5120,10 +5831,305 @@ ${article.summary}
   readonly usersList = signal<UserProfile[]>([]);
   readonly loadingUsers = signal<boolean>(false);
 
-  setActiveTab(tabName: 'articles' | 'auto-studio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users') {
+  setActiveTab(tabName: 'articles' | 'auto-studio' | 'audio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users') {
     this.activeTab.set(tabName);
     if (tabName === 'users') {
       this.fetchUsers();
+    } else if (tabName === 'audio') {
+      this.loadAudioPipelineStatus();
+    }
+  }
+
+  // ==========================================
+  // AUDIO 15-MINUTE MORNING COMMUTE METHODS
+  // ==========================================
+  addChapterRow() {
+    const lastChapter = this.audioChapters[this.audioChapters.length - 1];
+    const lastTime = lastChapter ? ((lastChapter.time ?? lastChapter.seconds ?? 0) + 120) : 0;
+    this.audioChapters.push({
+      time: Math.min(lastTime, 900),
+      title: 'New Story Chapter'
+    });
+  }
+
+  removeChapterRow(index: number) {
+    if (this.audioChapters.length > 1) {
+      this.audioChapters.splice(index, 1);
+    }
+  }
+
+  autoPopulateChaptersFromArticles() {
+    const articles = this.articleService.articles().slice(0, 6);
+    if (articles.length === 0) return;
+
+    const chapters: ChapterMark[] = [
+      { time: 0, title: '🌅 Commute Opening & Highlights Overview' }
+    ];
+
+    // Spread timestamps across ~15 minutes (900 seconds)
+    const step = Math.floor(840 / Math.max(articles.length, 1));
+    articles.forEach((art, idx) => {
+      chapters.push({
+        time: 60 + (idx * step),
+        title: art.title.length > 55 ? art.title.substring(0, 52) + '...' : art.title,
+        articleId: art.id
+      });
+    });
+
+    chapters.push({
+      time: 870,
+      title: '📊 Market Brief & Commute Sign-off'
+    });
+
+    this.audioChapters = chapters;
+  }
+
+  async saveMorningEdition() {
+    if (!this.audioEditionTitle || !this.audioUrlInput) return;
+    this.isSavingAudioEdition.set(true);
+
+    try {
+      // Calculate duration seconds from "MM:SS"
+      let durationSecs = 915; // default ~15 mins
+      if (this.audioDurationFormatted.includes(':')) {
+        const parts = this.audioDurationFormatted.split(':');
+        const mins = parseInt(parts[0], 10) || 0;
+        const secs = parseInt(parts[1], 10) || 0;
+        durationSecs = (mins * 60) + secs;
+      }
+
+      const edition: Omit<MorningEdition, 'id'> = {
+        title: this.audioEditionTitle,
+        timeWindowText: this.audioTimeWindowText,
+        audioUrl: this.audioUrlInput,
+        durationSeconds: durationSecs,
+        durationFormatted: this.audioDurationFormatted || '15:15',
+        narratorName: this.audioNarrator || 'Kaveen Sandeepa & MyFeed Audio Studio',
+        summarySinhala: this.audioSummarySinhala || 'පසුගිය පැය 24 පුවත් විනාඩි 15ක විග්‍රහය.',
+        summary: this.audioSummarySinhala || 'පසුගිය පැය 24 පුවත් විනාඩි 15ක විග්‍රහය.',
+        date: new Date().toISOString().split('T')[0],
+        listenCount: 0,
+        isFeatured: this.audioIsFeatured,
+        chapters: this.audioChapters.filter(c => c.title.trim().length > 0)
+      };
+
+      await this.audioService.saveEdition(edition);
+      alert('Morning Audio Edition published successfully!');
+    } catch (err) {
+      console.error('Error saving audio edition:', err);
+      alert('Failed to publish audio edition.');
+    } finally {
+      this.isSavingAudioEdition.set(false);
+    }
+  }
+
+  async deleteAudioEdition(id: string) {
+    if (confirm('මෙම Morning Audio Edition එක delete කිරීමට අවශ්‍යද?')) {
+      await this.audioService.deleteEdition(id);
+    }
+  }
+
+  // ==========================================
+  // AUTOMATED AI AUDIO PIPELINE (3:30 AM -> 4:00 AM) METHODS
+  // ==========================================
+  async loadAudioPipelineStatus() {
+    this.loadingAudioPipeline.set(true);
+    try {
+      const res = await fetch('/api/admin/audio-pipeline/status');
+      if (res.ok) {
+        const data = await res.json();
+        this.audioPipelineStatus.set(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load audio pipeline status:', e);
+    } finally {
+      this.loadingAudioPipeline.set(false);
+    }
+  }
+
+  startAudioPipelineCountdown() {
+    if (typeof window === 'undefined') return;
+    if (this.audioPipelineCountdownInterval) {
+      clearInterval(this.audioPipelineCountdownInterval);
+    }
+    this.updateAudioPipelineCountdown();
+    this.audioPipelineCountdownInterval = setInterval(() => {
+      this.updateAudioPipelineCountdown();
+    }, 1000);
+  }
+
+  private updateAudioPipelineCountdown() {
+    const status = this.audioPipelineStatus();
+    if (!status || !status.enabled) {
+      this.audioPipelineNextGenCountdown.set('PAUSED');
+      this.audioPipelineNextPubCountdown.set('PAUSED');
+      return;
+    }
+
+    const now = new Date();
+    // Calculate Colombo time (UTC + 5:30)
+    const nowUtc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const colomboNow = new Date(nowUtc + (5.5 * 3600000));
+    
+    // Parse 03:30 target
+    const [genH, genM] = (status.generationTimeColombo || '03:30').split(':').map(Number);
+    const targetGen = new Date(colomboNow);
+    targetGen.setHours(genH, genM, 0, 0);
+    if (targetGen.getTime() <= colomboNow.getTime()) {
+      targetGen.setDate(targetGen.getDate() + 1);
+    }
+    const genDiff = Math.max(0, targetGen.getTime() - colomboNow.getTime());
+    const genMins = Math.floor(genDiff / 60000);
+    const genSecs = Math.floor((genDiff % 60000) / 1000);
+    const genHrs = Math.floor(genMins / 60);
+    const remGenMins = genMins % 60;
+    this.audioPipelineNextGenCountdown.set(`${genHrs.toString().padStart(2, '0')}h ${remGenMins.toString().padStart(2, '0')}m ${genSecs.toString().padStart(2, '0')}s`);
+
+    // Parse 04:00 target
+    const [pubH, pubM] = (status.publishTimeColombo || '04:00').split(':').map(Number);
+    const targetPub = new Date(colomboNow);
+    targetPub.setHours(pubH, pubM, 0, 0);
+    if (targetPub.getTime() <= colomboNow.getTime()) {
+      targetPub.setDate(targetPub.getDate() + 1);
+    }
+    const pubDiff = Math.max(0, targetPub.getTime() - colomboNow.getTime());
+    const pubMins = Math.floor(pubDiff / 60000);
+    const pubSecs = Math.floor((pubDiff % 60000) / 1000);
+    const pubHrs = Math.floor(pubMins / 60);
+    const remPubMins = pubMins % 60;
+    this.audioPipelineNextPubCountdown.set(`${pubHrs.toString().padStart(2, '0')}h ${remPubMins.toString().padStart(2, '0')}m ${pubSecs.toString().padStart(2, '0')}s`);
+  }
+
+  async saveAudioPipelineConfig(configUpdates: Record<string, unknown>) {
+    this.isSavingAudioConfig.set(true);
+    try {
+      const current = this.audioPipelineStatus()?.config || {};
+      const payload = { ...current, ...configUpdates };
+      const res = await fetch('/api/admin/audio-pipeline/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        await this.loadAudioPipelineStatus();
+        this.audioPipelineToast.set('✅ Audio Pipeline settings updated successfully!');
+        setTimeout(() => this.audioPipelineToast.set(null), 4000);
+      }
+    } catch (e) {
+      console.error('Error saving audio pipeline config:', e);
+      alert('Failed to save audio pipeline config');
+    } finally {
+      this.isSavingAudioConfig.set(false);
+    }
+  }
+
+  async triggerAudioDraftGenerationNow() {
+    this.isGeneratingAudioDraft.set(true);
+    try {
+      const res = await fetch('/api/admin/audio-pipeline/generate-now', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        this.audioPipelineToast.set('🎙️ 3:30 AM Commute Draft synthesized successfully!');
+        await this.loadAudioPipelineStatus();
+        if (data.draft) {
+          this.applyDraftToForm(data.draft);
+        }
+      } else {
+        alert('Generation failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Error triggering audio generation: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      this.isGeneratingAudioDraft.set(false);
+      setTimeout(() => this.audioPipelineToast.set(null), 6000);
+    }
+  }
+
+  async triggerAudioPublishNow() {
+    this.isPublishingAudioEdition.set(true);
+    try {
+      const res = await fetch('/api/admin/audio-pipeline/publish-now', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        this.audioPipelineToast.set('🚀 4:00 AM Morning Edition Published to App & Web Push Dispatched!');
+        await this.loadAudioPipelineStatus();
+        await this.audioService.loadEditions();
+      } else {
+        alert('Publish failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Error publishing audio edition: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      this.isPublishingAudioEdition.set(false);
+      setTimeout(() => this.audioPipelineToast.set(null), 6000);
+    }
+  }
+
+  applyDraftToForm(customDraft?: any) {
+    const draft = customDraft || this.audioPipelineStatus()?.draftSummary;
+    if (!draft) return;
+    if (draft.title) this.audioEditionTitle = draft.title;
+    if (draft.windowStart && draft.windowEnd) this.audioTimeWindowText = `${draft.windowStart} – ${draft.windowEnd}`;
+    if (draft.audioUrl) {
+      this.audioUrlInput = draft.audioUrl;
+      if (draft.audioUrl.startsWith('/api/audio/file/')) {
+        this.ttsPreviewAudioUrl.set(draft.audioUrl);
+      }
+    }
+    if (draft.durationFormatted) this.audioDurationFormatted = draft.durationFormatted;
+    if (draft.narratorName) this.audioNarrator = draft.narratorName;
+    if (draft.summarySinhala) this.audioSummarySinhala = draft.summarySinhala;
+    if (draft.fullNarrationScriptSinhala) this.audioFullScriptSinhala = draft.fullNarrationScriptSinhala;
+    if (Array.isArray(draft.chapters)) {
+      this.audioChapters = draft.chapters.map((c: any) => ({
+        time: typeof c.seconds === 'number' ? c.seconds : (c.time || 0),
+        title: c.title || 'Story Chapter',
+        articleId: c.articleId
+      }));
+    }
+    this.audioPipelineToast.set('📥 Draft loaded into manual edition editor!');
+    setTimeout(() => this.audioPipelineToast.set(null), 4000);
+  }
+
+  async generateAiVoiceOver(customScript?: string) {
+    const textToSynthesize = (customScript || this.audioFullScriptSinhala || this.audioSummarySinhala || this.audioPipelineStatus()?.draftSummary?.fullNarrationScriptSinhala || this.audioPipelineStatus()?.draftSummary?.summarySinhala || this.audioEditionTitle).trim();
+
+    if (!textToSynthesize) {
+      alert('කරුණාකර Voice Over එකක් සෑදීමට Summary එකක් හෝ Script එකක් ඇතුළත් කරන්න.');
+      return;
+    }
+
+    this.isSynthesizingVoice.set(true);
+    this.audioPipelineToast.set(`🎙️ Synthesizing Studio Voice Over with Gemini (${this.selectedTtsVoice})...`);
+
+    try {
+      const res = await fetch('/api/audio/generate-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: textToSynthesize,
+          title: this.audioEditionTitle || 'MyFeed Morning Tech Wrap',
+          voiceName: this.selectedTtsVoice
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.audioUrl) {
+        this.audioUrlInput = data.audioUrl;
+        if (data.durationFormatted) {
+          this.audioDurationFormatted = data.durationFormatted;
+        }
+        this.ttsPreviewAudioUrl.set(data.audioUrl);
+        this.audioPipelineToast.set('✨ Gemini AI Voice Over Generated & Attached Successfully!');
+        await this.loadAudioPipelineStatus();
+      } else {
+        alert('Voice synthesis failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err: any) {
+      alert('Error generating voice: ' + (err?.message || String(err)));
+    } finally {
+      this.isSynthesizingVoice.set(false);
+      setTimeout(() => this.audioPipelineToast.set(null), 5000);
     }
   }
 

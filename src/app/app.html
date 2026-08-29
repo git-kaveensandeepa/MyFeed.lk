@@ -99,9 +99,9 @@
 
     <a routerLink="/radio" routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
       <div class="flex items-center gap-3">
-        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-500">podcasts</mat-icon> Audio
+        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-500">podcasts</mat-icon> Audio Brief
       </div>
-      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">Soon</span>
+      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">15-Min</span>
     </a>
 
     <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-8 mb-2 px-3">Library & Me</div>
@@ -223,8 +223,8 @@
   <!-- Audio Podcasts Tab -->
   <a routerLink="/radio" #rlaRadio="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
     <div class="relative flex items-center justify-center">
-      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">graphic_eq</mat-icon>
-      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-blue-500 text-[8px] font-black text-white leading-none shadow-xs">SOON</span>
+      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">podcasts</mat-icon>
+      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-blue-600 text-[8px] font-black text-white leading-none shadow-xs">15M</span>
       @if (rlaRadio.isActive) {
         <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
       }
@@ -502,6 +502,9 @@
 
 <!-- Auth Modal & Profile Management -->
 <app-auth-modal></app-auth-modal>
+
+<!-- Global Commute Audio Mini Player -->
+<app-audio-mini-player></app-audio-mini-player>
 
 <!-- Verification Modal -->
 @if (authService.verificationModalOpen()) {
