@@ -920,12 +920,61 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
         </div>
       }
     } @else {
-      <div class="min-h-[calc(100vh-200px)] flex flex-col items-center justify-center text-[#1d1d1f]/50 dark:text-white/50">
-        <mat-icon class="opacity-50 mb-4" style="font-size: 48px; width: 48px; height: 48px;">error_outline</mat-icon>
-        <p class="text-xl font-medium tracking-tight mb-6">Article not found.</p>
-        <a routerLink="/" class="px-6 py-3 rounded-full bg-[#1d1d1f] dark:bg-white text-white dark:text-[#121212] font-medium hover:bg-black/80 dark:hover:bg-gray-200 transition-colors cursor-pointer">
-          Return to Home
-        </a>
+      <div class="min-h-[70vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 max-w-4xl mx-auto text-center animate-fade-in">
+        <div class="w-20 h-20 rounded-3xl bg-blue-500/10 dark:bg-blue-500/20 text-[#007AFF] flex items-center justify-center mb-6 shadow-inner">
+          <mat-icon style="font-size: 40px; width: 40px; height: 40px;">article</mat-icon>
+        </div>
+        
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[#000000] dark:text-white mb-3">
+          ලිපිය හමු නොවීය
+        </h1>
+        <p class="text-sm sm:text-base text-[#8e8e93] max-w-md mx-auto mb-8 leading-relaxed font-normal">
+          ඔබ සොයන පුවත ඉවත් කර හෝ වෙනත් ලිපිනයකට මාරු කර තිබිය හැක. පහතින් ඇති නවතම පුවත් කියවන්න.
+        </p>
+        
+        <div class="flex flex-wrap items-center justify-center gap-3 mb-12">
+          <a routerLink="/" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95 cursor-pointer">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;">home</mat-icon>
+            <span>මුල් පිටුවට යන්න (Home)</span>
+          </a>
+          <a routerLink="/radio" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-sm border border-black/5 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-all active:scale-95 cursor-pointer">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-500">radio</mat-icon>
+            <span>AI Audio Journal</span>
+          </a>
+        </div>
+
+        @if (articleService.articles().length > 0) {
+          <div class="w-full text-left pt-8 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-lg sm:text-xl font-bold text-[#000000] dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#007AFF] animate-pulse"></span>
+                <span>නවතම පුවත් (Trending Tech Stories)</span>
+              </h2>
+              <a routerLink="/" class="text-xs font-bold text-[#007AFF] hover:underline flex items-center gap-1">
+                <span>සියල්ල බලන්න</span>
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">chevron_right</mat-icon>
+              </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              @for (art of articleService.articles().slice(0, 6); track art.id) {
+                <a [routerLink]="['/article', art.slug || art.id]" class="group bg-white dark:bg-[#1c1c1e] rounded-2xl p-3 border border-black/[0.06] dark:border-white/[0.08] shadow-xs hover:shadow-md transition-all flex flex-col gap-2.5 cursor-pointer ios-card">
+                  <div class="w-full aspect-[16/9] rounded-xl overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative">
+                    <img [src]="art.imageUrl" [alt]="art.title" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold uppercase">{{ art.category }}</span>
+                  </div>
+                  <h3 class="text-xs sm:text-sm font-bold text-[#000000] dark:text-white line-clamp-2 group-hover:text-[#007AFF] transition-colors leading-snug">
+                    {{ art.title }}
+                  </h3>
+                  <div class="flex items-center justify-between text-[11px] text-[#8e8e93] mt-auto pt-1">
+                    <span>{{ art.date }}</span>
+                    <span>{{ art.readTime }}</span>
+                  </div>
+                </a>
+              }
+            </div>
+          </div>
+        }
       </div>
     }
   `,
@@ -966,10 +1015,59 @@ export class ArticleComponent implements OnDestroy {
     this.route.paramMap.pipe(map(params => params.get('id')))
   );
 
+  private findArticleInList(list: Article[], searchKey: string | null | undefined): Article | null {
+    if (!searchKey || !list || list.length === 0) return null;
+    const rawKey = searchKey.trim();
+    if (!rawKey) return null;
+    
+    let decodedKey = rawKey;
+    try {
+      decodedKey = decodeURIComponent(rawKey);
+    } catch {
+      decodedKey = rawKey;
+    }
+    const cleanKey = decodedKey.toLowerCase().replace(/\/+$/, '').trim();
+    const normKey = cleanKey.replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+
+    // 1. Direct ID or exact slug match
+    const exact = list.find(a => 
+      a.id === rawKey || 
+      a.id === cleanKey || 
+      (a.slug && (a.slug === rawKey || a.slug === cleanKey || a.slug === decodedKey))
+    );
+    if (exact) return exact;
+
+    // 2. Case-insensitive slug match
+    const caseInsensitive = list.find(a => 
+      a.slug && a.slug.toLowerCase().trim() === cleanKey
+    );
+    if (caseInsensitive) return caseInsensitive;
+
+    // 3. Normalized slug or originalTitle match
+    const normMatch = list.find(a => {
+      const aSlugNorm = (a.slug || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+      const aOrigNorm = (a.originalTitle || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+      return (aSlugNorm && aSlugNorm === normKey) || (aOrigNorm && aOrigNorm === normKey);
+    });
+    if (normMatch) return normMatch;
+
+    // 4. Substring / partial match if key is descriptive
+    if (cleanKey.length >= 6) {
+      const partial = list.find(a => 
+        (a.slug && a.slug.toLowerCase().includes(cleanKey)) || 
+        (a.originalTitle && a.originalTitle.toLowerCase().includes(cleanKey)) ||
+        (a.title && a.title.toLowerCase().includes(cleanKey))
+      );
+      if (partial) return partial;
+    }
+
+    return null;
+  }
+
   readonly article = computed(() => {
     const id = this.articleId();
-    if (!id) return null;
-    return this.articleService.articles().find(a => a.slug === id || a.id === id) || this.directArticle();
+    if (!id || id.trim() === '' || id.trim() === 'article') return null;
+    return this.findArticleInList(this.articleService.articles(), id) || this.directArticle();
   });
 
   readonly factCheck = computed(() => {
@@ -997,27 +1095,86 @@ export class ArticleComponent implements OnDestroy {
       });
     }
 
-    // 0. Direct Article Fetch Effect for deep links and direct notifications
+    // 0. Direct Article Fetch Effect for deep links, notifications, and shared URLs
     effect(async () => {
       const id = this.articleId();
-      if (!id || typeof window === 'undefined') return;
+      if (typeof window === 'undefined') return;
       
-      const foundInService = this.articleService.articles().find(a => a.slug === id || a.id === id);
+      // If path has empty or missing id, redirect to home
+      if (!id || id.trim() === '' || id.trim() === 'article') {
+        this.router.navigate(['/']);
+        return;
+      }
+      
+      const foundInService = this.findArticleInList(this.articleService.articles(), id);
       if (!foundInService) {
         try {
-          const { getDoc, doc: firestoreDoc, collection: firestoreCol, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs } = await import('firebase/firestore');
-          const docRef = firestoreDoc(db, 'articles', id);
+          const { getDoc, doc: firestoreDoc, collection: firestoreCol, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs, limit: firestoreLimit } = await import('firebase/firestore');
+          
+          let decoded = id.trim();
+          try { decoded = decodeURIComponent(id.trim()); } catch { decoded = id.trim(); }
+          const clean = decoded.toLowerCase().replace(/\/+$/, '');
+          const norm = clean.replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+
+          // 1. Try Doc ID
+          const docRef = firestoreDoc(db, 'articles', id.trim());
           const snap = await getDoc(docRef);
           if (snap.exists()) {
             this.directArticle.set({ id: snap.id, ...snap.data() } as Article);
             return;
           }
 
-          const q = firestoreQuery(firestoreCol(db, 'articles'), firestoreWhere('slug', '==', id));
-          const slugSnap = await firestoreGetDocs(q);
+          // 2. Try Exact Slug in articles
+          const qSlug = firestoreQuery(firestoreCol(db, 'articles'), firestoreWhere('slug', '==', id.trim()));
+          const slugSnap = await firestoreGetDocs(qSlug);
           if (!slugSnap.empty) {
             const first = slugSnap.docs[0];
             this.directArticle.set({ id: first.id, ...first.data() } as Article);
+            return;
+          }
+
+          // 3. Try Clean/Decoded Slug in articles
+          if (clean !== id.trim()) {
+            const qClean = firestoreQuery(firestoreCol(db, 'articles'), firestoreWhere('slug', '==', clean));
+            const cleanSnap = await firestoreGetDocs(qClean);
+            if (!cleanSnap.empty) {
+              const first = cleanSnap.docs[0];
+              this.directArticle.set({ id: first.id, ...first.data() } as Article);
+              return;
+            }
+          }
+
+          // 4. Try Normalized Slug
+          if (norm && norm !== clean) {
+            const qNorm = firestoreQuery(firestoreCol(db, 'articles'), firestoreWhere('slug', '==', norm));
+            const normSnap = await firestoreGetDocs(qNorm);
+            if (!normSnap.empty) {
+              const first = normSnap.docs[0];
+              this.directArticle.set({ id: first.id, ...first.data() } as Article);
+              return;
+            }
+          }
+
+          // 5. Fallback in-memory scan of latest articles (handles drafts or fuzzy slugs)
+          const qRecent = firestoreQuery(firestoreCol(db, 'articles'), firestoreLimit(40));
+          const recentSnap = await firestoreGetDocs(qRecent);
+          const recentArticles: Article[] = [];
+          recentSnap.forEach(d => {
+            recentArticles.push({ id: d.id, ...d.data() } as Article);
+          });
+          const fuzzyMatch = this.findArticleInList(recentArticles, id);
+          if (fuzzyMatch) {
+            this.directArticle.set(fuzzyMatch);
+            return;
+          }
+
+          // 6. If Admin, check drafts collection too
+          if (this.isAdmin()) {
+            const draftDocRef = firestoreDoc(db, 'drafts', id.trim());
+            const draftSnap = await getDoc(draftDocRef);
+            if (draftSnap.exists()) {
+              this.directArticle.set({ id: draftSnap.id, ...draftSnap.data() } as Article);
+            }
           }
         } catch (e) {
           console.warn('Direct article fetch notice:', e);

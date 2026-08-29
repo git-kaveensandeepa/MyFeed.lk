@@ -8,6 +8,7 @@ import {TermsComponent} from './terms';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
+  { path: 'article', redirectTo: '', pathMatch: 'full' },
   { path: 'article/:id', component: ArticleComponent },
   { path: 'admin', loadComponent: () => import('./admin').then(m => m.AdminComponent) },
   { path: 'profile', loadComponent: () => import('./profile').then(m => m.ProfileComponent) },

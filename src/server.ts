@@ -1268,7 +1268,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
           : getServerTopicImage(item.title);
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const englishSource = (item.title || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
-        const cleanSlug = englishSource && englishSource.length >= 3 ? englishSource.slice(0, 80) : '';
+        const cleanSlug = (englishSource && englishSource.length >= 3 ? englishSource.slice(0, 80) : '') || `story-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
 
         const targetCollection = autoPilotConfig.autoPublish ? 'articles' : 'drafts';
         const newDocPayload = {

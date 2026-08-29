@@ -4241,7 +4241,7 @@ export class AdminComponent {
         authorType: this.formAuthorType,
         isAiGenerated: this.formAuthorType === 'ai',
         factCheck: factCheckObj,
-        slug: this.formTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
+        slug: (this.formTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')) || `story-${Date.now().toString(36)}`
       };
 
       if (this.editingId()) {
