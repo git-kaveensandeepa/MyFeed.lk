@@ -14,8 +14,7 @@ import {
   writeBatch,
   Unsubscribe,
   query,
-  orderBy,
-  limit
+  orderBy
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -614,18 +613,34 @@ export class ArticleService implements OnDestroy {
   }
 
   private getDocTimestamp(docData: Record<string, unknown>): number {
-    if (typeof docData['timestamp'] === 'number') return docData['timestamp'];
-    const createdAt = docData['createdAt'] as { toMillis?: () => number; toDate?: () => Date } | string | undefined;
+    if (typeof docData['timestamp'] === 'number' && docData['timestamp'] > 0) return docData['timestamp'];
+    
+    const createdAt = docData['createdAt'] as { toMillis?: () => number; toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
     if (createdAt) {
-      if (typeof createdAt === 'object' && typeof createdAt.toMillis === 'function') return createdAt.toMillis();
-      if (typeof createdAt === 'object' && typeof createdAt.toDate === 'function') return createdAt.toDate().getTime();
-      const parsed = new Date(createdAt as string).getTime();
-      if (!isNaN(parsed)) return parsed;
+      if (typeof createdAt === 'object') {
+        if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+        if (typeof createdAt.toDate === 'function') return createdAt.toDate().getTime();
+        if (typeof createdAt.seconds === 'number') return createdAt.seconds * 1000;
+        if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
+          return ((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000;
+        }
+      }
+      if (typeof createdAt === 'string') {
+        const parsed = new Date(createdAt).getTime();
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
     }
+
+    const publishedAt = docData['publishedAt'] as string | undefined;
+    if (publishedAt) {
+      const parsed = new Date(publishedAt).getTime();
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+
     const dateVal = docData['date'] as string | undefined;
     if (dateVal) {
       const parsed = new Date(dateVal).getTime();
-      if (!isNaN(parsed)) return parsed;
+      if (!isNaN(parsed) && parsed > 0) return parsed;
     }
     return 0;
   }
@@ -639,17 +654,22 @@ export class ArticleService implements OnDestroy {
 
     try {
       const articlesCol = collection(db, 'articles');
-      const articlesQuery = query(articlesCol, limit(60));
 
-      // Realtime listener for Firestore collection with limit
-      this.unsubscribeSnapshot = onSnapshot(articlesQuery, (snapshot) => {
+      // Realtime listener for Firestore collection
+      this.unsubscribeSnapshot = onSnapshot(articlesCol, (snapshot) => {
         const list: Article[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as Record<string, unknown>;
           let uploadTimeStr: string | undefined = undefined;
-          const createdAt = data['createdAt'] as { toDate?: () => Date } | string | undefined;
-          if (createdAt && typeof createdAt === 'object' && typeof createdAt.toDate === 'function') {
-            uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const createdAt = data['createdAt'] as { toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
+          if (createdAt && typeof createdAt === 'object') {
+            if (typeof createdAt.toDate === 'function') {
+              uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            } else if (typeof createdAt.seconds === 'number') {
+              uploadTimeStr = new Date(createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            } else if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
+              uploadTimeStr = new Date(((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            }
           } else if (typeof createdAt === 'string') {
             const d = new Date(createdAt);
             if (!isNaN(d.getTime())) {
@@ -671,7 +691,7 @@ export class ArticleService implements OnDestroy {
           } as unknown as Article);
         });
 
-        // Sort descending by timestamp / date
+        // Sort descending by timestamp / createdAt / date
         list.sort((a, b) => {
           const timeA = this.getDocTimestamp(a as unknown as Record<string, unknown>);
           const timeB = this.getDocTimestamp(b as unknown as Record<string, unknown>);
@@ -695,17 +715,25 @@ export class ArticleService implements OnDestroy {
   private async fallbackGetDocs() {
     try {
       const articlesCol = collection(db, 'articles');
-      const articlesQuery = query(articlesCol, limit(60));
-      const querySnapshot = await getDocs(articlesQuery);
+      const querySnapshot = await getDocs(articlesCol);
       const list: Article[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data() as Record<string, unknown>;
         let uploadTimeStr: string | undefined = undefined;
-        const createdAt = data['createdAt'] as { toDate?: () => Date } | string | undefined;
-        if (createdAt && typeof createdAt === 'object' && typeof createdAt.toDate === 'function') {
-          uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const createdAt = data['createdAt'] as { toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
+        if (createdAt && typeof createdAt === 'object') {
+          if (typeof createdAt.toDate === 'function') {
+            uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          } else if (typeof createdAt.seconds === 'number') {
+            uploadTimeStr = new Date(createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          } else if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
+            uploadTimeStr = new Date(((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          }
         } else if (typeof createdAt === 'string') {
-          uploadTimeStr = new Date(createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const d = new Date(createdAt);
+          if (!isNaN(d.getTime())) {
+            uploadTimeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          }
         }
         
         const rawImg = data['imageUrl'] as string | undefined;
@@ -731,8 +759,7 @@ export class ArticleService implements OnDestroy {
       this._articles.set(list);
       this.saveToLocalCache(list);
     } catch (e) {
-      console.error('Firestore getDocs notice / quota reached:', e);
-      // Fallback: If memory/signal is empty, load cached items from storage
+      console.warn('Firestore getDocs notice:', e);
       if (this._articles().length === 0) {
         this.loadFromLocalCache();
       }

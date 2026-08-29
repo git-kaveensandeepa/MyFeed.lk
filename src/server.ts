@@ -9,6 +9,7 @@ import {
   collection as serverCollection, 
   addDoc as serverAddDoc, 
   getDocs as serverGetDocs, 
+  getDoc as serverGetDoc,
   serverTimestamp as serverTimestampDoc,
   doc as serverDoc,
   setDoc as serverSetDoc,
@@ -227,25 +228,84 @@ function getServerTopicImage(title = ''): string {
 }
 
 function isValidServerImage(url: string): boolean {
-  if (!url || typeof url !== 'string' || (!url.startsWith('http') && !url.startsWith('data:image'))) return false;
+  if (!url || typeof url !== 'string') return false;
+  url = url.trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:image/')) return false;
+
   const lower = url.toLowerCase();
+
+  // Strip query string and hash for filename check
+  const cleanPath = lower.split('?')[0].split('#')[0];
+
+  // Discard tracking beacons, spacers, 1x1 pixels, favicon files, and vector SVGs
   if (
-    lower.includes('googleusercontent.com') ||
-    lower.includes('news.google.com') ||
-    lower.includes('gstatic.com') ||
-    lower.includes('google.com/favicon') ||
-    lower.includes('avatar') ||
-    lower.includes('logo') ||
-    lower.includes('icon') ||
-    lower.includes('1x1') ||
-    lower.includes('pixel') ||
-    lower.includes('badge') ||
-    lower.endsWith('.svg') ||
-    lower.endsWith('.gif')
+    cleanPath.endsWith('/1x1.gif') ||
+    cleanPath.endsWith('/1x1.png') ||
+    cleanPath.endsWith('/spacer.gif') ||
+    cleanPath.endsWith('/blank.gif') ||
+    cleanPath.endsWith('/cleardot.gif') ||
+    cleanPath.endsWith('/pixel.gif') ||
+    cleanPath.endsWith('/beacon.gif') ||
+    cleanPath.endsWith('/transparent.gif') ||
+    cleanPath.endsWith('/track.gif') ||
+    cleanPath.endsWith('/tr.gif') ||
+    cleanPath.endsWith('/favicon.ico') ||
+    cleanPath.endsWith('/favicon.png') ||
+    cleanPath.endsWith('/favicon.svg') ||
+    cleanPath.endsWith('.svg')
   ) {
     return false;
   }
+
+  // Discard generic tracking domains and placeholder avatars
+  if (
+    lower.includes('google.com/favicon') ||
+    lower.includes('gstatic.com/images/branding') ||
+    lower.includes('doubleclick.net') ||
+    lower.includes('adroll.com') ||
+    lower.includes('scorecardresearch.com') ||
+    lower.includes('facebook.com/tr/') ||
+    lower.includes('gravatar.com/avatar/default') ||
+    lower.includes('default-avatar')
+  ) {
+    return false;
+  }
+
   return true;
+}
+
+function parseLargestFromSrcset(srcsetStr: string, pageUrl?: string): string {
+  if (!srcsetStr) return '';
+  const entries = srcsetStr.split(',').map(s => s.trim()).filter(Boolean);
+  let bestUrl = '';
+  let maxDim = 0;
+
+  for (const entry of entries) {
+    const parts = entry.split(/\s+/);
+    const candidateUrl = parts[0];
+    if (!candidateUrl) continue;
+    let dim = 1;
+    if (parts[1]) {
+      const match = parts[1].match(/(\d+)(?:w|x)/i);
+      if (match) dim = parseInt(match[1], 10);
+    }
+    if (dim >= maxDim) {
+      maxDim = dim;
+      bestUrl = candidateUrl;
+    }
+  }
+
+  if (bestUrl) {
+    bestUrl = bestUrl.replace(/&amp;/g, '&').replace(/&#38;/g, '&');
+    if (pageUrl && (bestUrl.startsWith('/') || !bestUrl.startsWith('http'))) {
+      try {
+        bestUrl = new URL(bestUrl, pageUrl).href;
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return bestUrl;
 }
 
 function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
@@ -253,25 +313,26 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
 
   const candidates: string[] = [];
 
-  // 1. OpenGraph Images: <meta property="og:image" content="...">
-  const ogMatches = html.matchAll(/<meta[^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image|twitter:image:src|image)["'][^>]+content=["']([^"']+)["']/gi);
-  for (const m of ogMatches) {
-    if (m[1]) candidates.push(m[1].trim());
+  // 1. OpenGraph, Twitter, and SEO meta tags (both property/name first AND content first)
+  const metaRegex = /<meta\s+[^>]*?(?:property|name)=["'](og:image|og:image:url|og:image:secure_url|twitter:image|twitter:image:src|twitter:image0|image|thumbnail|sailthru\.image|sailthru\.image\.full|parsely-image-url|itemprop)["'][^>]*?content=["']([^"']+)["'][^>]*?>|<meta\s+[^>]*?content=["']([^"']+)["'][^>]*?(?:property|name)=["'](og:image|og:image:url|og:image:secure_url|twitter:image|twitter:image:src|twitter:image0|image|thumbnail|sailthru\.image|sailthru\.image\.full|parsely-image-url|itemprop)["'][^>]*?>/gi;
+  let metaMatch;
+  while ((metaMatch = metaRegex.exec(html)) !== null) {
+    const val = metaMatch[2] || metaMatch[3];
+    if (val && typeof val === 'string' && val.trim().length > 0) {
+      candidates.push(val.trim());
+    }
   }
 
-  // 1.1 Inverted meta attribute order: <meta content="..." property="og:image">
-  const invertedOgMatches = html.matchAll(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image|twitter:image:src)["']/gi);
-  for (const m of invertedOgMatches) {
-    if (m[1]) candidates.push(m[1].trim());
-  }
-
-  // 2. Link rel image_src
-  const linkMatches = html.matchAll(/<link[^>]+rel=["'](?:image_src|preload)["'][^>]+(?:href|imagesrcset)=["']([^"']+)["']/gi);
+  // 2. Link rel image_src / preload
+  const linkMatches = html.matchAll(/<link\s+[^>]*?rel=["'](?:image_src|preload)["'][^>]*?(?:href|imagesrcset)=["']([^"']+)["'][^>]*?>/gi);
   for (const m of linkMatches) {
-    if (m[1]) candidates.push(m[1].split(' ')[0].trim());
+    if (m[1]) {
+      const urlCandidate = m[1].split(' ')[0].trim();
+      if (urlCandidate) candidates.push(urlCandidate);
+    }
   }
 
-  // 3. Schema.org JSON-LD image
+  // 3. Schema.org JSON-LD structured data
   const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
   for (const m of jsonLdMatches) {
     try {
@@ -281,7 +342,9 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
         if (typeof obj === 'string' && (obj.startsWith('http') || obj.startsWith('/'))) return obj;
         if (typeof obj === 'object' && obj !== null) {
           const record = obj as Record<string, unknown>;
-          const imgVal = record['image'];
+          
+          // Check standard schema properties
+          const imgVal = record['image'] || record['primaryImageOfPage'] || record['associatedMedia'];
           if (imgVal) {
             if (typeof imgVal === 'string') return imgVal;
             if (Array.isArray(imgVal) && imgVal[0]) {
@@ -290,15 +353,27 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
               if (typeof first === 'object' && first !== null) {
                 const firstRec = first as Record<string, unknown>;
                 if (typeof firstRec['url'] === 'string') return firstRec['url'];
+                if (typeof firstRec['contentUrl'] === 'string') return firstRec['contentUrl'];
               }
             }
             if (typeof imgVal === 'object' && imgVal !== null) {
               const imgRec = imgVal as Record<string, unknown>;
               if (typeof imgRec['url'] === 'string') return imgRec['url'];
+              if (typeof imgRec['contentUrl'] === 'string') return imgRec['contentUrl'];
             }
           }
-          const thumbVal = record['thumbnailUrl'];
+
+          const thumbVal = record['thumbnailUrl'] || record['contentUrl'];
           if (typeof thumbVal === 'string') return thumbVal;
+
+          // Search graph arrays
+          if (Array.isArray(record['@graph'])) {
+            for (const item of record['@graph']) {
+              const found = findImage(item);
+              if (found) return found;
+            }
+          }
+
           if (Array.isArray(obj)) {
             for (const item of obj) {
               const found = findImage(item);
@@ -315,16 +390,43 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
     }
   }
 
-  // 4. Main article image in <figure> or <article>
-  const articleImgMatch = html.match(/<article[\s\S]*?<img[^>]+src=["']([^"']+)["']/i) || html.match(/<figure[\s\S]*?<img[^>]+src=["']([^"']+)["']/i);
+  // 4. Featured article container / picture tag / figure tag
+  const figureMatches = html.matchAll(/<(?:figure|picture|article|div)[^>]*?(?:class|id)=["'][^"']*(?:featured|lead|thumbnail|wp-post-image|hero|main-image|story-media)[^"']*["'][^>]*>([\s\S]*?)<\/(?:figure|picture|article|div)>/gi);
+  for (const fm of figureMatches) {
+    const blockHtml = fm[1];
+    
+    // Check srcset inside picture or source
+    const srcsetMatch = blockHtml.match(/srcset=["']([^"']+)["']/i);
+    if (srcsetMatch && srcsetMatch[1]) {
+      const best = parseLargestFromSrcset(srcsetMatch[1], pageUrl);
+      if (best) candidates.push(best);
+    }
+
+    // Check img tag data-src or src
+    const imgMatch = blockHtml.match(/<img\s+[^>]*?(?:data-src|data-original|data-lazy-src|data-orig-file|src)=["']([^"']+)["']/i);
+    if (imgMatch && imgMatch[1]) {
+      candidates.push(imgMatch[1].trim());
+    }
+  }
+
+  // 5. General article lead image
+  const articleImgMatch = html.match(/<article[\s\S]*?<img[^>]+(?:data-src|src)=["']([^"']+)["']/i) ||
+                          html.match(/<figure[\s\S]*?<img[^>]+(?:data-src|src)=["']([^"']+)["']/i);
   if (articleImgMatch && articleImgMatch[1]) {
     candidates.push(articleImgMatch[1].trim());
   }
 
-  // Filter & resolve candidate URLs
+  // 6. Direct img tags in top portion of HTML
+  const topHtml = html.substring(0, 100000);
+  const generalImgMatches = topHtml.matchAll(/<img\s+[^>]*?(?:data-src|data-original|data-lazy-src|src)=["']([^"']+\.(?:jpg|jpeg|png|webp|avif)[^"']*)["']/gi);
+  for (const gm of generalImgMatches) {
+    if (gm[1]) candidates.push(gm[1].trim());
+  }
+
+  // Filter, clean & resolve candidate URLs
   for (let candidate of candidates) {
     // Decode HTML entities if any
-    candidate = candidate.replace(/&amp;/g, '&').replace(/&#38;/g, '&');
+    candidate = candidate.replace(/&amp;/g, '&').replace(/&#38;/g, '&').replace(/&#x2F;/g, '/');
     
     // Resolve relative URL if pageUrl is given
     if (pageUrl && (candidate.startsWith('/') || !candidate.startsWith('http'))) {
@@ -347,16 +449,18 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
   const items: ServerArticleItem[] = [];
   const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
 
-  for (const itemXml of itemMatches.slice(0, 5)) {
+  for (const itemXml of itemMatches.slice(0, 15)) {
     const titleMatch = itemXml.match(/<title(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     let title = titleMatch ? titleMatch[1].trim() : '';
     title = title.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-    const linkMatch = itemXml.match(/<link(?:[^>]*)href="([^"]+)"/i) || itemXml.match(/<link(?:[^>]*)>([\s\S]*?)<\/link>/i);
-    const link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : '';
+    const linkMatch = itemXml.match(/<link(?:[^>]*)href="([^"]+)"/i) || itemXml.match(/<link(?:[^>]*)>([\s\S]*?)<\/link>/i) || itemXml.match(/<guid[^>]*isPermaLink="true"[^>]*>([\s\S]*?)<\/guid>/i);
+    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : '';
+    link = link.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').trim();
 
     const descMatch = itemXml.match(/<description(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
-    let description = descMatch ? descMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    const rawDesc = descMatch ? descMatch[1] : '';
+    let description = rawDesc.replace(/<[^>]+>/g, '').trim();
     description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
     const contentEncodedMatch = itemXml.match(/<content:encoded(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content:encoded>/i);
@@ -364,15 +468,43 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
 
     // Extract exact original article image from media tags, enclosure, or content:encoded
     let imageUrl = '';
-    const mediaMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
-                       itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
-                       itemXml.match(/<media:thumbnail[^>]+url="([^">]+)"/i);
-    if (mediaMatch && mediaMatch[1] && isValidServerImage(mediaMatch[1])) {
-      imageUrl = mediaMatch[1];
+    const mediaMatch = itemXml.match(/<media:content[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<enclosure[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<image>\s*<url>([^<]+)<\/url>\s*<\/image>/i) ||
+                       itemXml.match(/<wp:attachment_url>([^<]+)<\/wp:attachment_url>/i) ||
+                       itemXml.match(/<wp:featured_image>([^<]+)<\/wp:featured_image>/i);
+    
+    if (mediaMatch && mediaMatch[1] && isValidServerImage(mediaMatch[1].trim())) {
+      imageUrl = mediaMatch[1].trim();
     } else {
-      const rawImgMatch = (fullContentHtml || (descMatch ? descMatch[1] : '')).match(/<img\s+[^>]*src="([^">]+)"/i);
-      if (rawImgMatch && rawImgMatch[1] && isValidServerImage(rawImgMatch[1])) {
-        imageUrl = rawImgMatch[1];
+      // Check for <img> tag inside description or content:encoded (e.g. Ada Derana, The Verge, WordPress)
+      const combinedHtml = `${fullContentHtml} ${rawDesc}`;
+      
+      // Check srcset first for highest res
+      const srcsetMatch = combinedHtml.match(/srcset=["']([^"']+)["']/i);
+      if (srcsetMatch && srcsetMatch[1]) {
+        const largest = parseLargestFromSrcset(srcsetMatch[1], link);
+        if (largest && isValidServerImage(largest)) {
+          imageUrl = largest;
+        }
+      }
+
+      if (!imageUrl) {
+        const rawImgMatch = combinedHtml.match(/<img\s+[^>]*?(?:data-src|data-original|data-lazy-src|src)=["']([^"']+)["']/i);
+        if (rawImgMatch && rawImgMatch[1]) {
+          let candidate = rawImgMatch[1].trim().replace(/&amp;/g, '&');
+          if (link && (candidate.startsWith('/') || !candidate.startsWith('http'))) {
+            try {
+              candidate = new URL(candidate, link).href;
+            } catch {
+              // ignore
+            }
+          }
+          if (isValidServerImage(candidate)) {
+            imageUrl = candidate;
+          }
+        }
       }
     }
 
@@ -384,7 +516,7 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
         title,
         description: description || title,
         url: link,
-        imageUrl: imageUrl || getServerTopicImage(title),
+        imageUrl: imageUrl, // Keep authentic image if found, or empty string so downstream scraper fetches full page image
         publishedAt: pubDate,
         source: { name: sourceName }
       });
@@ -555,6 +687,63 @@ const autoPilotConfig: AutoPilotConfig = {
 const autoPilotLogs: AutoPilotLog[] = [];
 let isAutoPilotSyncing = false;
 let autoPilotLastRunTime: string | null = null;
+let lastExecutedAutoPilotSlot = '';
+
+// Load persistent config from Firestore
+async function loadAutoPilotConfigFromFirestore(): Promise<void> {
+  try {
+    const db = getServerDb();
+    const snap = await serverGetDoc(serverDoc(db, 'system_config', 'autopilot'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (typeof data['enabled'] === 'boolean') autoPilotConfig.enabled = data['enabled'];
+      if (data['scheduleMode'] === 'interval' || data['scheduleMode'] === 'exact_times') autoPilotConfig.scheduleMode = data['scheduleMode'];
+      if (typeof data['intervalMinutes'] === 'number') autoPilotConfig.intervalMinutes = data['intervalMinutes'];
+      if (Array.isArray(data['scheduledDailyTimes']) && data['scheduledDailyTimes'].length > 0) {
+        autoPilotConfig.scheduledDailyTimes = data['scheduledDailyTimes'];
+      }
+      if (typeof data['autoPublish'] === 'boolean') autoPilotConfig.autoPublish = data['autoPublish'];
+      if (typeof data['notifyPhone'] === 'boolean') autoPilotConfig.notifyPhone = data['notifyPhone'];
+      if (typeof data['postWhatsApp'] === 'boolean') autoPilotConfig.postWhatsApp = data['postWhatsApp'];
+      if (typeof data['postFacebook'] === 'boolean') autoPilotConfig.postFacebook = data['postFacebook'];
+      if (typeof data['phoneTopic'] === 'string') autoPilotConfig.phoneTopic = data['phoneTopic'];
+      if (typeof data['waWebhookUrl'] === 'string') autoPilotConfig.waWebhookUrl = data['waWebhookUrl'];
+      if (typeof data['fbWebhookUrl'] === 'string') autoPilotConfig.fbWebhookUrl = data['fbWebhookUrl'];
+      if (typeof data['maxArticlesPerRun'] === 'number') autoPilotConfig.maxArticlesPerRun = data['maxArticlesPerRun'];
+      console.log(`[Auto-Pilot] Loaded persistent config from Firestore. Mode: ${autoPilotConfig.scheduleMode}, Times: [${autoPilotConfig.scheduledDailyTimes.join(', ')}]`);
+    }
+  } catch (err) {
+    console.warn('[Auto-Pilot] Could not load persistent config from Firestore, using defaults:', err);
+  }
+  autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
+}
+
+async function saveAutoPilotConfigToFirestore(cfg: AutoPilotConfig): Promise<void> {
+  try {
+    const db = getServerDb();
+    await serverSetDoc(serverDoc(db, 'system_config', 'autopilot'), {
+      enabled: cfg.enabled,
+      scheduleMode: cfg.scheduleMode,
+      intervalMinutes: cfg.intervalMinutes,
+      scheduledDailyTimes: cfg.scheduledDailyTimes,
+      autoPublish: cfg.autoPublish,
+      notifyPhone: cfg.notifyPhone,
+      postWhatsApp: cfg.postWhatsApp,
+      postFacebook: cfg.postFacebook,
+      phoneTopic: cfg.phoneTopic,
+      waWebhookUrl: cfg.waWebhookUrl,
+      fbWebhookUrl: cfg.fbWebhookUrl,
+      maxArticlesPerRun: cfg.maxArticlesPerRun,
+      updatedAt: serverTimestampDoc()
+    }, { merge: true });
+    console.log('[Auto-Pilot] Persistent config saved to Firestore system_config/autopilot');
+  } catch (err) {
+    console.warn('[Auto-Pilot] Error saving persistent config to Firestore:', err);
+  }
+}
+
+// Kick off initial load in the background
+loadAutoPilotConfigFromFirestore().catch(e => console.warn('[Auto-Pilot] Startup load warning:', e));
 
 // Colombo / Sri Lanka Timezone Helpers (Asia/Colombo UTC+5:30)
 export function getColomboDateTimeParts(): {
@@ -653,8 +842,8 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
       .sort((a, b) => a.minutes - b.minutes);
 
     if (parsedMinutesList.length > 0) {
-      // Find the next scheduled time today (must be strictly in the future, with at least 5 seconds buffer)
-      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay || (item.minutes === currentMinutesOfDay && colombo.second < 10));
+      // Find the next scheduled time strictly in future (at least 1 minute ahead)
+      const nextTimeToday = parsedMinutesList.find(item => item.minutes > currentMinutesOfDay);
 
       let targetMinutes = 0;
       let daysToAdd = 0;
@@ -670,7 +859,7 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
 
       const diffMinutes = (daysToAdd * 24 * 60) + (targetMinutes - currentMinutesOfDay);
       const diffMs = (diffMinutes * 60 * 1000) - (colombo.second * 1000);
-      return Date.now() + Math.max(10000, diffMs);
+      return Date.now() + Math.max(30000, diffMs);
     }
   }
 
@@ -970,13 +1159,19 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
         if (item.url) {
           try {
             const pageRes = await fetch(item.url, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9,si;q=0.8'
+              },
+              redirect: 'follow',
               signal: AbortSignal.timeout(30000)
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
-              const extractedImg = extractOriginalImageFromHtml(html, item.url);
-              if (extractedImg) {
+              const finalUrl = pageRes.url || item.url;
+              const extractedImg = extractOriginalImageFromHtml(html, finalUrl);
+              if (extractedImg && isValidServerImage(extractedImg)) {
                 originalSourceImage = extractedImg;
               }
               sourceHtml = html
@@ -1068,9 +1263,12 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
           continue;
         }
 
-        const finalImage = originalSourceImage || '';
+        const finalImage = (originalSourceImage && isValidServerImage(originalSourceImage)) 
+          ? originalSourceImage 
+          : getServerTopicImage(item.title);
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const cleanSlug = (generated.sinhalaTitle || item.title).toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+        const englishSource = (item.title || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+        const cleanSlug = englishSource && englishSource.length >= 3 ? englishSource.slice(0, 80) : '';
 
         const targetCollection = autoPilotConfig.autoPublish ? 'articles' : 'drafts';
         const newDocPayload = {
@@ -1087,12 +1285,14 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
           isAiGenerated: true,
           slug: cleanSlug,
           createdAt: serverTimestampDoc(),
+          timestamp: Date.now(),
           views: 0
         };
 
         const docRef = await serverAddDoc(serverCollection(db, targetCollection), newDocPayload);
+        const finalSlug = cleanSlug || docRef.id;
         const baseSiteUrl = (process.env['SITE_URL'] || 'https://myfeedlk.com').replace(/\/+$/, '');
-        const articleSiteUrl = `${baseSiteUrl}/article/${cleanSlug || docRef.id}`;
+        const articleSiteUrl = `${baseSiteUrl}/article/${finalSlug}`;
 
         publishedArticlesList.push({
           title: newDocPayload.title,
@@ -1253,6 +1453,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
       message: `Auto-pilot failed: ${errorObj.message || String(err)}`
     };
   } finally {
+    autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
     isAutoPilotSyncing = false;
   }
 }
@@ -1805,9 +2006,26 @@ export async function executeMorningAudioPublish(triggerType: 'scheduled' | 'man
 // Background Cron Scheduler (Checks every 15 seconds)
 setInterval(async () => {
   // 1. AutoPilot 24/7 News Sync
-  if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
-    console.log('[Auto-Pilot] Scheduled time reached in Sri Lanka Time. Executing 24/7 news sync...');
-    await executeAutoPilotSync('scheduled_cron');
+  if (autoPilotConfig.enabled && !isAutoPilotSyncing) {
+    const colombo = getColomboDateTimeParts();
+    
+    if (autoPilotConfig.scheduleMode === 'exact_times') {
+      const currentSlot = `${colombo.dateString}_${colombo.timeString}`;
+      const isScheduledMinute = autoPilotConfig.scheduledDailyTimes.includes(colombo.timeString);
+      const isTimePassed = Date.now() >= autoPilotNextRunTime;
+
+      if ((isScheduledMinute && lastExecutedAutoPilotSlot !== currentSlot) || (isTimePassed && lastExecutedAutoPilotSlot !== currentSlot)) {
+        lastExecutedAutoPilotSlot = currentSlot;
+        console.log(`[Auto-Pilot] ⏰ Scheduled time reached in Sri Lanka Time: ${colombo.timeString} (${colombo.dateString}). Executing 24/7 news sync...`);
+        await executeAutoPilotSync('scheduled_cron');
+      }
+    } else {
+      // Interval mode
+      if (Date.now() >= autoPilotNextRunTime) {
+        console.log('[Auto-Pilot] ⏱️ Interval reached. Executing 24/7 news sync...');
+        await executeAutoPilotSync('scheduled_cron');
+      }
+    }
   }
 
   // 2. Automated AI Audio Pipeline (3:30 AM Generate -> 4:00 AM Daily Publish)
@@ -2209,6 +2427,7 @@ ${rssItemsXml}
         if (typeof body.maxArticlesPerRun === 'number') autoPilotConfig.maxArticlesPerRun = Math.max(1, Math.min(body.maxArticlesPerRun, 5));
 
         autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
+        await saveAutoPilotConfigToFirestore(autoPilotConfig);
 
         return new Response(JSON.stringify({ success: true, config: autoPilotConfig, nextRunTime: autoPilotNextRunTime }), {
           status: 200,
@@ -2514,6 +2733,7 @@ ${rssItemsXml}
         const mode = body.mode || 'topic'; // 'topic' | 'url' | 'trending' | 'custom'
         const topic = (body.topic || '').trim();
         const articleUrl = (body.url || '').trim();
+        const incomingImageUrl = (body.imageUrl || body.rawImageUrl || '').trim();
         const contextInfo = (body.context || '').trim();
         const tone = body.tone || 'journalistic'; // 'journalistic', 'review', 'explainer', 'breaking', 'opinion'
         const length = body.length || 'standard'; // 'short', 'standard', 'deep_dive'
@@ -2521,17 +2741,26 @@ ${rssItemsXml}
         const includeLKR = !!body.includePricingInLKR;
 
         let sourceMaterial = '';
-        let originalSourceImage = '';
+        let originalSourceImage = (incomingImageUrl && isValidServerImage(incomingImageUrl)) ? incomingImageUrl : '';
 
         if (articleUrl) {
           try {
             const pageRes = await fetch(articleUrl, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+              headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9,si;q=0.8'
+              },
+              redirect: 'follow',
               signal: AbortSignal.timeout(30000)
             });
             if (pageRes.ok) {
               const html = await pageRes.text();
-              originalSourceImage = extractOriginalImageFromHtml(html, articleUrl);
+              const finalUrl = pageRes.url || articleUrl;
+              const extractedImg = extractOriginalImageFromHtml(html, finalUrl);
+              if (extractedImg && isValidServerImage(extractedImg)) {
+                originalSourceImage = extractedImg;
+              }
               sourceMaterial = html
                 .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
                 .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')

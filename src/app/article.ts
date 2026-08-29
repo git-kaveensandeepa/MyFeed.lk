@@ -10,7 +10,7 @@ import {ArticleService, getTopicFallbackImage, getCuratedTopicImages, getArticle
 import {BookmarkManager} from './bookmark';
 import {SkeletonLoaderComponent} from './skeleton-loader.component';
 import {AuthService} from './auth.service';
-import {auth} from './firebase';
+import {auth, db} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
 import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 
@@ -960,6 +960,7 @@ export class ArticleComponent implements OnDestroy {
   readonly isQuickImageUpdating = signal(false);
   readonly isGeneratingQuickAiImage = signal(false);
   readonly isExtractingQuickSourceImage = signal(false);
+  readonly directArticle = signal<Article | null>(null);
 
   private articleId = toSignal(
     this.route.paramMap.pipe(map(params => params.get('id')))
@@ -968,7 +969,7 @@ export class ArticleComponent implements OnDestroy {
   readonly article = computed(() => {
     const id = this.articleId();
     if (!id) return null;
-    return this.articleService.articles().find(a => a.slug === id || a.id === id) || null;
+    return this.articleService.articles().find(a => a.slug === id || a.id === id) || this.directArticle();
   });
 
   readonly factCheck = computed(() => {
@@ -995,6 +996,34 @@ export class ArticleComponent implements OnDestroy {
         this.isAdmin.set(user?.email === 'mail.kaveensandeepa@gmail.com');
       });
     }
+
+    // 0. Direct Article Fetch Effect for deep links and direct notifications
+    effect(async () => {
+      const id = this.articleId();
+      if (!id || typeof window === 'undefined') return;
+      
+      const foundInService = this.articleService.articles().find(a => a.slug === id || a.id === id);
+      if (!foundInService) {
+        try {
+          const { getDoc, doc: firestoreDoc, collection: firestoreCol, query: firestoreQuery, where: firestoreWhere, getDocs: firestoreGetDocs } = await import('firebase/firestore');
+          const docRef = firestoreDoc(db, 'articles', id);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            this.directArticle.set({ id: snap.id, ...snap.data() } as Article);
+            return;
+          }
+
+          const q = firestoreQuery(firestoreCol(db, 'articles'), firestoreWhere('slug', '==', id));
+          const slugSnap = await firestoreGetDocs(q);
+          if (!slugSnap.empty) {
+            const first = slugSnap.docs[0];
+            this.directArticle.set({ id: first.id, ...first.data() } as Article);
+          }
+        } catch (e) {
+          console.warn('Direct article fetch notice:', e);
+        }
+      }
+    });
 
     // 1. SEO Tags Effect (Re-runs when article data changes, e.g. views/likes update, which is safe)
     effect(() => {
@@ -1053,14 +1082,14 @@ export class ArticleComponent implements OnDestroy {
         }
         if (art && art.id && typeof window !== 'undefined') {
           const q = this.articleService.getComments(art.id);
-          this.unsubscribeComments = onSnapshot(q, (snapshot) => {
+          this.unsubscribeComments = onSnapshot(q, (snapshot: any) => {
             const fetchedComments: ArticleComment[] = [];
-            snapshot.forEach(doc => {
-              fetchedComments.push({ id: doc.id, ...doc.data() } as ArticleComment);
+            snapshot.forEach((docSnap: any) => {
+              fetchedComments.push({ id: docSnap.id, ...docSnap.data() } as ArticleComment);
             });
             this.comments.set(fetchedComments);
             this.cdr.markForCheck();
-          }, (error) => {
+          }, (error: any) => {
             console.error('Error fetching comments', error);
           });
         }
