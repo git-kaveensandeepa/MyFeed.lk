@@ -110,13 +110,16 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Free, Official RSS Feeds for Server Live Cache (AI, Local Sri Lanka, Tech)
+// 100% Free, Official Direct RSS Feeds with Authentic HD Featured Images
 const SERVER_RSS_FEEDS = [
+  { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
-  { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
-  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI&hl=en-US&gl=US&ceid=US:en' },
+  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
+  { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index' },
+  { name: '9to5Google', url: 'https://9to5google.com/feed/' },
+  { name: '9to5Mac', url: 'https://9to5mac.com/feed/' },
+  { name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
   { name: 'Ada Derana', url: 'http://www.adaderana.lk/rss.php' },
-  { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
   { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
 ];
@@ -671,8 +674,8 @@ export const DEFAULT_SCHEDULED_TIMES: string[] = [
 
 const autoPilotConfig: AutoPilotConfig = {
   enabled: true,
-  scheduleMode: 'exact_times',
-  intervalMinutes: 60,
+  scheduleMode: 'interval',
+  intervalMinutes: 5,
   scheduledDailyTimes: [...DEFAULT_SCHEDULED_TIMES],
   autoPublish: true,
   notifyPhone: true,
@@ -864,7 +867,7 @@ function calculateNextRunTimestamp(config: AutoPilotConfig): number {
   }
 
   // Fallback to interval mode
-  const mins = config.intervalMinutes >= 15 ? config.intervalMinutes : 60;
+  const mins = config.intervalMinutes >= 5 ? config.intervalMinutes : 5;
   return Date.now() + (mins * 60 * 1000);
 }
 
@@ -2109,6 +2112,31 @@ async function fetchAndTranslateNews(): Promise<TranslatedServerArticle[]> {
 
   for (let index = 0; index < articles.length; index++) {
     const article = articles[index];
+    
+    // Always ensure we have the real authentic original HD image from the source article page
+    if ((!article.imageUrl || !isValidServerImage(article.imageUrl)) && article.url) {
+      try {
+        const pageRes = await fetch(article.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(15000)
+        });
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          const finalUrl = pageRes.url || article.url;
+          const extractedImg = extractOriginalImageFromHtml(html, finalUrl);
+          if (extractedImg && isValidServerImage(extractedImg)) {
+            article.imageUrl = extractedImg;
+          }
+        }
+      } catch (scrapeErr) {
+        console.warn('[News Image Scraper] Fallback notice:', scrapeErr);
+      }
+    }
+
     try {
       let genResponseText = '';
       let attempt = 0;
