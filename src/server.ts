@@ -2343,8 +2343,8 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
       });
     }
 
-    // Public RSS Feed for Social Media Automation (Make.com, Zapier, Buffer, IFTTT)
-    if ((url.pathname === '/api/rss' || url.pathname === '/api/rss/' || url.pathname === '/rss.xml' || url.pathname === '/feed.xml' || url.pathname === '/rss') && (request.method === 'GET' || request.method === 'HEAD')) {
+    // Public RSS & JSON Feed for Social Media Automation (Make.com, Zapier, Buffer, IFTTT)
+    if ((url.pathname === '/api/rss' || url.pathname === '/api/rss/' || url.pathname === '/rss.xml' || url.pathname === '/feed.xml' || url.pathname === '/rss' || url.pathname === '/api/posts/latest' || url.pathname === '/api/latest-articles') && (request.method === 'GET' || request.method === 'HEAD')) {
       try {
         const db = getServerDb();
         const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
@@ -2363,6 +2363,44 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
 
         const baseUrl = 'https://myfeedlk.com';
         const topArticles = allArticles.slice(0, 20);
+
+        // Check if caller wants JSON format (e.g. Make.com HTTP module)
+        const isJson = url.pathname === '/api/posts/latest' || 
+                       url.pathname === '/api/latest-articles' || 
+                       url.searchParams.get('format') === 'json' ||
+                       request.headers.get('accept')?.includes('application/json');
+
+        if (isJson) {
+          const formattedItems = topArticles.map(art => {
+            const itemUrl = art.slug ? `${baseUrl}/article/${art.slug}` : (art.id ? `${baseUrl}/article/${art.id}` : baseUrl);
+            const imgUrl = art.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80';
+            return {
+              id: art.id,
+              title: art.title || '',
+              summary: art.summary || art.description || '',
+              content: art.content || art.body || art.summary || '',
+              url: itemUrl,
+              imageUrl: imgUrl,
+              category: art.category || 'Tech',
+              readTime: art.readTime || '3 min',
+              publishedAt: art.publishedAt || new Date().toISOString()
+            };
+          });
+
+          return new Response(JSON.stringify({
+            status: 'success',
+            total: formattedItems.length,
+            latest: formattedItems[0] || null,
+            items: formattedItems
+          }, null, 2), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=60, s-maxage=60'
+            }
+          });
+        }
 
         const rssItemsXml = topArticles.map(art => {
           const itemUrl = art.slug ? `${baseUrl}/article/${art.slug}` : (art.id ? `${baseUrl}/article/${art.id}` : baseUrl);
