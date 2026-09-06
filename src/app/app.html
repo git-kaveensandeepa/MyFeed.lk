@@ -491,23 +491,6 @@
   </div>
 }
 
-<!-- Web Push Banner -->
-@if (webPushService.isSupported && !webPushService.isSubscribed() && !webPushService.isDenied()) {
-  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm ios-glass-thick rounded-[22px] shadow-2xl p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-8 fade-in duration-500">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shrink-0">
-        <mat-icon>notifications_active</mat-icon>
-      </div>
-      <div class="flex flex-col">
-        <span class="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">Get Live Alerts</span>
-        <span class="text-xs text-[#8e8e93]">Be the first to read breaking news.</span>
-      </div>
-    </div>
-    <button (click)="webPushService.subscribe()" class="shrink-0 bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-bold px-4 py-2 rounded-full transition-all ios-touch">
-      Allow
-    </button>
-  </div>
-}
 
 <!-- Auth Modal & Profile Management -->
 <app-auth-modal></app-auth-modal>
