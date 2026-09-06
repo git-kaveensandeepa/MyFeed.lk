@@ -17,6 +17,7 @@ import {
   deleteDoc as serverDeleteDoc,
   type Firestore
 } from 'firebase/firestore';
+import { formatWhatsAppPost } from './app/whatsapp-format.util';
 
 // Polyfill Buffer and process for environments that don't have them (like Netlify Edge)
 const g: any = globalThis;
@@ -113,14 +114,13 @@ const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 // 100% Pure Technology & Artificial Intelligence RSS Feeds
 const SERVER_RSS_FEEDS = [
+  { name: 'Ars Technica AI & Tech', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
-  { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
-  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI+OR+Anthropic+OR+LLM&hl=en-US&gl=US&ceid=US:en' },
-  { name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/' },
-  { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
-  { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
-  { name: 'Wired Tech', url: 'https://www.wired.com/feed/category/gear/latest/rss' },
-  { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' }
+  { name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
+  { name: 'Wired Tech & AI', url: 'https://www.wired.com/feed/category/gear/latest/rss' },
+  { name: 'Engadget Tech', url: 'https://www.engadget.com/rss.xml' },
+  { name: 'Ada Derana Biz & Tech', url: 'http://bizenglish.adaderana.lk/feed/' },
+  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI+OR+Anthropic+OR+LLM&hl=en-US&gl=US&ceid=US:en' }
 ];
 
 export function isTechOrAiTopic(title: string, description = ''): boolean {
@@ -169,101 +169,17 @@ function getServerSimpleHash(str: string): number {
   return Math.abs(hash);
 }
 
-const SERVER_IMAGE_POOLS: Record<string, string[]> = {
-  blackberry_software: [
-    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80'
-  ],
-  apple: [
-    'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=1200&q=80'
-  ],
-  samsung: [
-    'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=80'
-  ],
-  pixel: [
-    'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1567581935884-3349723552ca?auto=format&fit=crop&w=1200&q=80'
-  ],
-  ai: [
-    'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1676299081847-824916de030a?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1684369175833-4b445ad6bfb5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1655720828018-edd2daec9349?auto=format&fit=crop&w=1200&q=80'
-  ],
-  robotics: [
-    'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1535378620166-273708d44e4c?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80'
-  ],
-  chips: [
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=1200&q=80'
-  ],
-  cyber: [
-    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80'
-  ],
-  space: [
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1517976487507-5b6533d44e7c?auto=format&fit=crop&w=1200&q=80'
-  ],
-  general: [
-    'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80'
-  ]
-};
-
-function getServerTopicImage(title = ''): string {
-  const t = title.toLowerCase();
-  const hash = getServerSimpleHash(title);
-
-  if (t.includes('blackberry') || t.includes('qnx') || t.includes('iot') || t.includes('embedded') || t.includes('බ්ලැක්බෙරි') || t.includes('මෘදුකාංග')) {
-    const pool = SERVER_IMAGE_POOLS['blackberry_software'];
-    return pool[hash % pool.length];
+function getAccurateArticleImage(title = '', category = 'Tech', existingImage = ''): string {
+  if (existingImage && isValidServerImage(existingImage)) {
+    return existingImage;
   }
-  if (t.includes('apple') || t.includes('iphone') || t.includes('macbook') || t.includes('ipad') || t.includes('ios') || t.includes('ඇපල්')) {
-    const pool = SERVER_IMAGE_POOLS['apple'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('samsung') || t.includes('galaxy') || t.includes('z fold') || t.includes('සැම්සුන්')) {
-    const pool = SERVER_IMAGE_POOLS['samsung'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('pixel') || t.includes('android') || t.includes('ගූගල්')) {
-    const pool = SERVER_IMAGE_POOLS['pixel'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('ai') || t.includes('gpt') || t.includes('openai') || t.includes('claude') || t.includes('gemini') || t.includes('deepseek') || t.includes('කෘත්‍රිම බුද්ධිය')) {
-    const pool = SERVER_IMAGE_POOLS['ai'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('robot') || t.includes('humanoid') || t.includes('automation') || t.includes('රොබෝ')) {
-    const pool = SERVER_IMAGE_POOLS['robotics'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('chip') || t.includes('nvidia') || t.includes('semiconductor') || t.includes('intel') || t.includes('amd') || t.includes('gpu') || t.includes('චිප්')) {
-    const pool = SERVER_IMAGE_POOLS['chips'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('cyber') || t.includes('hack') || t.includes('security') || t.includes('malware') || t.includes('සයිබර්')) {
-    const pool = SERVER_IMAGE_POOLS['cyber'];
-    return pool[hash % pool.length];
-  }
-  if (t.includes('space') || t.includes('nasa') || t.includes('spacex') || t.includes('අභ්‍යවකාශ')) {
-    const pool = SERVER_IMAGE_POOLS['space'];
-    return pool[hash % pool.length];
-  }
-  const pool = SERVER_IMAGE_POOLS['general'];
-  return pool[hash % pool.length];
+  const cleanTitle = (title || '')
+    .replace(/\s*[-|—–]\s*[^-|—–]+$/, '') // Remove trailing publisher name e.g. "- The Guardian"
+    .replace(/[^\w\s]/g, ' ')
+    .trim();
+  const seed = getServerSimpleHash(cleanTitle || title) % 1000000;
+  const prompt = encodeURIComponent(`${cleanTitle || title} ${category} modern tech news editorial photography 16:9 8k cinematic`);
+  return `https://image.pollinations.ai/prompt/${prompt}?width=1200&height=675&nologo=true&enhance=true&seed=${seed}`;
 }
 
 function isValidServerImage(url: string): boolean {
@@ -486,23 +402,23 @@ function extractOriginalImageFromHtml(html: string, pageUrl?: string): string {
 
 function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[] {
   const items: ServerArticleItem[] = [];
-  const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
+  const itemMatches = xmlText.match(/<(?:item|entry)[\s\S]*?<\/(?:item|entry)>/gi) || [];
 
   for (const itemXml of itemMatches.slice(0, 15)) {
     const titleMatch = itemXml.match(/<title(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     let title = titleMatch ? titleMatch[1].trim() : '';
     title = title.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-    const linkMatch = itemXml.match(/<link(?:[^>]*)href="([^"]+)"/i) || itemXml.match(/<link(?:[^>]*)>([\s\S]*?)<\/link>/i) || itemXml.match(/<guid[^>]*isPermaLink="true"[^>]*>([\s\S]*?)<\/guid>/i);
+    const linkMatch = itemXml.match(/<link(?:[^>]*?)href="([^"]+)"/i) || itemXml.match(/<link(?:[^>]*)>([\s\S]*?)<\/link>/i) || itemXml.match(/<guid[^>]*isPermaLink="true"[^>]*>([\s\S]*?)<\/guid>/i);
     let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : '';
     link = link.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').trim();
 
-    const descMatch = itemXml.match(/<description(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/i);
+    const descMatch = itemXml.match(/<(?:description|summary)(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/i);
     const rawDesc = descMatch ? descMatch[1] : '';
     let description = rawDesc.replace(/<[^>]+>/g, '').trim();
     description = description.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
-    const contentEncodedMatch = itemXml.match(/<content:encoded(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/content:encoded>/i);
+    const contentEncodedMatch = itemXml.match(/<(?:content:encoded|content)(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:content:encoded|content)>/i);
     const fullContentHtml = contentEncodedMatch ? contentEncodedMatch[1] : '';
 
     // Extract exact original article image from media tags, enclosure, or content:encoded
@@ -547,7 +463,16 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
       }
     }
 
-    const dateMatch = itemXml.match(/<pubDate(?:[^>]*)>([\s\S]*?)<\/pubDate>/i);
+    // Resolve source name from item e.g. Google News <source url="...">Publisher</source>
+    const sourceMatch = itemXml.match(/<source[^>]*>([^<]+)<\/source>/i);
+    const resolvedSource = sourceMatch ? sourceMatch[1].trim() : sourceName;
+
+    // If feed XML doesn't contain an image (e.g., Google News RSS), provide tailored high-resolution editorial photo
+    if (!imageUrl && title) {
+      imageUrl = getAccurateArticleImage(title, 'Tech');
+    }
+
+    const dateMatch = itemXml.match(/<(?:pubDate|published|updated)(?:[^>]*)>([\s\S]*?)<\/(?:pubDate|published|updated)>/i);
     const pubDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString();
 
     if (title) {
@@ -555,9 +480,9 @@ function parseServerRss(xmlText: string, sourceName: string): ServerArticleItem[
         title,
         description: description || title,
         url: link,
-        imageUrl: imageUrl, // Keep authentic image if found, or empty string so downstream scraper fetches full page image
+        imageUrl: imageUrl,
         publishedAt: pubDate,
-        source: { name: sourceName }
+        source: { name: resolvedSource }
       });
     }
   }
@@ -1482,7 +1407,7 @@ EDITORIAL GUIDELINES (ONLY when isRelevantTechOrAi is true AND isDuplicate is fa
    - <p>Final verdict</p>
 4. 'suggestedCategory': Classify strictly into 'AI' or 'Tech'.
 5. 'readTime': e.g. '4 min read'
-6. 'socialShareText': Formatted WhatsApp / Social copy with emojis and summary in Sinhala.`;
+6. 'socialShareText': Formatted WhatsApp / Social copy with emojis and summary in Sinhala. STRICT RULE: NEVER use formatting symbols like asterisks (*), underscores (_), backticks (\`), or single/double quotes. Keep text clean and elegant.`;
 
         let geminiRes;
         const retries = 3;
@@ -1540,7 +1465,9 @@ EDITORIAL GUIDELINES (ONLY when isRelevantTechOrAi is true AND isDuplicate is fa
 
         const finalImage = (originalSourceImage && isValidServerImage(originalSourceImage)) 
           ? originalSourceImage 
-          : getServerTopicImage(item.title);
+          : ((item.imageUrl && isValidServerImage(item.imageUrl)) 
+              ? item.imageUrl 
+              : getAccurateArticleImage(item.title, generated.suggestedCategory || 'Tech'));
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const englishSource = (item.title || '').toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
         const cleanSlug = (englishSource && englishSource.length >= 3 ? englishSource.slice(0, 80) : '') || `story-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
@@ -1620,6 +1547,13 @@ EDITORIAL GUIDELINES (ONLY when isRelevantTechOrAi is true AND isDuplicate is fa
         // 6. Post to WhatsApp Webhook if configured
         if (autoPilotConfig.postWhatsApp && autoPilotConfig.waWebhookUrl) {
           try {
+            const autoFormattedPost = formatWhatsAppPost({
+              title: newDocPayload.title,
+              summary: newDocPayload.summary,
+              category: newDocPayload.category,
+              readTime: newDocPayload.readTime,
+              articleUrl: articleSiteUrl
+            });
             const waBody = {
               title: newDocPayload.title,
               summary: newDocPayload.summary,
@@ -1627,7 +1561,10 @@ EDITORIAL GUIDELINES (ONLY when isRelevantTechOrAi is true AND isDuplicate is fa
               readTime: newDocPayload.readTime,
               imageUrl: finalImage,
               articleUrl: articleSiteUrl,
-              customSnippet: generated.socialShareText
+              text: autoFormattedPost,
+              caption: autoFormattedPost,
+              formattedPost: autoFormattedPost,
+              customSnippet: autoFormattedPost
             };
             await fetch(autoPilotConfig.waWebhookUrl, {
               method: 'POST',
@@ -3221,7 +3158,9 @@ RESPONSE SCHEMA (JSON strictly):
                   title: item.title,
                   description: item.description,
                   url: item.url,
-                  imageUrl: item.imageUrl || getServerTopicImage(item.title),
+                  imageUrl: (item.imageUrl && isValidServerImage(item.imageUrl)) 
+                    ? item.imageUrl 
+                    : getAccurateArticleImage(item.title, isAi ? 'AI' : (isLocal ? 'Local' : 'Tech')),
                   publishedAt: item.publishedAt,
                   source: feed.name,
                   categoryHint: isAi ? 'AI' : (isLocal ? 'Local' : 'Tech')
@@ -3346,7 +3285,8 @@ CONTENT FORMATTING ('sinhalaFullContent'):
 - High standards of modern Sinhala technical language and grammar (නූතන තාක්ෂණික වචන නිවැරදිව භාවිත කරන්න).
 
 SOCIAL COPY ('socialShareText'):
-- Create a complete, formatted WhatsApp Channel & Social Media post in Sinhala with eye-catching emojis, title, 3 key bullet points, and call-to-action to read on My Feed LK.`;
+- Create a complete, formatted WhatsApp Channel & Social Media post in Sinhala with eye-catching emojis, title, 3 key bullet points, and call-to-action to read on My Feed LK.
+- STRICT RULE: Do NOT use asterisks (*), underscores (_), backticks (\`), or quotes (') for text styling. Keep the typography clean and clear.`;
 
         const geminiRes = await ai.models.generateContent({
           model: 'gemini-3.6-flash',
@@ -3505,7 +3445,7 @@ REQUIREMENTS:
 - 4-5 structured HTML paragraphs with <h2> subheadings and <ul> bullet highlights ('sinhalaFullContent')
 - Classify into 'AI', 'Tech', or 'Local' ('suggestedCategory')
 - 20-30 word visual prompt for AI image ('visualPrompt')
-- Ready-to-share WhatsApp post copy ('socialShareText')`;
+- Ready-to-share WhatsApp post copy ('socialShareText') without markdown symbols like (*, _, \`, ')`;
 
           const res = await ai.models.generateContent({
             model: 'gemini-3.6-flash',
@@ -3630,8 +3570,11 @@ REQUIREMENTS:
 
         const result = JSON.parse(geminiRes.text || '{}');
         const originalSourceImg = extractOriginalImageFromHtml(html, articleUrl);
-        result.originalImageUrl = originalSourceImg || '';
-        result.imageUrl = originalSourceImg || '';
+        const resolvedImg = (originalSourceImg && isValidServerImage(originalSourceImg))
+          ? originalSourceImg
+          : getAccurateArticleImage(result.sinhalaTitle || articleUrl, result.suggestedCategory || 'Tech');
+        result.originalImageUrl = resolvedImg;
+        result.imageUrl = resolvedImg;
         result.sourceUrl = articleUrl;
 
         return new Response(JSON.stringify(result), {
@@ -3686,9 +3629,13 @@ REQUIREMENTS:
         const siteMatch = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i);
         const siteName = siteMatch ? siteMatch[1].trim() : '';
 
+        const finalExtracted = (originalImage && isValidServerImage(originalImage))
+          ? originalImage
+          : getAccurateArticleImage(title, 'Tech');
+
         return new Response(JSON.stringify({
           originalImageUrl: originalImage || '',
-          imageUrl: originalImage || getServerTopicImage(title),
+          imageUrl: finalExtracted,
           title,
           siteName
         }), {
@@ -3849,16 +3796,14 @@ Rules:
         const waRecipient = process.env['WHATSAPP_RECIPIENT_ID'] || process.env['WHATSAPP_CHANNEL_ID'];
         const waWebhookUrl = process.env['WHATSAPP_WEBHOOK_URL'];
 
-        const formattedPost = customMessage || `*🚀 NEW ON My Feed LK (${category || 'Tech'})*
-
-*${title}*
-
-${summary}
-
-⏱️ ${readTime || '3 min read'}
-🔗 *Read full story:* ${articleUrl || (process.env['SITE_URL'] || 'https://myfeedlk.com')}
-
-_Curated with precision by My Feed LK Sri Lanka_`;
+        const formattedPost = formatWhatsAppPost({
+          title,
+          summary,
+          category: category || 'Tech',
+          readTime: readTime || '3 min read',
+          articleUrl: articleUrl || (process.env['SITE_URL'] || 'https://myfeedlk.com'),
+          customMessage
+        });
 
         // 1. If custom Webhook is configured (Zapier / Make / Evolution API / Baileys / WhatsApp Gateway)
         if (waWebhookUrl) {

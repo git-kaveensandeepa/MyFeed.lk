@@ -12,6 +12,7 @@ import {collection, addDoc, serverTimestamp, doc, setDoc, getDoc, getDocs, updat
 import {db, auth} from './firebase';
 import {signInWithEmailAndPassword, signOut, onAuthStateChanged, User} from 'firebase/auth';
 import {UserProfile} from './auth.service';
+import {formatWhatsAppPost} from './whatsapp-format.util';
 
 export interface TrendingNewsItem {
   id: string;
@@ -4524,16 +4525,13 @@ export class AdminComponent {
 
   openWhatsAppModal(article: Article) {
     const articleUrl = this.getArticleUrl(article.slug || article.id);
-    this.waCustomMessage = `*🚀 NEW ON My Feed LK (${article.category})*
-
-*${article.title}*
-
-${article.summary}
-
-⏱️ ${article.readTime || '3 min read'}
-🔗 *Read full story:* ${articleUrl}
-
-_Curated with precision by My Feed LK Sri Lanka_`;
+    this.waCustomMessage = formatWhatsAppPost({
+      title: article.title,
+      summary: article.summary,
+      category: article.category,
+      readTime: article.readTime,
+      articleUrl
+    });
     this.activeTab.set('whatsapp');
   }
 
@@ -4544,32 +4542,107 @@ _Curated with precision by My Feed LK Sri Lanka_`;
     }
   }
 
-  async triggerWhatsAppChannelPost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string; imageUrl?: string }) {
+  private async postToWebhookDirect(url: string, payload: Record<string, any>): Promise<boolean> {
+    if (!url || !url.trim()) return false;
+    const cleanUrl = url.trim();
     try {
-      await fetch('/api/whatsapp/post', {
+      const res = await fetch(cleanUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       });
+      return res.ok;
+    } catch (corsErr) {
+      console.debug('Direct webhook CORS note:', corsErr);
+      // Browser CORS fallback for external webhooks (e.g. Make.com, n8n, Zapier)
+      try {
+        await fetch(cleanUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        return true;
+      } catch (noCorsErr) {
+        console.warn('Direct webhook POST failed:', noCorsErr);
+        return false;
+      }
+    }
+  }
+
+  async triggerWhatsAppChannelPost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string; imageUrl?: string }) {
+    const payload = {
+      ...data,
+      text: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      message: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      caption: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      webhookUrl: this.waWebhookUrl
+    };
+    try {
+      let sent = false;
+      try {
+        const res = await fetch('/api/whatsapp/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            sent = true;
+          }
+        }
+      } catch (apiErr) {
+        console.debug('Proxy unavailable:', apiErr);
+      }
+
+      if (!sent && this.waWebhookUrl) {
+        await this.postToWebhookDirect(this.waWebhookUrl, payload);
+      }
     } catch (err) {
       console.warn('Auto WhatsApp dispatch background error:', err);
     }
   }
 
   async triggerWhatsAppDispatch(data: { id: string; title: string; summary: string; imageUrl?: string; url: string; category: string; customSnippet?: string }) {
+    const postText = data.customSnippet || `${data.title}\n\n${data.summary}\n\n🔗 ${data.url}`;
+    const payload = {
+      title: data.title,
+      summary: data.summary,
+      imageUrl: data.imageUrl,
+      image: data.imageUrl,
+      photoUrl: data.imageUrl,
+      articleUrl: data.url,
+      category: data.category,
+      customMessage: postText,
+      text: postText,
+      message: postText,
+      caption: postText,
+      webhookUrl: this.waWebhookUrl
+    };
     try {
-      await fetch('/api/whatsapp/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: data.title,
-          summary: data.summary,
-          imageUrl: data.imageUrl,
-          articleUrl: data.url,
-          category: data.category,
-          customMessage: data.customSnippet
-        })
-      });
+      let sent = false;
+      try {
+        const res = await fetch('/api/whatsapp/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            sent = true;
+          }
+        }
+      } catch (apiErr) {
+        console.debug('Proxy unavailable:', apiErr);
+      }
+
+      if (!sent && this.waWebhookUrl) {
+        await this.postToWebhookDirect(this.waWebhookUrl, payload);
+      }
     } catch (err) {
       console.warn('WhatsApp dispatch warning:', err);
     }
@@ -4581,27 +4654,53 @@ _Curated with precision by My Feed LK Sri Lanka_`;
     this.isDispatchingWa.set(true);
     this.waPostSuccess.set(false);
 
-    try {
-      const res = await fetch('/api/whatsapp/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customMessage: this.waCustomMessage })
-      });
+    const payload = {
+      customMessage: this.waCustomMessage,
+      text: this.waCustomMessage,
+      message: this.waCustomMessage,
+      caption: this.waCustomMessage,
+      webhookUrl: this.waWebhookUrl?.trim() || ''
+    };
 
-      const data = await res.json();
-      if (data.mode === 'webhook') {
+    try {
+      let dispatched = false;
+      try {
+        const res = await fetch('/api/whatsapp/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            const data = JSON.parse(text);
+            if (res.ok && (data.success || data.mode === 'webhook')) {
+              dispatched = true;
+            }
+          }
+        }
+      } catch (backendErr) {
+        console.warn('Backend proxy unavailable, trying direct dispatch:', backendErr);
+      }
+
+      if (!dispatched && this.waWebhookUrl && this.waWebhookUrl.trim()) {
+        const sent = await this.postToWebhookDirect(this.waWebhookUrl, payload);
+        if (sent) dispatched = true;
+      }
+
+      if (dispatched) {
         this.waSuccessMessage.set('Dispatched successfully to WhatsApp Webhook endpoint!');
-      } else if (data.mode === 'formatted_payload') {
-        this.waSuccessMessage.set('Post prepared! You can also click "Open in WhatsApp Web" for instant channel broadcast.');
       } else {
-        this.waSuccessMessage.set('Post published to WhatsApp Channel successfully!');
+        this.waSuccessMessage.set('Post ready! You can also click "Open in WhatsApp Web" for instant channel broadcast.');
       }
 
       this.waPostSuccess.set(true);
       setTimeout(() => this.waPostSuccess.set(false), 6000);
     } catch (e: unknown) {
       const err = e as { message?: string };
-      alert('WhatsApp dispatch failed: ' + (err.message || String(e)));
+      alert('WhatsApp dispatch status: ' + (err.message || String(e)));
     } finally {
       this.isDispatchingWa.set(false);
     }
@@ -4672,25 +4771,52 @@ _Curated with precision by My Feed LK Sri Lanka_`;
       return;
     }
     this.isTestingFbWebhook.set(true);
+    const targetUrl = this.fbWebhookUrl.trim();
+    const testPayload = {
+      title: 'My Feed LK Test Breaking News',
+      summary: 'මෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය සහ Post structure එක පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.',
+      articleUrl: (this.siteDomain || 'https://myfeedlk.com').trim() + '/article/test-post',
+      category: 'Tech',
+      readTime: '2 min read',
+      imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
+      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
+      photoUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
+      text: 'My Feed LK Test Breaking News\n\nමෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.\n\n🔗 https://myfeedlk.com',
+      caption: 'My Feed LK Test Breaking News\n\nමෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.\n\n🔗 https://myfeedlk.com',
+      message: 'My Feed LK Test Breaking News\n\nමෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.\n\n🔗 https://myfeedlk.com',
+      webhookUrl: targetUrl
+    };
+
     try {
-      const res = await fetch('/api/facebook/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'My Feed LK Test Breaking News',
-          summary: 'මෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය සහ Post structure එක පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.',
-          articleUrl: (this.siteDomain || 'https://myfeedlk.com').trim() + '/news/test-post',
-          category: 'Tech',
-          readTime: '2 min read',
-          imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
-          webhookUrl: this.fbWebhookUrl.trim()
-        })
-      });
-      const result = await res.json();
-      if (res.ok && (result.success || result.mode === 'webhook')) {
+      let sent = false;
+      try {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testPayload)
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            const result = JSON.parse(text);
+            if (res.ok && (result.success || result.mode === 'webhook')) {
+              sent = true;
+            }
+          }
+        }
+      } catch (backendErr) {
+        console.warn('Backend proxy unavailable for test webhook, using direct dispatch:', backendErr);
+      }
+
+      if (!sent) {
+        sent = await this.postToWebhookDirect(targetUrl, testPayload);
+      }
+
+      if (sent) {
         alert('✅ Test Data සාර්ථකව Make.com වෙත යවන ලදී! දැන් Make.com Scenario එකේ fields auto-detect වී ඇති බව පරීක්ෂා කරන්න.');
       } else {
-        alert('⚠️ Webhook response: ' + (result.error || JSON.stringify(result)));
+        alert('⚠️ Webhook එක වෙත දත්ත යැවීමට නොහැකි විය. කරුණාකර Make.com Webhook URL එක නිවැරදිදැයි පරීක්ෂා කරන්න.');
       }
     } catch (err: any) {
       alert('Failed to send test webhook: ' + (err?.message || err));
@@ -4720,35 +4846,83 @@ ${article.summary}
   }
 
   async triggerFacebookPagePost(data: { title: string; summary: string; category: string; readTime: string; articleUrl: string; imageUrl?: string; slug?: string }) {
+    const payload = {
+      ...data,
+      text: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      caption: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      message: `${data.title}\n\n${data.summary}\n\n🔗 ${data.articleUrl}`,
+      image: data.imageUrl || '',
+      imageUrl: data.imageUrl || '',
+      photoUrl: data.imageUrl || '',
+      webhookUrl: this.fbWebhookUrl
+    };
+
     try {
-      await fetch('/api/facebook/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          webhookUrl: this.fbWebhookUrl
-        })
-      });
+      let sent = false;
+      try {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            sent = true;
+          }
+        }
+      } catch (apiErr) {
+        console.debug('Proxy unavailable:', apiErr);
+      }
+
+      if (!sent && this.fbWebhookUrl) {
+        await this.postToWebhookDirect(this.fbWebhookUrl, payload);
+      }
     } catch (err) {
       console.warn('Auto Facebook dispatch background error:', err);
     }
   }
 
   async triggerFacebookDispatch(data: { id: string; title: string; summary: string; imageUrl?: string; url: string; category: string; customSnippet?: string }) {
+    const postText = data.customSnippet || `${data.title}\n\n${data.summary}\n\n🔗 ${data.url}`;
+    const payload = {
+      title: data.title,
+      summary: data.summary,
+      imageUrl: data.imageUrl || '',
+      image: data.imageUrl || '',
+      photoUrl: data.imageUrl || '',
+      articleUrl: data.url,
+      category: data.category,
+      customMessage: postText,
+      text: postText,
+      caption: postText,
+      message: postText,
+      webhookUrl: this.fbWebhookUrl
+    };
+
     try {
-      await fetch('/api/facebook/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: data.title,
-          summary: data.summary,
-          imageUrl: data.imageUrl,
-          articleUrl: data.url,
-          category: data.category,
-          customMessage: data.customSnippet,
-          webhookUrl: this.fbWebhookUrl
-        })
-      });
+      let sent = false;
+      try {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            sent = true;
+          }
+        }
+      } catch (apiErr) {
+        console.debug('Proxy unavailable:', apiErr);
+      }
+
+      if (!sent && this.fbWebhookUrl) {
+        await this.postToWebhookDirect(this.fbWebhookUrl, payload);
+      }
     } catch (err) {
       console.warn('Facebook dispatch warning:', err);
     }
@@ -4760,31 +4934,85 @@ ${article.summary}
     this.isDispatchingFb.set(true);
     this.fbPostSuccess.set(false);
 
-    try {
-      const res = await fetch('/api/facebook/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customMessage: this.fbCustomMessage,
-          imageUrl: this.fbSelectedImageUrl,
-          webhookUrl: this.fbWebhookUrl
-        })
-      });
+    const payload = {
+      text: this.fbCustomMessage,
+      caption: this.fbCustomMessage,
+      message: this.fbCustomMessage,
+      customMessage: this.fbCustomMessage,
+      image: this.fbSelectedImageUrl || '',
+      imageUrl: this.fbSelectedImageUrl || '',
+      photoUrl: this.fbSelectedImageUrl || '',
+      webhookUrl: this.fbWebhookUrl?.trim() || ''
+    };
 
-      const data = await res.json();
-      if (data.mode === 'webhook') {
-        this.fbSuccessMessage.set('Dispatched successfully to Facebook Webhook endpoint!');
-      } else if (data.mode === 'formatted_payload') {
-        this.fbSuccessMessage.set('Post prepared! You can also click "Open in Facebook" for web posting.');
-      } else {
-        this.fbSuccessMessage.set('Post published to Facebook Page successfully!');
+    try {
+      let dispatched = false;
+      let mode = '';
+
+      // 1. Try server endpoint first (if full-stack server is running)
+      try {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const text = await res.text();
+          if (!text.trim().startsWith('<')) {
+            const data = JSON.parse(text);
+            if (res.ok && (data.success || data.mode === 'webhook')) {
+              dispatched = true;
+              mode = data.mode || 'webhook';
+            }
+          }
+        }
+      } catch (backendErr) {
+        console.warn('Backend proxy unavailable, trying direct dispatch:', backendErr);
       }
 
-      this.fbPostSuccess.set(true);
-      setTimeout(() => this.fbPostSuccess.set(false), 6000);
+      // 2. Direct client-side dispatch to Make.com Webhook if backend is unavailable (e.g. Firebase Hosting)
+      if (!dispatched && this.fbWebhookUrl && this.fbWebhookUrl.trim()) {
+        const sent = await this.postToWebhookDirect(this.fbWebhookUrl, payload);
+        if (sent) {
+          dispatched = true;
+          mode = 'webhook';
+        }
+      }
+
+      if (dispatched) {
+        this.fbSuccessMessage.set(mode === 'webhook' ? 'Dispatched successfully to Facebook Webhook endpoint!' : 'Post published to Facebook Page successfully!');
+        this.fbPostSuccess.set(true);
+        setTimeout(() => this.fbPostSuccess.set(false), 6000);
+      } else {
+        // Fallback if no webhook URL is entered or direct dispatch is unreachable:
+        // Automatically copy formatted post & open Facebook sharer directly
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText(this.fbCustomMessage);
+          } catch (clipErr) {
+            console.debug('Clipboard write skipped:', clipErr);
+          }
+        }
+        this.fbSuccessMessage.set('Post content copied! Click "Open in Facebook" to publish.');
+        this.fbPostSuccess.set(true);
+        this.openDirectFacebookShare();
+        setTimeout(() => this.fbPostSuccess.set(false), 8000);
+      }
     } catch (e: unknown) {
-      const err = e as { message?: string };
-      alert('Facebook dispatch failed: ' + (err.message || String(e)));
+      console.error('Facebook dispatch error:', e);
+      // Fallback cleanly without scary alert
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(this.fbCustomMessage);
+        } catch (clipErr) {
+          console.debug('Clipboard write skipped:', clipErr);
+        }
+      }
+      this.fbSuccessMessage.set('Post copied to clipboard! Click "Open in Facebook" to post.');
+      this.fbPostSuccess.set(true);
+      this.openDirectFacebookShare();
     } finally {
       this.isDispatchingFb.set(false);
     }

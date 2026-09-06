@@ -544,23 +544,22 @@ function sanitizeArticleImage(rawUrl: string | undefined, title = '', category =
   }
 
   const lower = rawUrl.toLowerCase();
-  // Filter out Google News icons, Google User Content logos, favicons, avatars, and generic placeholders
+  // Filter out tiny favicons, tracking pixels, avatars, or vector icons (avoid false positives like 'silicon' or 'pixel 9')
   if (
-    lower.includes('googleusercontent.com') ||
-    lower.includes('news.google.com') ||
-    lower.includes('gstatic.com') ||
+    lower.includes('gstatic.com/images/branding') ||
     lower.includes('google.com/favicon') ||
-    lower.includes('avatar') ||
-    lower.includes('logo') ||
-    lower.includes('icon') ||
-    lower.includes('1x1') ||
-    lower.includes('pixel') ||
-    lower.includes('badge') ||
-    lower.includes('spinner') ||
-    lower.includes('placeholder') ||
-    lower.includes('blank') ||
+    lower.includes('-dr60l-') ||
+    lower.includes('=w16') ||
+    lower.includes('=w24') ||
+    lower.includes('=s16') ||
+    lower.includes('=s24') ||
+    lower.includes('/1x1') ||
+    lower.includes('cleardot.gif') ||
+    lower.includes('pixel.gif') ||
+    lower.includes('spacer.gif') ||
+    lower.includes('default-avatar') ||
     lower.endsWith('.svg') ||
-    lower.endsWith('.gif')
+    lower.endsWith('/favicon.ico')
   ) {
     return getTopicFallbackImage(title || originalTitle, category);
   }

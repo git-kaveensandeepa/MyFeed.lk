@@ -93,21 +93,6 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
         </div>
       </div>
 
-      <!-- iOS Segmented Category Filter Carousel -->
-      <div class="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 mb-6 px-0.5">
-        @for (cat of categoryFilters; track cat.id) {
-          <button
-            (click)="selectCategory(cat.id)"
-            class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all duration-150 ios-touch cursor-pointer flex items-center gap-1.5"
-            [class]="activeCategory() === cat.id 
-              ? 'bg-[#007AFF] text-white shadow-md font-bold' 
-              : 'ios-glass-thin text-[#000000] dark:text-white hover:bg-black/10 dark:hover:bg-white/15'">
-            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">{{ cat.icon }}</mat-icon>
-            <span>{{ cat.label }}</span>
-          </button>
-        }
-      </div>
-
       <!-- Search Active Indicator (if searching) -->
       @if (searchService.searchTerm().trim()) {
         <div class="mb-8 p-4 rounded-2xl ios-glass-thick flex items-center justify-between animate-fade-in-up">

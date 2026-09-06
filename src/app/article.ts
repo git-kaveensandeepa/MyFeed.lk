@@ -13,6 +13,7 @@ import {AuthService} from './auth.service';
 import {auth, db} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
 import {onSnapshot, Unsubscribe} from 'firebase/firestore';
+import {formatWhatsAppPost} from './whatsapp-format.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -90,18 +91,16 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                 <span>Poster</span>
               </button>
 
-              <!-- WhatsApp Direct Share & Forward Button -->
+              <!-- Universal Share Anywhere Button (Formatted with stylized typography) -->
               <button 
-                (click)="shareToWhatsApp(article)"
+                (click)="shareStory(article)"
                 [disabled]="isSharing()"
                 class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#34C759] text-white font-bold text-xs shadow-sm hover:bg-[#2db24e] active:scale-95 transition-all ios-touch cursor-pointer"
-                title="Forward article to WhatsApp">
+                title="Share formatted story to WhatsApp, Telegram or any app">
                 @if (isSharing()) {
                   <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="animate-spin">sync</mat-icon>
                 } @else {
-                  <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                  </svg>
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">share</mat-icon>
                 }
                 <span>Share</span>
               </button>
@@ -435,37 +434,55 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
-                <!-- WhatsApp Forward Button -->
+                <!-- Universal Share Anywhere Button (Formatted with stylized typography) -->
                 <button 
-                  (click)="shareToWhatsApp(article)"
+                  (click)="shareStory(article)"
                   [disabled]="isSharing()"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#34C759] text-white hover:bg-[#2db24e] font-bold text-xs transition-all ios-touch cursor-pointer shadow-sm">
+                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#34C759] text-white hover:bg-[#2db24e] font-bold text-xs transition-all ios-touch cursor-pointer shadow-sm active:scale-95"
+                  title="Share formatted story to WhatsApp, Telegram or any app">
                   @if (isSharing()) {
                     <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="animate-spin">sync</mat-icon>
                   } @else {
-                    <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
-                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                    </svg>
+                    <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
                   }
+                  <span>Share Anywhere</span>
+                </button>
+
+                <!-- WhatsApp Direct Button -->
+                <button 
+                  (click)="shareDirectWhatsApp(article)"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 font-bold text-xs transition-all ios-touch cursor-pointer border border-[#25D366]/20 active:scale-95">
+                  <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                  </svg>
                   <span>WhatsApp</span>
+                </button>
+
+                <!-- Copy Formatted Post Button -->
+                <button 
+                  (click)="copyFormattedStory(article)"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs transition-all ios-touch cursor-pointer active:scale-95"
+                  title="Copy formatted story with Unicode bold fonts">
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">content_copy</mat-icon>
+                  <span>{{ copyFormattedSuccess() ? 'Copied Post!' : 'Copy Formatted' }}</span>
                 </button>
 
                 <!-- Facebook Share Button -->
                 <button 
                   (click)="shareToFacebook(article)"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] font-bold text-xs transition-all ios-touch cursor-pointer shadow-sm">
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 font-bold text-xs transition-all ios-touch cursor-pointer border border-[#1877F2]/20 active:scale-95">
                   <svg class="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
                     <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
                   </svg>
-                  <span>Share</span>
+                  <span>Facebook</span>
                 </button>
 
-                <!-- Copy Link -->
+                <!-- Copy Article URL -->
                 <button 
                   (click)="copyLink()"
-                  class="inline-flex items-center gap-1 px-3.5 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs transition-all ios-touch cursor-pointer">
-                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">share</mat-icon>
-                  <span>{{ copySuccess() ? 'Copied!' : 'Copy' }}</span>
+                  class="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs transition-all ios-touch cursor-pointer">
+                  <mat-icon style="font-size: 15px; width: 15px; height: 15px;">link</mat-icon>
+                  <span>{{ copySuccess() ? 'Copied Link!' : 'Link' }}</span>
                 </button>
               </div>
             </div>
@@ -710,12 +727,10 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                 <span>Download PNG</span>
               </button>
               <button 
-                (click)="shareToWhatsApp(article)"
+                (click)="shareStory(article)"
                 class="w-full py-3 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs shadow-md shadow-[#25D366]/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
-                <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                </svg>
-                <span>WhatsApp</span>
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">share</mat-icon>
+                <span>Share Story</span>
               </button>
               <button 
                 (click)="shareToFacebook(article)"
@@ -724,6 +739,91 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                   <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
                 </svg>
                 <span>Facebook</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- UNIVERSAL SHARE MODAL (Formatted with Unicode stylized fonts for any app) -->
+      @if (showShareModal() && shareModalData(); as sData) {
+        <div class="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
+          <div class="bg-white dark:bg-[#1c1c1e] rounded-[2rem] max-w-lg w-full p-6 shadow-2xl border border-black/10 dark:border-white/10 animate-scale-in my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-black/5 dark:border-white/10">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <mat-icon style="font-size: 22px; width: 22px; height: 22px;">share</mat-icon>
+                </div>
+                <div class="min-w-0">
+                  <h3 class="text-base font-bold text-[#000000] dark:text-white leading-tight">Share this Story</h3>
+                  <p class="text-xs text-[#8e8e93] truncate">Formatted with stylized typography ready for any app</p>
+                </div>
+              </div>
+              <button 
+                (click)="showShareModal.set(false)" 
+                class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#000000] dark:text-white flex items-center justify-center transition-all cursor-pointer shrink-0">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Formatted Preview Box -->
+            <div class="mb-5">
+              <div class="flex items-center justify-between text-xs font-semibold text-[#8e8e93] mb-1.5 px-1">
+                <span>Post Preview (Stylized Unicode)</span>
+                <span class="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">Ready to paste</span>
+              </div>
+              <div class="bg-black/[0.03] dark:bg-white/[0.04] p-3.5 rounded-2xl border border-black/5 dark:border-white/10 text-xs text-[#1c1c1e] dark:text-gray-200 font-sans max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
+                {{ sData.formattedPost }}
+              </div>
+            </div>
+
+            <!-- Primary Action: Copy Formatted Post -->
+            <button 
+              (click)="copyFormattedPostText(sData.formattedPost)"
+              class="w-full py-3 px-4 rounded-2xl bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold text-xs shadow-md shadow-[#007AFF]/20 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 mb-3">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">content_copy</mat-icon>
+              <span>{{ copyFormattedSuccess() ? 'Copied to Clipboard! ✨' : 'Copy Formatted Text (Paste Anywhere)' }}</span>
+            </button>
+
+            <!-- Quick App Share Buttons -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <!-- WhatsApp -->
+              <button 
+                (click)="shareDirectWhatsApp(sData.article)"
+                class="p-2.5 rounded-2xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer border border-[#25D366]/20 active:scale-95">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </button>
+
+              <!-- Telegram -->
+              <button 
+                (click)="shareDirectTelegram(sData.articleUrl, sData.formattedPost)"
+                class="p-2.5 rounded-2xl bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer border border-[#0088cc]/20 active:scale-95">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18.892-1.053 5.006-1.493 7.085-.187.879-.514 1.173-.83 1.202-.687.063-1.208-.454-1.873-.89-1.041-.682-1.63-1.107-2.641-1.773-1.168-.769-.411-1.192.255-1.884.174-.181 3.2-2.934 3.259-3.185.007-.031.015-.15-.056-.213-.071-.063-.176-.042-.252-.024-.108.024-1.829 1.163-5.161 3.414-.488.336-.931.5-1.328.491-.437-.01-1.278-.248-1.904-.452-.767-.25-1.378-.383-1.325-.808.028-.221.332-.448.913-.68 3.582-1.56 5.972-2.589 7.168-3.087 3.416-1.42 4.126-1.667 4.588-1.674.102-.002.329.023.476.143.124.101.158.238.172.336.015.097.034.318.019.493z"/>
+                </svg>
+                <span>Telegram</span>
+              </button>
+
+              <!-- X / Twitter -->
+              <button 
+                (click)="shareDirectTwitter(sData.formattedPost)"
+                class="p-2.5 rounded-2xl bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-black dark:text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer border border-black/5 dark:border-white/10 active:scale-95">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                <span>X</span>
+              </button>
+
+              <!-- Email -->
+              <button 
+                (click)="shareDirectEmail(sData.article.title, sData.formattedPost)"
+                class="p-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer border border-amber-500/20 active:scale-95">
+                <mat-icon style="font-size: 20px; width: 20px; height: 20px;">mail</mat-icon>
+                <span>Email</span>
               </button>
             </div>
           </div>
@@ -1283,9 +1383,14 @@ export class ArticleComponent implements OnDestroy {
 
   readonly scrollProgress = signal(0);
   readonly copySuccess = signal(false);
+  readonly copyFormattedSuccess = signal(false);
   readonly isSharing = signal(false);
   readonly toastMessage = signal<string | null>(null);
   readonly currentReaction = signal<string | null>(null);
+
+  // Universal Share Sheet Modal Signals
+  readonly showShareModal = signal(false);
+  readonly shareModalData = signal<{ article: any; formattedPost: string; articleUrl: string } | null>(null);
 
   // Social Media Story / Poster Generator (HTML5 Canvas)
   readonly showPosterModal = signal(false);
@@ -1454,72 +1559,99 @@ export class ArticleComponent implements OnDestroy {
     }, 3500);
   }
 
-  /**
-   * Forwards formatted article with Feature image file, Summary, and Read More link directly to WhatsApp app/web
-   */
-  async shareToWhatsApp(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string; imageUrl?: string }) {
-    if (typeof window === 'undefined') return;
-
+  getArticleUrl(article: { slug?: string; id: string }): string {
+    if (typeof window === 'undefined') return '';
     const domain = window.location.origin.includes('localhost') || window.location.origin.includes('run.app')
       ? 'https://myfeedlk.com'
       : window.location.origin;
-    const articleUrl = `${domain}/article/${article.slug || article.id}`;
+    return `${domain}/article/${article.slug || article.id}`;
+  }
 
-    const formattedPost = `*🚀 NEW ON My Feed LK (${article.category || 'News'})*
+  getFormattedPost(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string }): { formattedPost: string; articleUrl: string } {
+    const articleUrl = this.getArticleUrl(article);
+    const formattedPost = formatWhatsAppPost({
+      title: article.title,
+      summary: article.summary,
+      category: article.category || 'News',
+      readTime: article.readTime,
+      articleUrl
+    });
+    return { formattedPost, articleUrl };
+  }
 
-*${article.title}*
+  /**
+   * Universal share function: Formats post with stylized typography (no symbols)
+   * On mobile / supported browsers, opens native share sheet (WhatsApp, Telegram, Viber, Facebook, Twitter, Messages, etc.)
+   * On desktop / fallback, opens the Universal Share modal with 1-click options to any platform.
+   */
+  async shareStory(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string; imageUrl?: string }) {
+    if (typeof window === 'undefined') return;
 
-${article.summary}
+    const { formattedPost, articleUrl } = this.getFormattedPost(article);
 
-⏱️ ${article.readTime || '3 min read'}
-🔗 *Read full story:* ${articleUrl}
-
-_Curated with precision by My Feed LK Sri Lanka_`;
-
-    // 1. Check if device supports Web Share API with files (Android / iOS / Mobile Chrome & Safari)
-    if (article.imageUrl && typeof navigator !== 'undefined' && 'share' in navigator) {
+    // 1. Try Native Web Share API (Android, iOS, iPadOS, Safari, Chrome Mobile)
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
       try {
         this.isSharing.set(true);
-        this.showToast('Preparing image & details for WhatsApp... ⏳');
 
-        // Fetch image blob via proxy to avoid CORS issues
-        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(article.imageUrl)}`;
-        let blob: Blob | null = null;
-        try {
-          const res = await fetch(proxyUrl);
-          if (res.ok) {
-            blob = await res.blob();
-          }
-        } catch {
-          // Direct fetch fallback if proxy unavailable
+        // Attempt sharing with Image file if available
+        let sharedWithFile = false;
+        if (article.imageUrl) {
           try {
-            const res = await fetch(article.imageUrl, { mode: 'cors' });
-            if (res.ok) blob = await res.blob();
-          } catch {
-            // ignore
+            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(article.imageUrl)}`;
+            let blob: Blob | null = null;
+            try {
+              const res = await fetch(proxyUrl);
+              if (res.ok) blob = await res.blob();
+            } catch {
+              try {
+                const res = await fetch(article.imageUrl, { mode: 'cors' });
+                if (res.ok) blob = await res.blob();
+              } catch {
+                // ignore
+              }
+            }
+
+            if (blob) {
+              const fileType = blob.type || 'image/jpeg';
+              const ext = fileType.includes('png') ? 'png' : fileType.includes('webp') ? 'webp' : 'jpg';
+              const file = new File([blob], `myfeed-${article.slug || article.id}.${ext}`, { type: fileType });
+
+              if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  title: article.title,
+                  text: formattedPost,
+                  files: [file]
+                });
+                sharedWithFile = true;
+                this.isSharing.set(false);
+                this.showToast('Shared successfully! ✨');
+                return;
+              }
+            }
+          } catch (fileErr: unknown) {
+            const error = fileErr as { name?: string };
+            if (error?.name === 'AbortError') {
+              this.isSharing.set(false);
+              return;
+            }
+            // If file share fails, fall through to text share
           }
         }
 
-        if (blob) {
-          const fileType = blob.type || 'image/jpeg';
-          const ext = fileType.includes('png') ? 'png' : fileType.includes('webp') ? 'webp' : 'jpg';
-          const file = new File([blob], `myfeed-${article.slug || article.id}.${ext}`, { type: fileType });
-
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: article.title,
-              text: formattedPost,
-              files: [file]
-            });
-            this.isSharing.set(false);
-            this.showToast('Shared with image! ✨');
-            return;
-          }
+        // Native share without file (text + title)
+        if (!sharedWithFile) {
+          await navigator.share({
+            title: article.title,
+            text: formattedPost
+          });
+          this.isSharing.set(false);
+          this.showToast('Shared successfully! ✨');
+          return;
         }
       } catch (err: unknown) {
         const error = err as { name?: string };
         if (error?.name === 'AbortError') {
-          // User closed share dialog
           this.isSharing.set(false);
           return;
         }
@@ -1528,11 +1660,56 @@ _Curated with precision by My Feed LK Sri Lanka_`;
       }
     }
 
-    // 2. Fallback for Desktop browser or if Web Share API with files is not supported
-    // WhatsApp direct deep link with complete formatted text and read more link
+    // 2. Fallback for Desktop browser or if Web Share API is not supported: Open Universal Share Modal
+    this.shareModalData.set({
+      article,
+      formattedPost,
+      articleUrl
+    });
+    this.showShareModal.set(true);
+  }
+
+  // Backward compatibility alias for any existing callers
+  shareToWhatsApp(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string; imageUrl?: string }) {
+    return this.shareStory(article);
+  }
+
+  shareDirectWhatsApp(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string }) {
+    const { formattedPost } = this.getFormattedPost(article);
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedPost)}`;
     window.open(waUrl, '_blank');
     this.showToast('Opening WhatsApp... 🚀');
+  }
+
+  copyFormattedStory(article: { title: string; summary: string; category?: string; readTime?: string; slug?: string; id: string }) {
+    const { formattedPost } = this.getFormattedPost(article);
+    this.copyFormattedPostText(formattedPost);
+  }
+
+  copyFormattedPostText(formattedPost: string) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(formattedPost);
+      this.copyFormattedSuccess.set(true);
+      this.showToast('Formatted post copied! Ready to paste anywhere ✨');
+      setTimeout(() => this.copyFormattedSuccess.set(false), 3000);
+    }
+  }
+
+  shareDirectTelegram(articleUrl: string, formattedPost: string) {
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(formattedPost)}`;
+    window.open(tgUrl, '_blank');
+    this.showToast('Opening Telegram... ✈️');
+  }
+
+  shareDirectTwitter(formattedPost: string) {
+    const twUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(formattedPost)}`;
+    window.open(twUrl, '_blank');
+    this.showToast('Opening X (Twitter)... 🚀');
+  }
+
+  shareDirectEmail(title: string, formattedPost: string) {
+    const mailUrl = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(formattedPost)}`;
+    window.location.href = mailUrl;
   }
 
   shareToFacebook(article: { slug?: string; id: string; title: string }) {
