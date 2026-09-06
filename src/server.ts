@@ -2624,14 +2624,27 @@ ${rssItemsXml}
     }
 
     
+    // Helper to check Authorization for external triggers (GitHub Actions / Cloud Scheduler)
+    const isAuthorizedCron = (req: Request): boolean => {
+      const secret = process.env['CRON_SECRET'];
+      if (!secret) return true; // Allowed in dev/preview if not set
+      const authHeader = req.headers.get('authorization') || '';
+      const xSecret = req.headers.get('x-cron-secret') || '';
+      return authHeader === `Bearer ${secret}` || xSecret === secret;
+    };
+
     // ==========================================
     // AUTO-PILOT 24/7 1-HOUR NEWS SYNC ENDPOINTS
     // ==========================================
 
-    // Auto-Pilot Status & Live History
-
     // Bytes Generation Endpoint (Manual Trigger & Auto-Scheduler)
     if ((url.pathname === '/api/admin/bytes/generate-now' || url.pathname === '/api/bytes/generate-now') && (request.method === 'POST' || request.method === 'GET')) {
+      if (!isAuthorizedCron(request)) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       try {
         const result = await executeDailyBytesGeneration('manual_api');
         return new Response(JSON.stringify(result), {
@@ -2664,6 +2677,12 @@ ${rssItemsXml}
 
     // Quiz Generation Endpoint (Manual Trigger & Auto-Scheduler)
     if ((url.pathname === '/api/admin/quizzes/generate-now' || url.pathname === '/api/quizzes/generate-now') && (request.method === 'POST' || request.method === 'GET')) {
+      if (!isAuthorizedCron(request)) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       try {
         const result = await executeDailyQuizGeneration('manual_api');
         return new Response(JSON.stringify(result), {
@@ -2754,6 +2773,12 @@ ${rssItemsXml}
 
     // Dedicated 1-Hour Cron & Webhook Trigger for Auto-Pilot
     if ((url.pathname === '/api/cron/sync-news' || url.pathname === '/api/admin/autopilot/sync-now') && (request.method === 'GET' || request.method === 'POST')) {
+      if (!isAuthorizedCron(request)) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const triggerType = url.pathname.includes('sync-now') ? 'manual_admin' : 'webhook_cron';
       const result = await executeAutoPilotSync(triggerType);
       return new Response(JSON.stringify(result), {
@@ -2829,6 +2854,12 @@ ${rssItemsXml}
 
     // Manual Generate Trigger (Admin or External Cron)
     if (url.pathname === '/api/admin/audio-pipeline/generate-now' && (request.method === 'GET' || request.method === 'POST')) {
+      if (!isAuthorizedCron(request)) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const result = await executeMorningAudioGeneration('manual');
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 500,
@@ -2838,6 +2869,12 @@ ${rssItemsXml}
 
     // Manual Publish Trigger (Admin or External Cron)
     if (url.pathname === '/api/admin/audio-pipeline/publish-now' && (request.method === 'GET' || request.method === 'POST')) {
+      if (!isAuthorizedCron(request)) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       const result = await executeMorningAudioPublish('manual');
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 500,

@@ -1,0 +1,171 @@
+name: Automated Content Generator (MyFeedLK)
+
+on:
+  schedule:
+    # 03:30 AM Sri Lanka Time (UTC 22:00) -> Generate Morning Audio Podcast
+    - cron: '0 22 * * *'
+
+    # 04:00 AM Sri Lanka Time (UTC 22:30) -> Generate Daily Quizzes, 60s Bytes & Publish Morning Audio
+    - cron: '30 22 * * *'
+
+    # 04:00 PM Sri Lanka Time (UTC 10:30) -> Generate Evening Quizzes
+    - cron: '30 10 * * *'
+
+    # Every 2 hours -> Auto-Pilot 24/7 Tech News Sync
+    - cron: '0 */2 * * *'
+
+  # Allows manual execution anytime from the GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Select Task to Run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'quizzes'
+          - 'bytes'
+          - 'news_sync'
+          - 'audio_generate'
+          - 'audio_publish'
+
+jobs:
+  generate-content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Validate Configuration
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "❌ ERROR: APP_URL secret is not set in GitHub repository secrets."
+            echo "Please add APP_URL (e.g. https://myfeedlk.com or your Cloud Run URL) in Settings -> Secrets and variables -> Actions"
+            exit 1
+          fi
+          echo "✅ Target App URL: ${{ secrets.APP_URL }}"
+
+      # -------------------------------------------------------------
+      # 1. Quizzes Generation
+      # -------------------------------------------------------------
+      - name: Generate Daily Quizzes
+        if: |
+          github.event_name == 'workflow_dispatch' && (github.event.inputs.task == 'all' || github.event.inputs.task == 'quizzes') ||
+          github.event_name == 'schedule' && (github.event.schedule == '30 22 * * *' || github.event.schedule == '30 10 * * *')
+        run: |
+          echo "🎯 Triggering Daily Quizzes generation..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/quizzes/generate-now" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to generate quizzes (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "✅ Quizzes generated successfully!"
+
+      # -------------------------------------------------------------
+      # 2. 60-Second Bytes Generation
+      # -------------------------------------------------------------
+      - name: Generate 60-Second Bytes
+        if: |
+          github.event_name == 'workflow_dispatch' && (github.event.inputs.task == 'all' || github.event.inputs.task == 'bytes') ||
+          github.event_name == 'schedule' && github.event.schedule == '30 22 * * *'
+        run: |
+          echo "⚡ Triggering 60-Second Bytes generation..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/bytes/generate-now" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to generate bytes (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "✅ 60s Bytes generated successfully!"
+
+      # -------------------------------------------------------------
+      # 3. Morning AI Audio Podcast Generation (3:30 AM LK Time)
+      # -------------------------------------------------------------
+      - name: Generate Morning AI Audio Podcast
+        if: |
+          github.event_name == 'workflow_dispatch' && (github.event.inputs.task == 'all' || github.event.inputs.task == 'audio_generate') ||
+          github.event_name == 'schedule' && github.event.schedule == '0 22 * * *'
+        run: |
+          echo "🎙️ Triggering Morning Audio Podcast generation..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/admin/audio-pipeline/generate-now" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to generate audio podcast (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "✅ Morning Audio generated successfully!"
+
+      # -------------------------------------------------------------
+      # 4. Morning AI Audio Podcast Publish (4:00 AM LK Time)
+      # -------------------------------------------------------------
+      - name: Publish Morning AI Audio Podcast
+        if: |
+          github.event_name == 'workflow_dispatch' && (github.event.inputs.task == 'all' || github.event.inputs.task == 'audio_publish') ||
+          github.event_name == 'schedule' && github.event.schedule == '30 22 * * *'
+        run: |
+          echo "📢 Triggering Morning Audio Podcast publication..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/admin/audio-pipeline/publish-now" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to publish audio podcast (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "✅ Morning Audio published successfully!"
+
+      # -------------------------------------------------------------
+      # 5. Auto-Pilot 24/7 Tech News Sync (Every 2 Hours)
+      # -------------------------------------------------------------
+      - name: Sync 24/7 Tech News
+        if: |
+          github.event_name == 'workflow_dispatch' && (github.event.inputs.task == 'all' || github.event.inputs.task == 'news_sync') ||
+          github.event_name == 'schedule' && github.event.schedule == '0 */2 * * *'
+        run: |
+          echo "📰 Triggering 24/7 Auto-Pilot Tech News Sync..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/cron/sync-news" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "❌ Failed to sync news (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+          echo "✅ Tech News sync completed successfully!"

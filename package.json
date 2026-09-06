@@ -6,6 +6,7 @@
     "start": "ng serve --allowed-hosts=true --live-reload=false",
     "dev": "ng serve --allowed-hosts=true --live-reload=false",
     "build": "ng build",
+    "serve:prod": "node server-prod.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"
