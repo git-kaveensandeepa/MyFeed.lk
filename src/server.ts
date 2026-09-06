@@ -112,7 +112,7 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Pure Technology & Artificial Intelligence RSS Feeds (Direct publishers with original featured images)
+// 100% Pure Technology & Artificial Intelligence RSS Feeds (Direct Premier Publishers)
 const SERVER_RSS_FEEDS = [
   { name: 'The Verge AI & Tech', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
@@ -126,12 +126,16 @@ const SERVER_RSS_FEEDS = [
 export function isTechOrAiTopic(title: string, description = ''): boolean {
   const text = `${title} ${description}`.toLowerCase();
   
-  // Non-tech rejection keywords (politics, crimes, accidents, sports, gossip)
+  // Non-tech rejection keywords (politics, crimes, accidents, disasters, sports, gossip)
   const nonTechRejections = [
-    'murder', 'homicide', 'killed', 'accident', 'dead', 'shooting', 'parliament', 'election',
-    'minister', 'president', 'prime minister', 'cricket', 'football', 'soccer', 'ipl', 'world cup',
-    'curfew', 'arrested', 'police raid', 'court hearing', 'drugs', 'smuggling',
-    'petrol', 'fuel crisis', 'inflation', 'protest', 'celebrity dating', 'divorce'
+    'murder', 'homicide', 'killed', 'killing', 'dead', 'death toll', 'dies', 'died', 'shooting', 'shot dead',
+    'accident', 'crash', 'police', 'arrested', 'arrest', 'crime', 'court', 'bail', 'remanded',
+    'hospital', 'injured', 'drowned', 'collapse', 'collapses', 'flood', 'rain', 'weather',
+    'stolen', 'theft', 'robbery', 'election', 'parliament', 'minister', 'president', 'prime minister',
+    'cricket', 'football', 'soccer', 'ipl', 'world cup', 'tournament', 'actress', 'actor', 'cinema',
+    'pony', 'horse', 'animal', 'suicide', 'assault', 'body found', 'trapped', 'fire broke out',
+    'protest', 'strike', 'drugs', 'smuggling', 'narcotics', 'curfew', 'petrol', 'fuel crisis',
+    'inflation', 'celebrity dating', 'divorce'
   ];
   
   for (const rej of nonTechRejections) {
@@ -214,10 +218,8 @@ function isValidServerImage(url: string): boolean {
 
   // Discard generic tracking domains and placeholder avatars
   if (
-    lower.includes('googleusercontent.com') ||
-    lower.includes('news.google.com') ||
     lower.includes('google.com/favicon') ||
-    lower.includes('gstatic.com') ||
+    lower.includes('gstatic.com/images/branding') ||
     lower.includes('doubleclick.net') ||
     lower.includes('adroll.com') ||
     lower.includes('scorecardresearch.com') ||

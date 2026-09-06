@@ -39,12 +39,12 @@ const RSS_FEEDS = [
     category: 'AI'
   },
   {
-    name: 'Ars Technica AI',
+    name: 'Ars Technica AI & Science',
     url: 'https://feeds.arstechnica.com/arstechnica/technology-lab',
     category: 'AI'
   },
 
-  // --- Local (Sri Lanka Tech, Innovation & Local News) ---
+  // --- Local (Sri Lanka Tech, Telecom & Digital Economy ONLY) ---
   {
     name: 'Daily FT - Sri Lanka IT & Telecom',
     url: 'https://www.ft.lk/rss/it-telecom-technology',
@@ -53,11 +53,6 @@ const RSS_FEEDS = [
   {
     name: 'Ada Derana Biz & Tech',
     url: 'http://bizenglish.adaderana.lk/feed/',
-    category: 'Local'
-  },
-  {
-    name: 'Ada Derana',
-    url: 'http://www.adaderana.lk/rss.php',
     category: 'Local'
   },
   {
@@ -78,6 +73,11 @@ const RSS_FEEDS = [
     category: 'Tech'
   },
   {
+    name: 'Engadget',
+    url: 'https://www.engadget.com/rss.xml',
+    category: 'Tech'
+  },
+  {
     name: 'BBC News - Technology',
     url: 'https://feeds.bbci.co.uk/news/technology/rss.xml',
     category: 'Tech'
@@ -90,11 +90,6 @@ const RSS_FEEDS = [
   {
     name: 'Ars Technica',
     url: 'https://feeds.arstechnica.com/arstechnica/index',
-    category: 'Tech'
-  },
-  {
-    name: 'Engadget',
-    url: 'https://www.engadget.com/rss.xml',
     category: 'Tech'
   },
   {
@@ -118,6 +113,48 @@ const RSS_FEEDS = [
     category: 'Tech'
   }
 ];
+
+// Strict filter to guarantee 100% Technology & AI relevance and reject general crime/disasters/politics
+function isStrictTechOrAiTopic(title = '', description = '') {
+  const text = `${title} ${description}`.toLowerCase();
+
+  // Explicit non-tech reject keywords (accidents, crimes, murders, collapse, politics, sports, celebrity gossip)
+  const nonTechRejections = [
+    'murder', 'killed', 'killing', 'dead', 'death toll', 'dies', 'died', 'shooting', 'shot dead',
+    'accident', 'crash', 'police', 'arrested', 'arrest', 'crime', 'court', 'bail', 'remanded',
+    'hospital', 'injured', 'drowned', 'collapse', 'collapses', 'flood', 'rain', 'weather',
+    'stolen', 'theft', 'robbery', 'election', 'parliament', 'minister', 'president', 'cabinet',
+    'cricket', 'football', 'match', 'ipl', 'world cup', 'tournament', 'actress', 'actor', 'cinema',
+    'pony', 'horse', 'animal', 'suicide', 'assault', 'body found', 'trapped', 'fire broke out',
+    'protest', 'strike', 'drugs', 'narcotics', 'customs seized'
+  ];
+
+  for (const rej of nonTechRejections) {
+    if (new RegExp(`\\b${rej}\\b`, 'i').test(text)) {
+      return false;
+    }
+  }
+
+  // Must contain actual technology / IT / AI / Digital terminology
+  const techPositiveWords = [
+    'ai', 'artificial intelligence', 'chatgpt', 'openai', 'gemini', 'claude', 'deepseek', 'copilot',
+    'llm', 'machine learning', 'neural', 'robot', 'robotics', 'model', 'software', 'hardware',
+    'chip', 'semiconductor', 'processor', 'nvidia', 'apple', 'iphone', 'ipad', 'macbook', 'ios',
+    'google', 'pixel', 'android', 'microsoft', 'windows', 'samsung', 'galaxy', 'qualcomm', 'intel',
+    'amd', 'smartphone', 'gadget', 'app', 'browser', 'cyber', 'security', 'malware', 'ransomware',
+    'cloud', 'database', 'telecom', 'dialog', 'mobitel', 'slt', '5g', '4g', 'broadband', 'fiber',
+    'spacex', 'satellite', 'nasa', 'tech', 'technology', 'computing', 'crypto', 'bitcoin', 'fintech',
+    'electric vehicle', 'ev', 'quantum', 'metaverse', 'vr', 'ar', 'firmware', 'gaming', 'console',
+    'playstation', 'xbox', 'nintendo', 'digital', 'device', 'laptop', 'camera sensor'
+  ];
+
+  return techPositiveWords.some(kw => {
+    if (kw.length <= 3) {
+      return new RegExp(`\\b${kw}\\b`, 'i').test(text);
+    }
+    return text.includes(kw);
+  });
+}
 
 // Topic-matching high-resolution photography fallbacks
 function getTopicFallbackImage(title = '', category = '') {
@@ -465,6 +502,12 @@ function parseRssXml(xmlText, sourceName, category) {
     const pubDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString();
 
     if (title && (link || description)) {
+      // STRICT FILTER: Ensure article is genuinely about Tech or AI
+      if (!isStrictTechOrAiTopic(title, description)) {
+        console.log(`[StrictFilter] Skipping non-tech off-topic item: "${title}"`);
+        continue;
+      }
+
       items.push({
         title,
         description: description || title,
@@ -560,6 +603,12 @@ Summary: ${article.description}
 Source: ${article.source?.name || 'Global News'}
 Feed Default Category: ${article.category || 'Tech'}
 
+CRITICAL STRICT RELEVANCE RULE:
+MyFeed.lk is EXCLUSIVELY an Artificial Intelligence, Consumer Technology, Telecommunications, and Digital Innovation publication.
+If this source story is NOT primarily and directly about Technology, AI, Computing, Software, Electronics, Smartphones, Telecommunications, or Digital Services (for example: if it is about general crimes, murder, fatal accidents, building collapses, weather/floods, animal abuse, political gossip, sports, or court cases):
+You MUST set "isOffTopic": true.
+DO NOT fabricate tech angles (e.g. do NOT reframe a building collapse as 'disaster rescue technology'). If the underlying event is not tech, mark it as off-topic!
+
 CATEGORY CLASSIFICATION RULE:
 Classify the story into exactly one of these 3 category labels:
 - 'AI' : If about Artificial Intelligence, Machine Learning, ChatGPT, OpenAI, Claude, Gemini, DeepSeek, Copilot, Midjourney, LLMs, Neural Networks, Humanoid AI robots.
@@ -580,6 +629,10 @@ Classify the story into exactly one of these 3 category labels:
           responseSchema: {
             type: Type.OBJECT,
             properties: {
+              isOffTopic: {
+                type: Type.BOOLEAN,
+                description: "True ONLY if this news is NOT a real technology/AI story (e.g. general crime, disaster, deaths, non-tech politics)."
+              },
               sinhalaTitle: { 
                 type: Type.STRING, 
                 description: "An engaging, high-impact, professional headline in Sinhala." 
@@ -603,6 +656,10 @@ Classify the story into exactly one of these 3 category labels:
       });
 
       const parsed = JSON.parse(genResponse?.text || '{}');
+      if (parsed.isOffTopic) {
+        console.warn(`[RejectOffTopic] Gemini flagged article as non-tech: "${article.title}". Discarding.`);
+        return null;
+      }
       if (parsed.sinhalaTitle && parsed.sinhalaDescription && parsed.sinhalaFullContent && parsed.sinhalaFullContent.length > 400) {
         return parsed;
       }
@@ -724,6 +781,12 @@ async function runAutoNewsUpload() {
       }
       if (existingOriginalTitles.has(normalizedTitleKey)) {
         console.log(`[Duplicate Skip] English title key already exists: "${article.title}"`);
+        continue;
+      }
+
+      // Final strict tech topic verification
+      if (!isStrictTechOrAiTopic(article.title, article.description)) {
+        console.log(`[StrictFilter Skip] Candidate rejected as non-tech: "${article.title}"`);
         continue;
       }
 
