@@ -39,8 +39,8 @@ const RSS_FEEDS = [
     category: 'AI'
   },
   {
-    name: 'Google News - AI & Machine Learning',
-    url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+OpenAI+OR+Gemini+AI+OR+Claude+AI&hl=en-US&gl=US&ceid=US:en',
+    name: 'Ars Technica AI',
+    url: 'https://feeds.arstechnica.com/arstechnica/technology-lab',
     category: 'AI'
   },
 
@@ -51,8 +51,8 @@ const RSS_FEEDS = [
     category: 'Local'
   },
   {
-    name: 'Google News - Sri Lanka Tech & Digital',
-    url: 'https://news.google.com/rss/search?q=Sri+Lanka+technology+OR+Sri+Lanka+digital+OR+Sri+Lanka+telecom+OR+Dialog+Axiata&hl=en-US&gl=US&ceid=US:en',
+    name: 'Ada Derana Biz & Tech',
+    url: 'http://bizenglish.adaderana.lk/feed/',
     category: 'Local'
   },
   {
@@ -93,6 +93,11 @@ const RSS_FEEDS = [
     category: 'Tech'
   },
   {
+    name: 'Engadget',
+    url: 'https://www.engadget.com/rss.xml',
+    category: 'Tech'
+  },
+  {
     name: '9to5Google',
     url: 'https://9to5google.com/feed/',
     category: 'Tech'
@@ -110,11 +115,6 @@ const RSS_FEEDS = [
   {
     name: 'SamMobile',
     url: 'https://www.sammobile.com/feed/',
-    category: 'Tech'
-  },
-  {
-    name: 'Google News - Technology',
-    url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en',
     category: 'Tech'
   }
 ];
@@ -441,13 +441,20 @@ function parseRssXml(xmlText, sourceName, category) {
 
     // Extract genuine original image from media tags or description HTML
     let imageUrl = '';
-    const mediaMatch = itemXml.match(/<media:content[^>]+url="([^">]+)"/i) ||
-                       itemXml.match(/<enclosure[^>]+url="([^">]+)"/i) ||
-                       itemXml.match(/<media:thumbnail[^>]+url="([^">]+)"/i);
+    const contentEncodedMatch = itemXml.match(/<(?:content:encoded|content)(?:[^>]*)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:content:encoded|content)>/i);
+    const fullContentHtml = contentEncodedMatch ? contentEncodedMatch[1] : '';
+
+    const mediaMatch = itemXml.match(/<media:content[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<enclosure[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i) ||
+                       itemXml.match(/<image>\s*<url>([^<]+)<\/url>\s*<\/image>/i) ||
+                       itemXml.match(/<wp:attachment_url>([^<]+)<\/wp:attachment_url>/i) ||
+                       itemXml.match(/<wp:featured_image>([^<]+)<\/wp:featured_image>/i);
     if (mediaMatch && isValidArticlePhoto(mediaMatch[1])) {
       imageUrl = mediaMatch[1];
     } else {
-      const rawImgMatch = (descMatch ? descMatch[1] : '').match(/<img\s+[^>]*src="([^">]+)"/i) || itemXml.match(/<img\s+[^>]*src="([^">]+)"/i);
+      const combinedHtml = `${fullContentHtml} ${descMatch ? descMatch[1] : ''} ${itemXml}`;
+      const rawImgMatch = combinedHtml.match(/<img\s+[^>]*?(?:data-src|data-original|src)=["']([^"']+)["']/i);
       if (rawImgMatch && isValidArticlePhoto(rawImgMatch[1])) {
         imageUrl = rawImgMatch[1];
       }

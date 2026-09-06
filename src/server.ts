@@ -112,15 +112,15 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Pure Technology & Artificial Intelligence RSS Feeds
+// 100% Pure Technology & Artificial Intelligence RSS Feeds (Direct publishers with original featured images)
 const SERVER_RSS_FEEDS = [
-  { name: 'Ars Technica AI & Tech', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
+  { name: 'The Verge AI & Tech', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
+  { name: 'Ars Technica AI & Tech', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
   { name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
   { name: 'Wired Tech & AI', url: 'https://www.wired.com/feed/category/gear/latest/rss' },
   { name: 'Engadget Tech', url: 'https://www.engadget.com/rss.xml' },
-  { name: 'Ada Derana Biz & Tech', url: 'http://bizenglish.adaderana.lk/feed/' },
-  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI+OR+Anthropic+OR+LLM&hl=en-US&gl=US&ceid=US:en' }
+  { name: 'Ada Derana Biz & Tech', url: 'http://bizenglish.adaderana.lk/feed/' }
 ];
 
 export function isTechOrAiTopic(title: string, description = ''): boolean {
@@ -214,8 +214,10 @@ function isValidServerImage(url: string): boolean {
 
   // Discard generic tracking domains and placeholder avatars
   if (
+    lower.includes('googleusercontent.com') ||
+    lower.includes('news.google.com') ||
     lower.includes('google.com/favicon') ||
-    lower.includes('gstatic.com/images/branding') ||
+    lower.includes('gstatic.com') ||
     lower.includes('doubleclick.net') ||
     lower.includes('adroll.com') ||
     lower.includes('scorecardresearch.com') ||
