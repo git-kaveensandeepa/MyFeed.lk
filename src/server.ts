@@ -111,16 +111,54 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Free, Official RSS Feeds for Server Live Cache (AI, Local Sri Lanka, Tech)
+// 100% Pure Technology & Artificial Intelligence RSS Feeds
 const SERVER_RSS_FEEDS = [
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
   { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
-  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI&hl=en-US&gl=US&ceid=US:en' },
-  { name: 'Ada Derana', url: 'http://www.adaderana.lk/rss.php' },
+  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI+OR+Anthropic+OR+LLM&hl=en-US&gl=US&ceid=US:en' },
+  { name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/' },
   { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
-  { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
+  { name: 'Wired Tech', url: 'https://www.wired.com/feed/category/gear/latest/rss' },
+  { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' }
 ];
+
+export function isTechOrAiTopic(title: string, description = ''): boolean {
+  const text = `${title} ${description}`.toLowerCase();
+  
+  // Non-tech rejection keywords (politics, crimes, accidents, sports, gossip)
+  const nonTechRejections = [
+    'murder', 'homicide', 'killed', 'accident', 'dead', 'shooting', 'parliament', 'election',
+    'minister', 'president', 'prime minister', 'cricket', 'football', 'soccer', 'ipl', 'world cup',
+    'curfew', 'arrested', 'police raid', 'court hearing', 'drugs', 'smuggling',
+    'petrol', 'fuel crisis', 'inflation', 'protest', 'celebrity dating', 'divorce'
+  ];
+  
+  for (const rej of nonTechRejections) {
+    if (new RegExp(`\\b${rej}\\b`, 'i').test(text)) {
+      return false;
+    }
+  }
+
+  // Tech & AI positive indicators
+  const techKeywords = [
+    'ai', 'artificial intelligence', 'gemini', 'chatgpt', 'openai', 'anthropic', 'claude',
+    'deepmind', 'llm', 'machine learning', 'neural', 'robot', 'robotics', 'model', 'tech',
+    'technology', 'software', 'hardware', 'chip', 'processor', 'semiconductor', 'nvidia',
+    'apple', 'google', 'microsoft', 'meta', 'samsung', 'intel', 'amd', 'qualcomm',
+    'smartphone', 'iphone', 'android', 'cyber', 'security', 'hack', 'quantum', 'algorithm',
+    'app', 'browser', 'developer', 'programming', 'python', 'cloud', 'database', 'crypto',
+    'blockchain', 'gadget', 'device', 'spacex', 'satellite', 'autonomous', 'electric vehicle',
+    'ev', 'computing', 'biotech', 'wearable', 'fintech', 'vr', 'ar', 'metaverse'
+  ];
+
+  return techKeywords.some(kw => {
+    if (kw.length <= 3) {
+      return new RegExp(`\\b${kw}\\b`, 'i').test(text);
+    }
+    return text.includes(kw);
+  });
+}
 
 function getServerSimpleHash(str: string): number {
   let hash = 0;
@@ -1272,6 +1310,11 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
     const candidateArticles: ServerArticleItem[] = [];
 
     for (const item of rawFeedArticles) {
+      // 0. Strict Tech and AI Topic Check
+      if (!isTechOrAiTopic(item.title, item.description)) {
+        continue;
+      }
+
       const titleLower = item.title.toLowerCase().trim();
       const cleanItemUrl = (item.url || '').toLowerCase().trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
 
@@ -1345,14 +1388,14 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
         newArticlesFound: 0,
         publishedArticles: [],
         status: 'warning',
-        message: 'No new breaking stories detected. All current feeds are already published & synced.',
+        message: 'No new breaking Tech or AI stories detected. Generation skipped until next scheduled run.',
         triggerType
       };
       autoPilotLogs.unshift(logEntry);
       if (autoPilotLogs.length > 30) autoPilotLogs.pop();
       autoPilotLastRunTime = timestampStr;
       autoPilotNextRunTime = calculateNextRunTimestamp(autoPilotConfig);
-      return { success: true, count: 0, articles: [], message: 'Feeds checked. All up to date.' };
+      return { success: true, count: 0, articles: [], message: 'No new Tech or AI stories found. Generation skipped until next scheduled run.' };
     }
 
     // Prepare recent published stories string for Gemini AI Semantic Validation Shield
@@ -1404,6 +1447,12 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
         const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for My Feed LK (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
 Your job is to examine this incoming breaking story and write an in-depth, prestigious, highly engaging technology news article in fluent, professional Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්).
 
+=== STRICT MANDATE: TECH AND AI STORIES ONLY ===
+You are EXCLUSIVELY permitted to write about Technology and Artificial Intelligence (AI, LLMs, machine learning, software, hardware, cyber security, gadgets, semiconductors, tech giants, developer tools).
+- If this incoming story is NOT primarily about Tech or AI (e.g. general news, politics, accident, crime, sports, entertainment, general economy):
+  You MUST set "isRelevantTechOrAi": false.
+- ONLY if it is genuine, authentic Technology or AI news, set "isRelevantTechOrAi": true.
+
 === CRITICAL AI SEMANTIC DEDUPLICATION SHIELD ===
 Check the incoming story against our recently published articles list:
 ${recentStoriesSummaryText ? recentStoriesSummaryText : 'No prior articles recorded.'}
@@ -1419,7 +1468,7 @@ INPUT STORY:
 - Source URL: ${item.url}
 ${sourceHtml ? `- Web Excerpt: ${sourceHtml.substring(0, 4000)}` : ''}
 
-EDITORIAL GUIDELINES (when isDuplicate is false):
+EDITORIAL GUIDELINES (ONLY when isRelevantTechOrAi is true AND isDuplicate is false):
 1. 'sinhalaTitle': An enticing, high-journalistic headline in Sinhala.
 2. 'sinhalaDescription': A punchy, 2-3 sentence overview in Sinhala.
 3. 'sinhalaFullContent': Full-length article (500-800 words) with clean HTML:
@@ -1431,7 +1480,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
    - <p>Practical user implications and industry context</p>
    - <h2>අවසන් විග්‍රහය සහ My Feed LK නිගමනය</h2>
    - <p>Final verdict</p>
-4. 'suggestedCategory': Classify strictly into 'AI', 'Tech', or 'Local'.
+4. 'suggestedCategory': Classify strictly into 'AI' or 'Tech'.
 5. 'readTime': e.g. '4 min read'
 6. 'socialShareText': Formatted WhatsApp / Social copy with emojis and summary in Sinhala.`;
 
@@ -1448,6 +1497,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
                 responseSchema: {
                   type: Type.OBJECT,
                   properties: {
+                    isRelevantTechOrAi: { type: Type.BOOLEAN },
                     isDuplicate: { type: Type.BOOLEAN },
                     duplicateReason: { type: Type.STRING },
                     sinhalaTitle: { type: Type.STRING },
@@ -1457,7 +1507,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
                     readTime: { type: Type.STRING },
                     socialShareText: { type: Type.STRING },
                   },
-                  required: ['isDuplicate', 'sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
+                  required: ['isRelevantTechOrAi', 'isDuplicate', 'sinhalaTitle', 'sinhalaDescription', 'sinhalaFullContent', 'suggestedCategory', 'readTime', 'socialShareText']
                 }
               }
             });
@@ -1476,7 +1526,13 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
 
         const generated = JSON.parse(geminiRes.text || '{}');
 
-        // If AI detects this is a duplicate of a previously published story, skip it safely!
+        // Check 1: Must be strictly relevant to Tech or AI
+        if (generated.isRelevantTechOrAi === false) {
+          console.log(`[Auto-Pilot] 🛑 Story rejected (Not strictly Tech/AI): "${item.title}". Skipping.`);
+          continue;
+        }
+
+        // Check 2: If AI detects this is a duplicate of a previously published story, skip it safely!
         if (generated.isDuplicate) {
           console.log(`[Auto-Pilot] 🛡️ AI Duplicate Shield filtered out story: "${item.title}". Reason: ${generated.duplicateReason || 'Already covered recently'}`);
           continue;
@@ -1640,7 +1696,9 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
       newArticlesFound: publishedArticlesList.length,
       publishedArticles: publishedArticlesList,
       status: publishedArticlesList.length > 0 ? 'success' : 'warning',
-      message: `Successfully synced & published ${publishedArticlesList.length} articles on Auto-Pilot.`,
+      message: publishedArticlesList.length > 0 
+        ? `Successfully synced & published ${publishedArticlesList.length} Tech/AI articles on Auto-Pilot.`
+        : 'All feeds checked. No fresh breaking Tech or AI stories found. Generation skipped until next scheduled run.',
       triggerType
     };
 
@@ -1653,7 +1711,9 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
       success: true,
       count: publishedArticlesList.length,
       articles: publishedArticlesList,
-      message: `Auto-pilot synced ${publishedArticlesList.length} news articles.`
+      message: publishedArticlesList.length > 0
+        ? `Auto-pilot synced ${publishedArticlesList.length} Tech/AI news articles.`
+        : 'No new Tech or AI stories found. Generation skipped until next scheduled run.'
     };
   } catch (err: any) {
     const errorObj = err as { message?: string };
