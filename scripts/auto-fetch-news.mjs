@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type } from '@google/genai';
 
 const firebaseConfig = {
@@ -13,6 +13,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7");
+
+// Hard safety timeout: Exit after max 90 seconds to never hang or consume GitHub Actions minutes
+setTimeout(() => {
+  console.log('[Safety Limit] Script reached 90s runtime limit. Exiting cleanly to save credits.');
+  process.exit(0);
+}, 90000).unref();
 
 // 100% Free, Official Direct RSS Feeds with rich Category diversity (AI, Local, Tech)
 const RSS_FEEDS = [
@@ -286,7 +292,7 @@ async function generateAiImageUrlFromTitle(ai, title = '', category = 'Tech') {
     let visualPrompt = '';
     if (ai) {
       const promptRes = await ai.models.generateContent({
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3.8-flash',
         contents: `Translate and convert this tech news headline into a concise 20-word visual description for a photorealistic editorial tech photograph.
 Headline: "${title}"
 Category: "${category}"
@@ -468,16 +474,31 @@ function parseRssXml(xmlText, sourceName, category) {
 }
 
 async function fetchFromRssFeeds() {
-  console.log('Fetching live articles from Official RSS Feeds (No API limits)...');
+  console.log('Fetching live articles from fast RSS Feeds...');
   const allArticles = [];
 
-  for (const feed of RSS_FEEDS) {
+  // Pick 1 AI, 1 Local, and 1 Tech feed to guarantee variety while remaining ultra-fast
+  const aiFeeds = RSS_FEEDS.filter(f => f.category === 'AI');
+  const localFeeds = RSS_FEEDS.filter(f => f.category === 'Local');
+  const techFeeds = RSS_FEEDS.filter(f => f.category === 'Tech');
+
+  const selectedFeeds = [
+    aiFeeds[Math.floor(Math.random() * aiFeeds.length)],
+    localFeeds[Math.floor(Math.random() * localFeeds.length)],
+    techFeeds[Math.floor(Math.random() * techFeeds.length)]
+  ].filter(Boolean);
+
+  for (const feed of selectedFeeds) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       const response = await fetch(feed.url, {
+        signal: controller.signal,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
       });
+      clearTimeout(timeout);
 
       if (!response.ok) {
         console.warn(`Could not fetch RSS from ${feed.name}: ${response.status}`);
@@ -487,9 +508,10 @@ async function fetchFromRssFeeds() {
       const xml = await response.text();
       const parsed = parseRssXml(xml, feed.name, feed.category);
       console.log(`✓ Fetched ${parsed.length} articles from ${feed.name}`);
-      allArticles.push(...parsed);
+      // Take only top 3 freshest items per feed
+      allArticles.push(...parsed.slice(0, 3));
     } catch (e) {
-      console.warn(`Error fetching ${feed.name}:`, e.message || e);
+      console.warn(`Notice fetching ${feed.name}:`, e.message || e);
     }
   }
 
@@ -542,7 +564,7 @@ Classify the story into exactly one of these 3 category labels:
       attempt++;
       console.log(`Generating Long Sinhala Article with Gemini (Attempt ${attempt}/${maxAttempts})...`);
       
-      const modelName = 'gemini-3.1-flash';
+      const modelName = 'gemini-3.8-flash';
       const genResponse = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
@@ -580,22 +602,13 @@ Classify the story into exactly one of these 3 category labels:
       throw new Error('Generated content length was too short');
     } catch (err) {
       console.warn(`Gemini generation attempt ${attempt} failed:`, err.message || err);
+      const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED');
+      if (isRateLimit) {
+        console.warn('Gemini quota / rate limit reached. Halting run cleanly to save GitHub Actions credits.');
+        process.exit(0);
+      }
       if (attempt < maxAttempts) {
-        let waitMs = 6000 * attempt;
-        const isRateLimit = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED');
-        
-        if (isRateLimit) {
-          // If the error message specifies a retry delay (e.g. "retry in 29.5s"), parse it.
-          const retryMatch = err?.message?.match(/retry in ([\d.]+)s/);
-          if (retryMatch && retryMatch[1]) {
-            waitMs = (parseFloat(retryMatch[1]) * 1000) + 2000; // Add 2s buffer
-          } else {
-            waitMs = 30000 * attempt; // Default heavy backoff for rate limits
-          }
-        }
-        
-        console.log(`Waiting ${waitMs / 1000}s before retrying Gemini...`);
-        await new Promise((res) => setTimeout(res, waitMs));
+        await new Promise((res) => setTimeout(res, 3000));
       }
     }
   }
@@ -613,6 +626,42 @@ async function runAutoNewsUpload() {
   }
 
   try {
+    // Load Auto-Pilot configuration from Firestore system_config/autopilot if available
+    let autoPilotConfig = {
+      enabled: true,
+      autoPublish: true,
+      maxArticlesPerRun: 2,
+      waWebhookUrl: process.env['WHATSAPP_WEBHOOK_URL'] || '',
+      fbWebhookUrl: process.env['FACEBOOK_WEBHOOK_URL'] || '',
+      phoneTopic: process.env['PHONE_NOTIFICATION_TOPIC'] || 'myfeedlk_kaveen',
+      notifyPhone: true,
+      postWhatsApp: true,
+      postFacebook: true,
+    };
+    try {
+      const cfgSnap = await getDoc(doc(db, 'system_config', 'autopilot'));
+      if (cfgSnap.exists()) {
+        const d = cfgSnap.data();
+        if (typeof d['enabled'] === 'boolean') autoPilotConfig.enabled = d['enabled'];
+        if (typeof d['autoPublish'] === 'boolean') autoPilotConfig.autoPublish = d['autoPublish'];
+        if (typeof d['maxArticlesPerRun'] === 'number') autoPilotConfig.maxArticlesPerRun = d['maxArticlesPerRun'];
+        if (d['waWebhookUrl']) autoPilotConfig.waWebhookUrl = d['waWebhookUrl'];
+        if (d['fbWebhookUrl']) autoPilotConfig.fbWebhookUrl = d['fbWebhookUrl'];
+        if (d['phoneTopic']) autoPilotConfig.phoneTopic = d['phoneTopic'];
+        if (typeof d['notifyPhone'] === 'boolean') autoPilotConfig.notifyPhone = d['notifyPhone'];
+        if (typeof d['postWhatsApp'] === 'boolean') autoPilotConfig.postWhatsApp = d['postWhatsApp'];
+        if (typeof d['postFacebook'] === 'boolean') autoPilotConfig.postFacebook = d['postFacebook'];
+        console.log('✓ Loaded Auto-Pilot configuration from Firestore system_config/autopilot');
+      }
+    } catch (cfgErr) {
+      console.log('Note: using environment variables / defaults for Auto-Pilot config:', cfgErr.message || cfgErr);
+    }
+
+    if (!autoPilotConfig.enabled) {
+      console.log('Auto-Pilot is currently disabled in system_config/autopilot. Exiting cleanly.');
+      process.exit(0);
+    }
+
     // 1. Fetch all existing articles from Firestore to build robust deduplication index
     console.log('Fetching existing articles from Firestore for duplicate detection...');
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(200));
@@ -649,14 +698,15 @@ async function runAutoNewsUpload() {
 
     if (articles.length === 0) {
       console.log('No articles fetched from RSS feeds.');
-      return;
+      process.exit(0);
     }
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
     let uploadedCount = 0;
+    const candidates = articles.slice(0, 6);
 
-    for (let index = 0; index < articles.length; index++) {
-      const article = articles[index];
+    for (let index = 0; index < candidates.length; index++) {
+      const article = candidates[index];
       const sourceUrl = (article.url || '').trim().toLowerCase();
       const normalizedTitleKey = getNormalizedKey(article.title);
 
@@ -718,19 +768,21 @@ async function runAutoNewsUpload() {
         createdAt: serverTimestamp()
       };
 
-      // Upload to Firebase Firestore
-      const colRef = collection(db, 'articles');
+      // Upload to Firebase Firestore (Articles or Drafts based on Auto-Pilot config)
+      const targetCollection = autoPilotConfig.autoPublish ? 'articles' : 'drafts';
+      const colRef = collection(db, targetCollection);
       const docRef = await addDoc(colRef, articleDoc);
-      console.log(`✓ Successfully uploaded NEW Long Sinhala Article to Firebase! (Doc ID: ${docRef.id})`);
+      console.log(`✓ Successfully uploaded NEW Long Sinhala Article to Firebase [${targetCollection}]! (Doc ID: ${docRef.id})`);
       console.log(`  Title: ${fullArticle.sinhalaTitle}`);
       uploadedCount++;
 
-      // Auto-post to WhatsApp Channel if configured
       const siteBaseUrl = process.env['SITE_URL'] || 'https://myfeedlk.web.app';
-      const waWebhook = process.env['WHATSAPP_WEBHOOK_URL'];
-      if (waWebhook) {
+      const articleUrl = `${siteBaseUrl}/article/${docRef.id}`;
+
+      // Auto-post to WhatsApp Channel if configured
+      const waWebhook = autoPilotConfig.waWebhookUrl || process.env['WHATSAPP_WEBHOOK_URL'];
+      if (autoPilotConfig.postWhatsApp && waWebhook) {
         try {
-          const articleUrl = `${siteBaseUrl}/article/${docRef.id}`;
           const formattedPost = `*🚀 NEW ON MYFEED.LK (${cleanCategory})*\n\n*${fullArticle.sinhalaTitle}*\n\n${fullArticle.sinhalaDescription}\n\n⏱️ 5 min read\n🔗 *Read full story:* ${articleUrl}\n\n_Curated with precision by MyFeed.lk Sri Lanka_`;
           await fetch(waWebhook, {
             method: 'POST',
@@ -752,33 +804,61 @@ async function runAutoNewsUpload() {
         }
       }
 
+      // Auto-post to Facebook Webhook if configured
+      const fbWebhook = autoPilotConfig.fbWebhookUrl || process.env['FACEBOOK_WEBHOOK_URL'];
+      if (autoPilotConfig.postFacebook && fbWebhook) {
+        try {
+          const formattedFbPost = `🚀 ${fullArticle.sinhalaTitle}\n\n${fullArticle.sinhalaDescription}\n\n⏱️ 5 min read\n🔗 කියවන්න: ${articleUrl}\n\n#MyFeedLK #TechNews #SriLanka #${cleanCategory}`;
+          await fetch(fbWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: formattedFbPost,
+              text: formattedFbPost,
+              caption: formattedFbPost,
+              image: finalImageUrl,
+              imageUrl: finalImageUrl,
+              title: fullArticle.sinhalaTitle,
+              summary: fullArticle.sinhalaDescription,
+              url: articleUrl,
+              category: cleanCategory
+            })
+          });
+          console.log(`  ✓ Auto-posted to Facebook Webhook!`);
+        } catch (fbErr) {
+          console.warn('  Facebook Webhook auto-post notice:', fbErr.message || fbErr);
+        }
+      }
+
       // Auto-dispatch Instant Phone Push Notification (100% Free via ntfy.sh)
-      try {
-        const phoneTopic = process.env['PHONE_NOTIFICATION_TOPIC'] || 'myfeedlk_kaveen';
-        const articleUrl = `${siteBaseUrl}/article/${docRef.id}`;
-        await fetch(`https://ntfy.sh/${phoneTopic}`, {
-          method: 'POST',
-          headers: {
-            'Title': `📰 MyFeed.lk (${cleanCategory}): ${fullArticle.sinhalaTitle}`,
-            'Click': articleUrl,
-            'Tags': 'newspaper,rocket',
-            'Priority': 'high',
-            ...(finalImageUrl ? { 'Attach': finalImageUrl } : {})
-          },
-          body: `${fullArticle.sinhalaDescription}\n\nTap to read on MyFeed.lk`
-        });
-        console.log(`  ✓ Phone Push Alert dispatched to topic: ${phoneTopic}`);
-      } catch (phoneErr) {
-        console.warn('  Phone Push alert notice:', phoneErr.message || phoneErr);
+      const phoneTopic = autoPilotConfig.phoneTopic || process.env['PHONE_NOTIFICATION_TOPIC'] || 'myfeedlk_kaveen';
+      if (autoPilotConfig.notifyPhone && phoneTopic) {
+        try {
+          await fetch(`https://ntfy.sh/${phoneTopic}`, {
+            method: 'POST',
+            headers: {
+              'Title': `📰 MyFeed.lk (${cleanCategory}): ${fullArticle.sinhalaTitle}`,
+              'Click': articleUrl,
+              'Tags': 'newspaper,rocket',
+              'Priority': 'high',
+              ...(finalImageUrl ? { 'Attach': finalImageUrl } : {})
+            },
+            body: `${fullArticle.sinhalaDescription}\n\nTap to read on MyFeed.lk`
+          });
+          console.log(`  ✓ Phone Push Alert dispatched to topic: ${phoneTopic}`);
+        } catch (phoneErr) {
+          console.warn('  Phone Push alert notice:', phoneErr.message || phoneErr);
+        }
       }
 
       if (sourceUrl) existingSourceUrls.add(sourceUrl);
       existingOriginalTitles.add(normalizedTitleKey);
       existingSinhalaTitles.add(fullArticle.sinhalaTitle.trim().toLowerCase());
 
-      // Upload 2 fresh high quality articles per run
-      if (uploadedCount >= 2) {
-        console.log('\nTarget batch (2 long articles) uploaded successfully.');
+      // Target batch limit from Auto-Pilot config (default: 2)
+      const maxBatch = autoPilotConfig.maxArticlesPerRun || 2;
+      if (uploadedCount >= maxBatch) {
+        console.log(`\nTarget batch (${maxBatch} long articles) uploaded successfully.`);
         break;
       }
 
