@@ -10,15 +10,15 @@ import { FormsModule } from '@angular/forms';
   imports: [MatIconModule, RouterLink, CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="min-h-screen bg-[#f2f2f7] dark:bg-[#000000] text-[#000000] dark:text-white transition-colors duration-300 pb-36 pt-3 sm:pt-6">
+    <div class="min-h-screen bg-transparent text-[#000000] dark:text-white transition-colors duration-300 pb-36 pt-3 sm:pt-6">
       
       <main class="max-w-3xl w-full mx-auto px-4 sm:px-6">
         
         <!-- Navigation Bar Header -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-2">
-            <a routerLink="/" class="inline-flex items-center gap-1 text-xs font-bold text-[#007AFF] hover:opacity-80 transition-opacity ios-touch">
-              <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_left</mat-icon>
+            <a routerLink="/" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full ios-glass-thin text-xs font-bold text-[#007AFF] hover:opacity-80 transition-opacity ios-touch">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chevron_left</mat-icon>
               <span>Journal</span>
             </a>
           </div>
@@ -33,7 +33,7 @@ import { FormsModule } from '@angular/forms';
           <!-- Submit Event Action -->
           <button 
             (click)="openSubmitModal()"
-            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#007AFF]/10 hover:bg-[#007AFF]/20 text-[#007AFF] text-xs font-bold transition-colors cursor-pointer ios-touch">
+            class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full ios-glass-thin hover:bg-black/10 dark:hover:bg-white/15 text-[#007AFF] text-xs font-bold transition-all cursor-pointer ios-touch">
             <mat-icon style="font-size: 16px; width: 16px; height: 16px;">add</mat-icon>
             <span class="hidden sm:inline">Submit Event</span>
           </button>
@@ -122,7 +122,7 @@ import { FormsModule } from '@angular/forms';
             </div>
 
             <p class="text-xs text-[#8e8e93] mb-4">
-              ඔබගේ තාක්ෂණික Meetup හෝ Event එක MyFeed.lk හි නොමිලේ පළ කිරීමට පහත විස්තර ඇතුළත් කර අපගේ WhatsApp කණ්ඩායමට යොමු කරන්න.
+              ඔබගේ තාක්ෂණික Meetup හෝ Event එක My Feed LK හි නොමිලේ පළ කිරීමට පහත විස්තර ඇතුළත් කර අපගේ WhatsApp කණ්ඩායමට යොමු කරන්න.
             </p>
 
             <form (ngSubmit)="submitCommunityEvent()" class="space-y-3">
@@ -199,11 +199,11 @@ export class EventsComponent {
   submitCommunityEvent() {
     if (!this.newEventTitle.trim()) return;
 
-    const formattedText = `*MyFeed.lk Event Submission*\n\n` +
+    const formattedText = `*My Feed LK Event Submission*\n\n` +
       `📅 *Event Name:* ${this.newEventTitle}\n` +
       `🏢 *Organizer:* ${this.newEventOrganizer || 'Community'}\n` +
       `📍 *Date & Venue:* ${this.newEventVenue || 'Sri Lanka / Online'}\n\n` +
-      `Sent via MyFeed.lk Events Hub`;
+      `Sent via My Feed LK Events Hub`;
 
     const encoded = encodeURIComponent(formattedText);
     const waUrl = `https://wa.me/94710947871?text=${encoded}`;

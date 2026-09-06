@@ -2021,11 +2021,11 @@ export interface PolishedResult {
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="space-y-1">
                       <label for="webPushTitle" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Push Alert Title</label>
-                      <input id="webPushTitle" [(ngModel)]="webPushTitle" name="webPushTitle" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="📰 MyFeed.lk Breaking News" />
+                      <input id="webPushTitle" [(ngModel)]="webPushTitle" name="webPushTitle" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="📰 My Feed LK Breaking News" />
                     </div>
                     <div class="space-y-1">
                       <label for="webPushBody" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Message Body</label>
-                      <input id="webPushBody" [(ngModel)]="webPushBody" name="webPushBody" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="New story published on MyFeed.lk" />
+                      <input id="webPushBody" [(ngModel)]="webPushBody" name="webPushBody" class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]" placeholder="New story published on My Feed LK" />
                     </div>
                   </div>
 
@@ -2182,7 +2182,7 @@ export interface PolishedResult {
                   </button>
                 </div>
 
-                <textarea [(ngModel)]="waCustomMessage" rows="6" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-emerald-600 outline-none text-xs sm:text-sm font-sans leading-relaxed text-gray-900 dark:text-white" placeholder="*🚀 NEW ON MYFEED.LK*&#10;&#10;*Article Title Here*..."></textarea>
+                <textarea [(ngModel)]="waCustomMessage" rows="6" class="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:ring-2 focus:ring-emerald-600 outline-none text-xs sm:text-sm font-sans leading-relaxed text-gray-900 dark:text-white" placeholder="*🚀 NEW ON My Feed LK*&#10;&#10;*Article Title Here*..."></textarea>
 
                 <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
                   <button (click)="dispatchWhatsAppPost()" [disabled]="isDispatchingWa() || !waCustomMessage.trim()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold uppercase tracking-wider text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-95">
@@ -2565,10 +2565,10 @@ export interface PolishedResult {
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
                 </div>
                 <div class="text-sm font-bold text-[#1d1d1f] dark:text-white truncate">
-                  {{ audioService.latestEdition()?.title || 'No active brief' }}
+                  {{ audioService.latestEdition().title || 'No active brief' }}
                 </div>
                 <p class="text-[11px] text-blue-500 font-semibold mt-1">
-                  {{ audioService.latestEdition()?.timeWindowText || '4:00 AM - 4:00 AM' }}
+                  {{ audioService.latestEdition().timeWindowText || '4:00 AM - 4:00 AM' }}
                 </p>
               </div>
             </div>
@@ -3453,7 +3453,7 @@ export class AdminComponent {
   readonly user = signal<User | null>(null);
   readonly loading = signal(true);
   
-  readonly activeTab = signal<'articles' | 'auto-studio' | 'audio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users'>('articles');
+  readonly activeTab = signal<'articles' | 'auto-studio' | 'audio' | 'subscribers' | 'notify' | 'whatsapp' | 'facebook' | 'deploy' | 'ads' | 'analytics' | 'users' | 'store'>('articles');
   
   // Audio Studio Signals & State
   audioEditionTitle = 'MyFeed Morning Tech Wrap';
@@ -3461,7 +3461,7 @@ export class AdminComponent {
   audioUrlInput = 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=news-ambient-112199.mp3';
   audioDurationFormatted = '15:15';
   audioNarrator = 'Kaveen Sandeepa & MyFeed Audio Studio';
-  audioSummarySinhala = 'පසුගිය පැය 24 (4:00 AM සිට 4:00 AM) තුළ MyFeed.lk හි පළවූ තාක්ෂණික පුවත් පිළිබඳ විනාඩි 15ක සම්පූර්ණ විග්‍රහය.';
+  audioSummarySinhala = 'පසුගිය පැය 24 (4:00 AM සිට 4:00 AM) තුළ My Feed LK හි පළවූ තාක්ෂණික පුවත් පිළිබඳ විනාඩි 15ක සම්පූර්ණ විග්‍රහය.';
   audioFullScriptSinhala = '';
   audioIsFeatured = true;
   audioChapters: ChapterMark[] = [
@@ -3678,8 +3678,8 @@ export class AdminComponent {
   private autoPilotCountdownInterval: ReturnType<typeof setInterval> | null = null;
 
   // Web Push Browser Notifications State
-  webPushTitle = '📰 MyFeed.lk Breaking News';
-  webPushBody = 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!';
+  webPushTitle = '📰 My Feed LK Breaking News';
+  webPushBody = 'නව පුවතක් My Feed LK හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!';
   readonly webPushSubscriberCount = signal<number>(0);
   readonly isTestingWebPush = signal(false);
   readonly webPushTestSuccess = signal<string | null>(null);
@@ -4524,7 +4524,7 @@ export class AdminComponent {
 
   openWhatsAppModal(article: Article) {
     const articleUrl = this.getArticleUrl(article.slug || article.id);
-    this.waCustomMessage = `*🚀 NEW ON MYFEED.LK (${article.category})*
+    this.waCustomMessage = `*🚀 NEW ON My Feed LK (${article.category})*
 
 *${article.title}*
 
@@ -4533,7 +4533,7 @@ ${article.summary}
 ⏱️ ${article.readTime || '3 min read'}
 🔗 *Read full story:* ${articleUrl}
 
-_Curated with precision by My Feed Lk Sri Lanka_`;
+_Curated with precision by My Feed LK Sri Lanka_`;
     this.activeTab.set('whatsapp');
   }
 
@@ -4677,8 +4677,8 @@ _Curated with precision by My Feed Lk Sri Lanka_`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: 'MyFeed.lk Test Breaking News',
-          summary: 'මෙය MyFeed.lk සහ Make.com Facebook Webhook සම්බන්ධතාවය සහ Post structure එක පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.',
+          title: 'My Feed LK Test Breaking News',
+          summary: 'මෙය My Feed LK සහ Make.com Facebook Webhook සම්බන්ධතාවය සහ Post structure එක පරික්ෂා කිරීම සඳහා යැවූ Test පණිවිඩයකි.',
           articleUrl: (this.siteDomain || 'https://myfeedlk.com').trim() + '/news/test-post',
           category: 'Tech',
           readTime: '2 min read',
@@ -4882,7 +4882,7 @@ ${article.summary}
       const targetUrl = (this.siteDomain || 'https://myfeedlk.com').trim().replace(/\/+$/, '');
       const payload = {
         topic: cleanTopic,
-        title: '🔥 Test Alert from MyFeed.lk',
+        title: '🔥 Test Alert from My Feed LK',
         message: 'Phone Push Notifications are active and working! Tap here to open MyFeed.',
         click: targetUrl,
         priority: 4,
@@ -4938,8 +4938,8 @@ ${article.summary}
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: this.webPushTitle || 'MyFeed.lk Test Notification',
-          summary: this.webPushBody || 'This is a test notification from MyFeed.lk',
+          title: this.webPushTitle || 'My Feed LK Test Notification',
+          summary: this.webPushBody || 'This is a test notification from My Feed LK',
           articleUrl: '/'
         })
       });
@@ -4982,8 +4982,8 @@ ${article.summary}
 
     try {
       const cleanTopic = (this.phoneTopic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
-      const safeTitle = (data.title ? `📰 ${data.title}` : '📰 MyFeed.lk: New Story').slice(0, 120);
-      const safeMessage = (data.summary ? `${data.summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on MyFeed.lk. Tap to read!').slice(0, 800);
+      const safeTitle = (data.title ? `📰 ${data.title}` : '📰 My Feed LK: New Story').slice(0, 120);
+      const safeMessage = (data.summary ? `${data.summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on My Feed LK. Tap to read!').slice(0, 800);
       const safeUrl = (data.articleUrl || this.siteDomain || 'https://myfeedlk.com').trim();
 
       const payload: Record<string, unknown> = {

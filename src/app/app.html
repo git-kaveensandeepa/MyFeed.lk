@@ -1,3 +1,11 @@
+<!-- Ambient iOS Mesh Aura Background for Glass Refraction -->
+<div class="ios-mesh-bg" aria-hidden="true">
+  <div class="ios-mesh-blob-1"></div>
+  <div class="ios-mesh-blob-2"></div>
+  <div class="ios-mesh-blob-3"></div>
+  <div class="ios-mesh-blob-4"></div>
+</div>
+
 <!-- Flash / Splash Screen Intro Animation -->
 @if (showSplash()) {
   <div 
@@ -28,38 +36,42 @@
 }
 
 <!-- Ticker (Fixed Top on Desktop, hidden on Mobile) -->
-<div class="fixed top-0 left-0 right-0 h-8 bg-[#161617] text-white/90 text-[10px] sm:text-xs px-4 overflow-hidden z-[60] select-none hidden lg:flex items-center">
+<div class="fixed top-0 left-0 right-0 h-8 ios-glass-thick text-black/90 dark:text-white/90 text-[10px] sm:text-xs px-4 overflow-hidden z-[60] select-none hidden lg:flex items-center border-b border-black/[0.06] dark:border-white/[0.08]">
   <div class="max-w-7xl mx-auto flex w-full items-center gap-4">
-    <div class="flex items-center gap-1.5 shrink-0 font-black uppercase tracking-wider text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/40">
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+    <div class="flex items-center gap-1.5 shrink-0 font-black uppercase tracking-wider text-[#007AFF] bg-[#007AFF]/10 dark:bg-blue-950/60 px-2 py-0.5 rounded-full border border-[#007AFF]/20">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
       <span>Live Rates</span>
     </div>
     <div class="flex-1 overflow-hidden relative">
       <div class="animate-ticker flex items-center gap-8">
         @for (item of tickerService.items(); track item.symbol) {
           <div class="flex items-center gap-2 shrink-0">
-            <span class="font-bold text-white/90">{{ item.symbol }}</span>
-            <span class="font-mono text-white/70">{{ item.price }}</span>
+            <span class="font-bold text-[#000000] dark:text-white/90">{{ item.symbol }}</span>
+            <span class="font-mono text-[#3a3a3c] dark:text-white/70">{{ item.price }}</span>
             <span 
-              class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center"
-              [class.text-emerald-400]="item.isPositive"
-              [class.bg-emerald-950/40]="item.isPositive"
-              [class.text-rose-400]="!item.isPositive"
-              [class.bg-rose-950/40]="!item.isPositive">
+              class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded-full flex items-center"
+              [class.text-emerald-600]="item.isPositive"
+              [class.dark:text-emerald-400]="item.isPositive"
+              [class.bg-emerald-500/10]="item.isPositive"
+              [class.text-rose-600]="!item.isPositive"
+              [class.dark:text-rose-400]="!item.isPositive"
+              [class.bg-rose-500/10]="!item.isPositive">
               {{ item.change }}
             </span>
           </div>
         }
         @for (item of tickerService.items(); track (item.symbol + '_dup')) {
           <div class="flex items-center gap-2 shrink-0">
-            <span class="font-bold text-white/90">{{ item.symbol }}</span>
-            <span class="font-mono text-white/70">{{ item.price }}</span>
+            <span class="font-bold text-[#000000] dark:text-white/90">{{ item.symbol }}</span>
+            <span class="font-mono text-[#3a3a3c] dark:text-white/70">{{ item.price }}</span>
             <span 
-              class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center"
-              [class.text-emerald-400]="item.isPositive"
-              [class.bg-emerald-950/40]="item.isPositive"
-              [class.text-rose-400]="!item.isPositive"
-              [class.bg-rose-950/40]="!item.isPositive">
+              class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded-full flex items-center"
+              [class.text-emerald-600]="item.isPositive"
+              [class.dark:text-emerald-400]="item.isPositive"
+              [class.bg-emerald-500/10]="item.isPositive"
+              [class.text-rose-600]="!item.isPositive"
+              [class.dark:text-rose-400]="!item.isPositive"
+              [class.bg-rose-500/10]="!item.isPositive">
               {{ item.change }}
             </span>
           </div>
@@ -69,75 +81,90 @@
   </div>
 </div>
 
-<!-- Desktop Left Sidebar -->
-<aside class="hidden lg:flex flex-col fixed top-8 left-0 bottom-0 w-64 border-r border-black/5 dark:border-white/5 bg-[#fcfcfd]/90 dark:bg-[#121212]/90 backdrop-blur-2xl z-50">
+<!-- Desktop Left Sidebar (iOS Glass Material) -->
+<aside class="hidden lg:flex flex-col fixed top-8 left-0 bottom-0 w-64 border-r border-black/[0.06] dark:border-white/[0.08] ios-glass-thick z-50">
   <!-- Brand -->
   <div class="h-20 flex items-center px-6">
-    <a routerLink="/" class="flex items-center gap-3 cursor-pointer group shrink-0">
-      <div class="w-10 h-10 rounded-2xl bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] flex items-center justify-center group-hover:scale-105 group-hover:-rotate-3 transition-transform shadow-md">
+    <a (click)="haptic.selection()" routerLink="/" class="flex items-center gap-3 cursor-pointer group shrink-0 ios-touch">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1d1d1f] to-[#3a3a3c] dark:from-white dark:to-[#e5e5ea] text-white dark:text-[#1d1d1f] flex items-center justify-center group-hover:scale-105 group-hover:-rotate-3 transition-transform shadow-md">
         <mat-icon style="font-size: 20px; width: 20px; height: 20px;">article</mat-icon>
       </div>
-      <span class="text-2xl font-black tracking-tight text-[#1d1d1f] dark:text-white">My Feed <span class="text-blue-600">Lk</span></span>
+      <span class="text-2xl font-black tracking-tight text-[#1d1d1f] dark:text-white">My Feed <span class="text-[#007AFF]">Lk</span></span>
     </a>
   </div>
 
   <!-- Scrollable Nav -->
-  <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1 custom-scrollbar">
+  <div class="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-2 custom-scrollbar">
     
-    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 px-3">Platform</div>
+    <div class="text-[10px] font-black uppercase tracking-widest text-[#8e8e93] mb-1 px-3">Platform</div>
     
-    <a routerLink="/" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="bg-black/5 dark:bg-white/10 text-blue-600 dark:text-blue-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
-      <mat-icon style="font-size: 20px; width: 20px; height: 20px;" [class.text-blue-500]="true">home</mat-icon> News Feed
+    <a (click)="haptic.selection()" routerLink="/" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="ios-tab-pill-active font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all ios-touch">
+      <div class="w-7 h-7 rounded-xl ios-tint-blue flex items-center justify-center shrink-0">
+        <mat-icon style="font-size: 17px; width: 17px; height: 17px;">home</mat-icon>
+      </div>
+      <span>News Feed</span>
     </a>
     
-    <a routerLink="/events" routerLinkActive="bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+    <a routerLink="/events" routerLinkActive="ios-tab-pill-active font-bold" class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all ios-touch">
       <div class="flex items-center gap-3">
-        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-[#FF9500]">event_upcoming</mat-icon> Events
+        <div class="w-7 h-7 rounded-xl ios-tint-orange flex items-center justify-center shrink-0">
+          <mat-icon style="font-size: 17px; width: 17px; height: 17px;">event_upcoming</mat-icon>
+        </div>
+        <span>Events</span>
       </div>
-      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Soon</span>
+      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">Soon</span>
     </a>
 
-    <a routerLink="/radio" routerLinkActive="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
+    <a (click)="haptic.selection()" routerLink="/learn" routerLinkActive="ios-tab-pill-active font-bold" class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all ios-touch">
       <div class="flex items-center gap-3">
-        <mat-icon style="font-size: 20px; width: 20px; height: 20px;" class="text-blue-500">podcasts</mat-icon> Audio Brief
+        <div class="w-7 h-7 rounded-xl ios-tint-purple flex items-center justify-center shrink-0">
+          <mat-icon style="font-size: 17px; width: 17px; height: 17px;">school</mat-icon>
+        </div>
+        <span>Academy</span>
       </div>
-      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">15-Min</span>
+      <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">FREE</span>
     </a>
 
-    <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-8 mb-2 px-3">Library & Me</div>
+    <div class="text-[10px] font-black uppercase tracking-widest text-[#8e8e93] mt-6 mb-1 px-3">Library &amp; Me</div>
     
-    <button (click)="toggleReadingList()" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all w-full text-left cursor-pointer" [class.bg-black]="showReadingList()" [class.bg-opacity-5]="showReadingList()" [class.dark:bg-white]="showReadingList()" [class.dark:bg-opacity-10]="showReadingList()">
+    <button (click)="toggleReadingList()" class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all w-full text-left cursor-pointer ios-touch" [class.bg-black]="showReadingList()" [class.bg-opacity-5]="showReadingList()" [class.dark:bg-white]="showReadingList()" [class.dark:bg-opacity-10]="showReadingList()">
       <div class="flex items-center gap-3">
-        <mat-icon style="font-size: 20px; width: 20px; height: 20px;">bookmark</mat-icon> Saved
+        <div class="w-7 h-7 rounded-xl ios-tint-green flex items-center justify-center shrink-0">
+          <mat-icon style="font-size: 17px; width: 17px; height: 17px;">bookmark</mat-icon>
+        </div>
+        <span>Saved</span>
       </div>
       @if (bookmarkManager.bookmarkedIds().length > 0) {
-        <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full">{{ bookmarkManager.bookmarkedIds().length }}</span>
+        <span class="bg-[#007AFF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">{{ bookmarkManager.bookmarkedIds().length }}</span>
       }
     </button>
 
-    <a routerLink="/profile" routerLinkActive="bg-black/5 dark:bg-white/10 text-blue-600 dark:text-blue-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1d1d1f] dark:hover:text-white transition-all">
-      <mat-icon style="font-size: 20px; width: 20px; height: 20px;">person</mat-icon> Profile
+    <a (click)="haptic.selection()" routerLink="/profile" routerLinkActive="ios-tab-pill-active font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all ios-touch">
+      <div class="w-7 h-7 rounded-xl ios-tint-blue flex items-center justify-center shrink-0">
+        <mat-icon style="font-size: 17px; width: 17px; height: 17px;">person</mat-icon>
+      </div>
+      <span>Profile</span>
     </a>
 
     @if (authService.isAdmin()) {
-      <div class="text-[10px] font-black uppercase tracking-widest text-red-400 mt-8 mb-2 px-3">System</div>
-      <a routerLink="/admin" routerLinkActive="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all">
+      <div class="text-[10px] font-black uppercase tracking-widest text-red-400 mt-6 mb-1 px-3">System</div>
+      <a routerLink="/admin" routerLinkActive="bg-red-500/15 text-red-600 dark:text-red-400 shadow-xs" class="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all ios-touch">
         <mat-icon style="font-size: 20px; width: 20px; height: 20px;">admin_panel_settings</mat-icon> Admin Panel
       </a>
     }
   </div>
 
   <!-- Bottom Actions -->
-  <div class="p-4 border-t border-black/5 dark:border-white/5 flex flex-col gap-3">
+  <div class="p-4 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col gap-3">
     @if (pwaService.canInstall()) {
-      <button (click)="pwaService.installApp()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer animate-pulse">
+      <button (click)="pwaService.installApp()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-bold transition-all shadow-md cursor-pointer ios-touch">
         <mat-icon style="font-size: 16px; width: 16px; height: 16px;">install_mobile</mat-icon> Install App
       </button>
     }
     
     <div class="flex items-center justify-between px-2">
-      <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Theme</span>
-      <button (click)="themeManager.toggle()" class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer">
+      <span class="text-xs font-bold text-[#8e8e93] uppercase tracking-widest">Theme</span>
+      <button (click)="themeManager.toggle()" class="w-8 h-8 rounded-full ios-glass-thin flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xs" title="Toggle Appearance">
         <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
     </div>
@@ -145,11 +172,11 @@
 </aside>
 
 <!-- Main Workspace Layout -->
-<div class="lg:pl-64 min-h-screen flex flex-col bg-[#f2f2f7] dark:bg-[#000000] pt-0 lg:pt-8 relative transition-all duration-300">
+<div class="lg:pl-64 min-h-screen flex flex-col bg-transparent pt-0 lg:pt-8 relative z-10 transition-all duration-300">
   
   <!-- iOS Mobile Top Navigation Bar -->
-  <header class="lg:hidden sticky top-0 z-40 w-full ios-glass border-b border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between px-4 h-14 pt-[env(safe-area-inset-top,0px)] transition-all">
-    <a routerLink="/" class="flex items-center gap-2.5 cursor-pointer group shrink-0 ios-touch">
+  <header class="lg:hidden sticky top-0 z-40 w-full ios-glass-thick border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between px-4 h-14 pt-[env(safe-area-inset-top,0px)] transition-all">
+    <a (click)="haptic.selection()" routerLink="/" class="flex items-center gap-2.5 cursor-pointer group shrink-0 ios-touch">
       <div class="w-8 h-8 rounded-[10px] bg-gradient-to-tr from-[#1d1d1f] to-[#3a3a3c] dark:from-white dark:to-[#e5e5ea] text-white dark:text-[#1c1c1e] flex items-center justify-center shadow-sm">
         <mat-icon style="font-size: 17px; width: 17px; height: 17px;">article</mat-icon>
       </div>
@@ -158,25 +185,31 @@
         <span class="text-[9px] font-semibold text-[#8e8e93] tracking-tight leading-tight mt-0.5">Sri Lanka</span>
       </div>
     </a>
+
+    <div class="flex items-center gap-2">
+      <button (click)="themeManager.toggle()" class="w-8 h-8 rounded-full ios-glass-thin flex items-center justify-center text-[#000000] dark:text-white ios-touch cursor-pointer">
+        <mat-icon style="font-size: 16px; width: 16px; height: 16px;">{{ themeManager.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+    </div>
   </header>
 
-  <!-- Desktop Top Header -->
-  <header class="hidden lg:flex sticky top-8 z-40 w-full h-20 bg-[#f2f2f7]/90 dark:bg-[#000000]/90 backdrop-blur-2xl border-b border-black/5 dark:border-white/5 items-center justify-between px-8">
+  <!-- Desktop Top Header (iOS Glass Material) -->
+  <header class="hidden lg:flex sticky top-8 z-40 w-full h-20 ios-glass-thick border-b border-black/[0.06] dark:border-white/[0.08] items-center justify-between px-8">
     
     <!-- Search Bar -->
     <div class="flex-1 max-w-xl">
       <div class="relative w-full group">
         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <mat-icon class="text-gray-400 group-focus-within:text-blue-500 transition-colors" style="font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+          <mat-icon class="text-[#8e8e93] group-focus-within:text-[#007AFF] transition-colors" style="font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
         </div>
         <input 
           type="text" 
           (input)="onSearch($event)" 
           placeholder="Search articles, podcasts, or tags..." 
-          class="w-full bg-black/[0.03] dark:bg-white/[0.03] border border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-[#1a1a1a] rounded-2xl py-3 pl-12 pr-4 text-sm font-medium transition-all outline-none placeholder:text-gray-400 shadow-sm focus:shadow-md text-[#1d1d1f] dark:text-white"
+          class="w-full ios-glass-input rounded-2xl py-3 pl-12 pr-4 text-sm font-medium transition-all outline-none placeholder:text-[#8e8e93] text-[#1d1d1f] dark:text-white"
         >
         <div class="absolute inset-y-0 right-0 pr-2 flex items-center">
-          <div class="hidden sm:flex items-center gap-1 px-2 py-1 rounded bg-black/5 dark:bg-white/10 text-[10px] font-bold text-gray-500">
+          <div class="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md ios-glass-thin text-[10px] font-bold text-[#8e8e93]">
             <span>⌘</span><span>K</span>
           </div>
         </div>
@@ -194,75 +227,63 @@
 
 </div>
 
-<!-- iOS Native Cupertino Bottom Tab Bar -->
-<nav class="lg:hidden fixed bottom-0 left-0 w-full ios-tab-bar z-[60] flex items-center justify-around px-3 pt-2 pb-[max(env(safe-area-inset-bottom,0px),8px)] transition-all">
+<!-- iOS 18 Floating Island Segmented Tab Dock -->
+<div class="lg:hidden fixed bottom-3.5 inset-x-3 max-w-sm mx-auto ios-floating-dock z-[60] py-1.5 px-2 flex items-center justify-around shadow-2xl transition-all">
   
   <!-- Feed Tab -->
-  <a routerLink="/" [routerLinkActiveOptions]="{exact: true}" #rlaHome="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
-    <div class="relative flex items-center justify-center">
-      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">{{ rlaHome.isActive ? 'article' : 'article' }}</mat-icon>
-      @if (rlaHome.isActive) {
-        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
-      }
+  <a (click)="haptic.selection()" routerLink="/" [routerLinkActiveOptions]="{exact: true}" #rlaHome="routerLinkActive" routerLinkActive="ios-tab-pill-active" class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-[#8E8E93] transition-all ios-touch relative">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center" [class.ios-tint-blue]="rlaHome.isActive">
+      <mat-icon style="font-size: 21px; width: 21px; height: 21px;">article</mat-icon>
     </div>
-    <span class="text-[10px] font-semibold tracking-tight">News</span>
+    <span class="text-[10px] font-bold tracking-tight mt-0.5" [class.text-[#007AFF]]="rlaHome.isActive" [class.dark:text-[#0A84FF]]="rlaHome.isActive">News</span>
   </a>
 
-  <!-- Events & Meetups Tab -->
-  <a routerLink="/events" #rlaEvents="routerLinkActive" routerLinkActive="text-[#FF9500] dark:text-[#FF9F0A]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
-    <div class="relative flex items-center justify-center">
-      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">event_upcoming</mat-icon>
-      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-amber-500 text-[8px] font-black text-white leading-none shadow-xs">SOON</span>
-      @if (rlaEvents.isActive) {
-        <span class="absolute -bottom-1 w-1 h-1 bg-[#FF9500] dark:bg-[#FF9F0A] rounded-full"></span>
-      }
+  <!-- Quizzes Tab -->
+  <a (click)="haptic.selection()" routerLink="/quizzes" #rlaQuizzes="routerLinkActive" routerLinkActive="ios-tab-pill-active" class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-[#8E8E93] transition-all ios-touch relative">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center relative" [class.ios-tint-orange]="rlaQuizzes.isActive">
+      <mat-icon style="font-size: 21px; width: 21px; height: 21px;">quiz</mat-icon>
+      <span class="absolute -top-1 -right-2 px-1 py-0.2 rounded-full bg-amber-500 text-[7px] font-black text-white leading-none shadow-xs">NEW</span>
     </div>
-    <span class="text-[10px] font-semibold tracking-tight">Events</span>
+    <span class="text-[10px] font-bold tracking-tight mt-0.5" [class.text-[#FF9500]]="rlaQuizzes.isActive" [class.dark:text-[#FF9F0A]]="rlaQuizzes.isActive">Quizzes</span>
   </a>
 
-  <!-- Audio Podcasts Tab -->
-  <a routerLink="/radio" #rlaRadio="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
-    <div class="relative flex items-center justify-center">
-      <mat-icon style="font-size: 23px; width: 23px; height: 23px;">podcasts</mat-icon>
-      <span class="absolute -top-1 -right-3 px-1 py-0.2 rounded-full bg-blue-600 text-[8px] font-black text-white leading-none shadow-xs">15M</span>
-      @if (rlaRadio.isActive) {
-        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
-      }
+  <!-- Learn / Academy Tab -->
+  <a (click)="haptic.selection()" routerLink="/learn" #rlaLearn="routerLinkActive" routerLinkActive="ios-tab-pill-active" class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-[#8E8E93] transition-all ios-touch relative">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center relative" [class.ios-tint-purple]="rlaLearn.isActive">
+      <mat-icon style="font-size: 21px; width: 21px; height: 21px;">school</mat-icon>
+      <span class="absolute -top-1 -right-2 px-1 py-0.2 rounded-full bg-purple-600 text-[7px] font-black text-white leading-none shadow-xs">FREE</span>
     </div>
-    <span class="text-[10px] font-semibold tracking-tight">Audio</span>
+    <span class="text-[10px] font-bold tracking-tight mt-0.5" [class.text-purple-600]="rlaLearn.isActive" [class.dark:text-purple-400]="rlaLearn.isActive">Learn</span>
   </a>
 
   <!-- Profile / Me Tab -->
-  <a routerLink="/profile" #rlaProfile="routerLinkActive" routerLinkActive="text-[#007AFF] dark:text-[#0A84FF]" class="flex flex-col items-center justify-center gap-1 text-[#8E8E93] py-1 px-3 ios-touch relative">
-    <div class="relative flex items-center justify-center">
+  <a (click)="haptic.selection()" routerLink="/profile" #rlaProfile="routerLinkActive" routerLinkActive="ios-tab-pill-active" class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-[#8E8E93] transition-all ios-touch relative">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center" [class.ios-tint-blue]="rlaProfile.isActive">
       @if (authService.currentUser()?.photoURL) {
-        <div class="w-5.5 h-5.5 rounded-full overflow-hidden border border-black/10 dark:border-white/15" [class.ring-2]="rlaProfile.isActive" [class.ring-[#007AFF]]="rlaProfile.isActive">
+        <div class="w-6 h-6 rounded-full overflow-hidden border border-black/10 dark:border-white/20">
           <img [src]="authService.currentUser()?.photoURL" alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer">
         </div>
       } @else {
-        <mat-icon style="font-size: 23px; width: 23px; height: 23px;">account_circle</mat-icon>
-      }
-      @if (rlaProfile.isActive) {
-        <span class="absolute -bottom-1 w-1 h-1 bg-[#007AFF] dark:bg-[#0A84FF] rounded-full"></span>
+        <mat-icon style="font-size: 21px; width: 21px; height: 21px;">person</mat-icon>
       }
     </div>
-    <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+    <span class="text-[10px] font-bold tracking-tight mt-0.5" [class.text-[#007AFF]]="rlaProfile.isActive" [class.dark:text-[#0A84FF]]="rlaProfile.isActive">Profile</span>
   </a>
-</nav>
+</div>
 
-<!-- iOS Style Bottom Sheet / Drawer -->
+<!-- iOS Style Glass Bottom Sheet / Drawer -->
 @if (showReadingList()) {
   <div class="fixed inset-0 z-[100] flex items-end sm:items-stretch sm:justify-end animate-fade-in">
     <!-- Backdrop -->
-    <button type="button" aria-label="Close reading list" (click)="toggleReadingList()" (keydown.enter)="toggleReadingList()" class="absolute inset-0 bg-black/50 backdrop-blur-md w-full h-full border-none cursor-pointer"></button>
+    <button type="button" aria-label="Close reading list" (click)="toggleReadingList()" (keydown.enter)="toggleReadingList()" class="absolute inset-0 bg-black/40 backdrop-blur-md w-full h-full border-none cursor-pointer"></button>
     
-    <!-- Drawer / Bottom Sheet Container -->
-    <div class="relative w-full sm:max-w-md bg-white dark:bg-[#1c1c1e] text-[#000000] dark:text-white max-h-[88vh] sm:max-h-full sm:h-full rounded-t-[32px] sm:rounded-t-none sm:rounded-l-[32px] shadow-2xl flex flex-col z-10 p-6 sm:p-8 overflow-y-auto border-t sm:border-t-0 sm:border-l border-black/10 dark:border-white/10 pb-[calc(env(safe-area-inset-bottom)+20px)]">
+    <!-- Drawer / Bottom Sheet Container (iOS Glass Panel) -->
+    <div class="relative w-full sm:max-w-md ios-glass-thick text-[#000000] dark:text-white max-h-[88vh] sm:max-h-full sm:h-full rounded-t-[32px] sm:rounded-t-none sm:rounded-l-[32px] shadow-2xl flex flex-col z-10 p-6 sm:p-8 overflow-y-auto border-t sm:border-t-0 sm:border-l border-black/10 dark:border-white/15 pb-[calc(env(safe-area-inset-bottom)+20px)]">
       
       <!-- iOS Drag Indicator on Mobile -->
       <div class="sm:hidden w-10 h-1.5 bg-black/20 dark:bg-white/20 rounded-full mx-auto mb-4"></div>
 
-      <div class="flex items-center justify-between pb-5 border-b border-black/10 dark:border-white/10">
+      <div class="flex items-center justify-between pb-5 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-[14px] bg-[#007AFF] text-white flex items-center justify-center shadow-md">
             <mat-icon>bookmark</mat-icon>
@@ -272,7 +293,7 @@
             <p class="text-xs text-[#8e8e93] font-medium">Offline Cached &bull; MyFeed</p>
           </div>
         </div>
-        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="w-8 h-8 rounded-full bg-black/[0.06] dark:bg-white/[0.1] flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 ios-touch cursor-pointer">
+        <button type="button" aria-label="Close" (click)="toggleReadingList()" class="w-8 h-8 rounded-full ios-glass-thin flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 ios-touch cursor-pointer">
           <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
         </button>
       </div>
@@ -287,18 +308,18 @@
         } @else {
           <div class="space-y-4">
             @for (article of bookmarkedArticles(); track article.id) {
-              <div class="group p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/5 dark:border-white/10 hover:border-blue-600/50 transition-all flex gap-4 items-center relative">
-                <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" class="w-20 h-20 rounded-xl object-cover shrink-0 bg-gray-100 dark:bg-white/10" />
+              <div class="group p-4 rounded-2xl ios-card flex gap-4 items-center relative">
+                <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" class="w-20 h-20 rounded-xl object-cover shrink-0 bg-gray-100 dark:bg-white/10 shadow-xs" />
                 <div class="flex-grow min-w-0">
-                  <div class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">{{ article.category }}</div>
-                  <a [routerLink]="['/article', article.slug || article.id]" (click)="toggleReadingList()" class="block text-sm font-bold tracking-tight text-[#1d1d1f] dark:text-white hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer line-clamp-2 mb-1">
+                  <div class="text-[10px] font-bold text-[#007AFF] uppercase tracking-widest mb-1">{{ article.category }}</div>
+                  <a [routerLink]="['/article', article.slug || article.id]" (click)="toggleReadingList()" class="block text-sm font-bold tracking-tight text-[#1d1d1f] dark:text-white hover:text-[#007AFF] dark:hover:text-[#0A84FF] cursor-pointer line-clamp-2 mb-1">
                     {{ article.title }}
                   </a>
-                  <div class="text-[11px] text-[#1d1d1f]/50 dark:text-white/50 flex items-center gap-2">
+                  <div class="text-[11px] text-[#8e8e93] flex items-center gap-2">
                     <span>{{ article.readTime }} read</span>
                   </div>
                 </div>
-                <button type="button" aria-label="Remove bookmark" (click)="bookmarkManager.toggleBookmark(article.id)" class="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer" title="Remove bookmark">
+                <button type="button" aria-label="Remove bookmark" (click)="bookmarkManager.toggleBookmark(article.id)" class="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer ios-touch" title="Remove bookmark">
                   <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_outline</mat-icon>
                 </button>
               </div>
@@ -307,8 +328,8 @@
         }
       </div>
 
-      <div class="pt-6 border-t border-black/10 dark:border-white/10 text-center">
-        <p class="text-xs text-[#1d1d1f]/40 dark:text-white/40 font-medium">Bookmarks are saved securely in your browser storage.</p>
+      <div class="pt-6 border-t border-black/[0.06] dark:border-white/[0.08] text-center">
+        <p class="text-xs text-[#8e8e93] font-medium">Bookmarks are saved securely in your browser storage.</p>
       </div>
     </div>
   </div>
@@ -319,7 +340,7 @@
   <!-- Scroll to Top Button -->
   <button 
     (click)="scrollToTop()"
-    class="w-10 h-10 sm:w-12 sm:h-12 p-2 sm:p-3 rounded-full bg-[#1d1d1f]/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-[#121212] shadow-xl hover:-translate-y-1 transition-all duration-300 active:scale-95 cursor-pointer flex items-center justify-center border border-white/10 dark:border-black/10"
+    class="w-10 h-10 sm:w-12 sm:h-12 p-2 sm:p-3 rounded-full ios-glass text-[#000000] dark:text-white shadow-xl hover:-translate-y-1 transition-all duration-300 active:scale-95 cursor-pointer flex items-center justify-center"
     [class.opacity-0]="!showScrollButton()"
     [class.translate-y-4]="!showScrollButton()"
     [class.pointer-events-none]="!showScrollButton()"
@@ -336,52 +357,50 @@
       type="button" 
       aria-label="Close modal" 
       (click)="toggleFeedbackModal()" 
-      class="absolute inset-0 bg-black/50 backdrop-blur-sm w-full h-full border-none cursor-pointer">
+      class="absolute inset-0 bg-black/50 backdrop-blur-md w-full h-full border-none cursor-pointer">
     </button>
     
-    <!-- Modal Card -->
-    <div class="relative w-full max-w-lg bg-white dark:bg-[#1a1a1a] text-[#1d1d1f] dark:text-white rounded-[2rem] shadow-2xl border border-black/10 dark:border-white/10 p-6 sm:p-8 z-10 overflow-hidden">
+    <!-- Modal Card (iOS Glass Material) -->
+    <div class="relative w-full max-w-lg ios-glass-thick text-[#1d1d1f] dark:text-white rounded-[2.5rem] shadow-2xl p-6 sm:p-8 z-10 overflow-hidden">
       
       <!-- Top Decor & Close -->
       <div class="flex items-start justify-between gap-4 mb-6">
         <div class="flex items-center gap-3.5">
-          <div class="w-12 h-12 rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center border border-green-500/20 shadow-sm shrink-0">
+          <div class="w-12 h-12 rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 flex items-center justify-center border border-green-500/20 shadow-sm shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
           </div>
           <div>
             <h3 class="text-lg sm:text-xl font-black tracking-tight text-[#1d1d1f] dark:text-white">Help &amp; Feedback</h3>
-            <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-medium">ගැටලු හෝ අදහස් WhatsApp මඟින් අපට එවන්න</p>
+            <p class="text-xs text-[#8e8e93] font-medium">ගැටලු හෝ අදහස් WhatsApp මඟින් අපට එවන්න</p>
           </div>
         </div>
 
         <button 
           type="button" 
           (click)="toggleFeedbackModal()" 
-          class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors cursor-pointer"
+          class="w-8 h-8 rounded-full ios-glass-thin flex items-center justify-center text-[#8e8e93] hover:text-[#000000] dark:hover:text-white transition-colors cursor-pointer ios-touch"
           aria-label="Close">
-          <mat-icon style="font-size: 20px; width: 20px; height: 20px;">close</mat-icon>
+          <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
         </button>
       </div>
 
       <!-- Category Selection Chips -->
       <div class="mb-5 space-y-2">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-[#1d1d1f]/60 dark:text-white/60">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#8e8e93]">
           මාතෘකාව තෝරන්න (Select Topic)
         </div>
         <div class="grid grid-cols-2 gap-2 sm:gap-2.5">
           <button 
             type="button" 
             (click)="setFeedbackCategory('issue')" 
-            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ios-touch"
             [class.border-rose-500]="feedbackCategory() === 'issue'"
-            [class.bg-rose-50]="feedbackCategory() === 'issue'"
-            [class.dark:bg-rose-950/30]="feedbackCategory() === 'issue'"
-            [class.text-rose-700]="feedbackCategory() === 'issue'"
+            [class.bg-rose-500/15]="feedbackCategory() === 'issue'"
+            [class.text-rose-600]="feedbackCategory() === 'issue'"
             [class.dark:text-rose-400]="feedbackCategory() === 'issue'"
             [class.border-black/5]="feedbackCategory() !== 'issue'"
             [class.dark:border-white/10]="feedbackCategory() !== 'issue'"
-            [class.bg-black/[0.02]]="feedbackCategory() !== 'issue'"
-            [class.dark:bg-white/[0.03]]="feedbackCategory() !== 'issue'">
+            [class.ios-glass-thin]="feedbackCategory() !== 'issue'">
             <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-rose-500 shrink-0">bug_report</mat-icon>
             <span class="truncate">Website Issue / Bug</span>
           </button>
@@ -389,16 +408,14 @@
           <button 
             type="button" 
             (click)="setFeedbackCategory('recommendation')" 
-            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ios-touch"
             [class.border-amber-500]="feedbackCategory() === 'recommendation'"
-            [class.bg-amber-50]="feedbackCategory() === 'recommendation'"
-            [class.dark:bg-amber-950/30]="feedbackCategory() === 'recommendation'"
-            [class.text-amber-700]="feedbackCategory() === 'recommendation'"
+            [class.bg-amber-500/15]="feedbackCategory() === 'recommendation'"
+            [class.text-amber-600]="feedbackCategory() === 'recommendation'"
             [class.dark:text-amber-400]="feedbackCategory() === 'recommendation'"
             [class.border-black/5]="feedbackCategory() !== 'recommendation'"
             [class.dark:border-white/10]="feedbackCategory() !== 'recommendation'"
-            [class.bg-black/[0.02]]="feedbackCategory() !== 'recommendation'"
-            [class.dark:bg-white/[0.03]]="feedbackCategory() !== 'recommendation'">
+            [class.ios-glass-thin]="feedbackCategory() !== 'recommendation'">
             <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-amber-500 shrink-0">lightbulb</mat-icon>
             <span class="truncate">Recommendation</span>
           </button>
@@ -406,33 +423,29 @@
           <button 
             type="button" 
             (click)="setFeedbackCategory('content')" 
-            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-            [class.border-blue-500]="feedbackCategory() === 'content'"
-            [class.bg-blue-50]="feedbackCategory() === 'content'"
-            [class.dark:bg-blue-950/30]="feedbackCategory() === 'content'"
-            [class.text-blue-700]="feedbackCategory() === 'content'"
+            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ios-touch"
+            [class.border-[#007AFF]]="feedbackCategory() === 'content'"
+            [class.bg-[#007AFF]/15]="feedbackCategory() === 'content'"
+            [class.text-[#007AFF]]="feedbackCategory() === 'content'"
             [class.dark:text-blue-400]="feedbackCategory() === 'content'"
             [class.border-black/5]="feedbackCategory() !== 'content'"
             [class.dark:border-white/10]="feedbackCategory() !== 'content'"
-            [class.bg-black/[0.02]]="feedbackCategory() !== 'content'"
-            [class.dark:bg-white/[0.03]]="feedbackCategory() !== 'content'">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-500 shrink-0">newspaper</mat-icon>
+            [class.ios-glass-thin]="feedbackCategory() !== 'content'">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-[#007AFF] shrink-0">newspaper</mat-icon>
             <span class="truncate">News / Story Note</span>
           </button>
 
           <button 
             type="button" 
             (click)="setFeedbackCategory('general')" 
-            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+            class="p-3 rounded-2xl border text-left text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ios-touch"
             [class.border-emerald-500]="feedbackCategory() === 'general'"
-            [class.bg-emerald-50]="feedbackCategory() === 'general'"
-            [class.dark:bg-emerald-950/30]="feedbackCategory() === 'general'"
-            [class.text-emerald-700]="feedbackCategory() === 'general'"
+            [class.bg-emerald-500/15]="feedbackCategory() === 'general'"
+            [class.text-emerald-600]="feedbackCategory() === 'general'"
             [class.dark:text-emerald-400]="feedbackCategory() === 'general'"
             [class.border-black/5]="feedbackCategory() !== 'general'"
             [class.dark:border-white/10]="feedbackCategory() !== 'general'"
-            [class.bg-black/[0.02]]="feedbackCategory() !== 'general'"
-            [class.dark:bg-white/[0.03]]="feedbackCategory() !== 'general'">
+            [class.ios-glass-thin]="feedbackCategory() !== 'general'">
             <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-emerald-500 shrink-0">chat</mat-icon>
             <span class="truncate">General Chat</span>
           </button>
@@ -441,7 +454,7 @@
 
       <!-- Optional Message Textarea -->
       <div class="mb-6 space-y-2">
-        <label for="userFeedbackMsg" class="block text-[11px] font-bold uppercase tracking-wider text-[#1d1d1f]/60 dark:text-white/60">
+        <label for="userFeedbackMsg" class="block text-[11px] font-bold uppercase tracking-wider text-[#8e8e93]">
           ඔබගේ පණිවිඩය (Your Message)
         </label>
         <textarea 
@@ -450,7 +463,7 @@
           (input)="updateFeedbackMessage($event)"
           [value]="feedbackMessage()"
           placeholder="ගැටලුව හෝ ඔබගේ අදහස කෙටියෙන් මෙහි සඳහන් කරන්න... (Describe the issue, bug or suggestion...)" 
-          class="w-full p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/5 dark:border-white/10 text-xs sm:text-sm focus:outline-none focus:bg-white dark:focus:bg-[#222] focus:ring-4 focus:ring-green-500/10 focus:border-green-500 transition-all placeholder:text-[#1d1d1f]/40 dark:placeholder:text-white/40 resize-none font-medium">
+          class="w-full p-4 rounded-2xl ios-glass-input text-xs sm:text-sm focus:outline-none transition-all placeholder:text-[#8e8e93] resize-none font-medium text-[#1d1d1f] dark:text-white">
         </textarea>
       </div>
 
@@ -459,7 +472,7 @@
         <button 
           type="button" 
           (click)="sendFeedbackViaWhatsApp()" 
-          class="flex-1 py-4 px-6 rounded-full bg-green-600 hover:bg-green-700 text-white font-extrabold uppercase tracking-wider text-xs transition-all shadow-xl shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+          class="flex-1 py-4 px-6 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold uppercase tracking-wider text-xs transition-all shadow-xl shadow-green-600/20 ios-touch flex items-center justify-center gap-2 cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
           <span>Send via WhatsApp</span>
         </button>
@@ -467,13 +480,13 @@
         <button 
           type="button" 
           (click)="toggleFeedbackModal()" 
-          class="py-4 px-6 rounded-full bg-black/[0.05] dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer">
+          class="py-4 px-6 rounded-full ios-glass-thin hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white font-bold text-xs transition-all cursor-pointer ios-touch">
           Cancel
         </button>
       </div>
 
       <!-- Quick Phone / Direct WhatsApp Info -->
-      <div class="mt-4 pt-4 border-t border-black/5 dark:border-white/10 text-center flex items-center justify-center gap-2 text-[11px] text-[#1d1d1f]/50 dark:text-white/50">
+      <div class="mt-4 pt-4 border-t border-black/[0.06] dark:border-white/[0.08] text-center flex items-center justify-center gap-2 text-[11px] text-[#8e8e93]">
         <span>Direct Contact: <strong>071 094 7871</strong></span>
         <span>&bull;</span>
         <a href="https://wa.me/94710947871" target="_blank" rel="noopener noreferrer" class="text-green-600 dark:text-green-400 font-bold hover:underline">Open WhatsApp Chat</a>
@@ -484,17 +497,17 @@
 
 <!-- Web Push Banner -->
 @if (webPushService.isSupported && !webPushService.isSubscribed() && !webPushService.isDenied()) {
-  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl border border-black/5 dark:border-white/5 p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-8 fade-in duration-500">
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm ios-glass-thick rounded-[22px] shadow-2xl p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-8 fade-in duration-500">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full bg-blue-600/10 dark:bg-blue-400/10 flex items-center justify-center shrink-0">
-        <mat-icon class="text-blue-600 dark:text-blue-400">notifications_active</mat-icon>
+      <div class="w-10 h-10 rounded-full bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shrink-0">
+        <mat-icon>notifications_active</mat-icon>
       </div>
       <div class="flex flex-col">
         <span class="text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">Get Live Alerts</span>
-        <span class="text-xs text-[#1d1d1f]/60 dark:text-white/60">Be the first to read breaking news.</span>
+        <span class="text-xs text-[#8e8e93]">Be the first to read breaking news.</span>
       </div>
     </div>
-    <button (click)="webPushService.subscribe()" class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-full transition-colors">
+    <button (click)="webPushService.subscribe()" class="shrink-0 bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-bold px-4 py-2 rounded-full transition-all ios-touch">
       Allow
     </button>
   </div>
@@ -503,14 +516,11 @@
 <!-- Auth Modal & Profile Management -->
 <app-auth-modal></app-auth-modal>
 
-<!-- Global Commute Audio Mini Player -->
-<app-audio-mini-player></app-audio-mini-player>
-
 <!-- Verification Modal -->
 @if (authService.verificationModalOpen()) {
   <div class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" tabindex="0" role="button" (keyup.enter)="authService.closeVerificationModal()" (click)="authService.closeVerificationModal()"></div>
-    <div class="relative bg-white dark:bg-[#1c1c1e] rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-300">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-md" tabindex="0" role="button" (keyup.enter)="authService.closeVerificationModal()" (click)="authService.closeVerificationModal()"></div>
+    <div class="relative ios-glass-thick rounded-[28px] shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-300">
       
       <!-- Background decoration -->
       <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-600 to-indigo-700 opacity-20"></div>
@@ -518,23 +528,23 @@
       <div class="p-8 text-center relative z-10">
         <!-- Shiny Icon -->
         <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 p-1 shadow-lg shadow-blue-500/30 mb-6">
-          <div class="w-full h-full rounded-full border-2 border-white/20 flex items-center justify-center bg-blue-600">
+          <div class="w-full h-full rounded-full border-2 border-white/20 flex items-center justify-center bg-[#007AFF]">
             <mat-icon class="text-white" style="font-size: 40px; width: 40px; height: 40px;">verified</mat-icon>
           </div>
         </div>
         
         <h2 class="text-2xl font-black text-[#1d1d1f] dark:text-white mb-2">Verified Member</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          Thank you for being a verified member of the MyFeed.lk community!
+        <p class="text-sm text-[#8e8e93] mb-6">
+          Thank you for being a verified member of the My Feed LK community!
         </p>
         
-        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-800/30 mb-8 flex flex-col items-center justify-center">
-          <mat-icon class="text-blue-500 mb-2" style="font-size: 32px; width: 32px; height: 32px;">workspace_premium</mat-icon>
-          <p class="text-sm font-bold text-blue-600 dark:text-blue-400">Authentic Account</p>
-          <p class="text-[11px] text-blue-600/70 dark:text-blue-400/70 mt-1 text-center">This badge confirms that your account has been verified by our system.</p>
+        <div class="ios-glass-thin rounded-2xl p-5 mb-8 flex flex-col items-center justify-center">
+          <mat-icon class="text-[#007AFF] mb-2" style="font-size: 32px; width: 32px; height: 32px;">workspace_premium</mat-icon>
+          <p class="text-sm font-bold text-[#007AFF]">Authentic Account</p>
+          <p class="text-[11px] text-[#8e8e93] mt-1 text-center">This badge confirms that your account has been verified by our system.</p>
         </div>
         
-        <button (click)="authService.closeVerificationModal()" class="w-full py-3.5 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] font-bold rounded-xl shadow-md hover:scale-[1.02] transition-transform">
+        <button (click)="authService.closeVerificationModal()" class="w-full py-3.5 bg-[#007AFF] hover:bg-[#0062cc] text-white font-bold rounded-2xl shadow-md ios-touch">
           Awesome!
         </button>
       </div>

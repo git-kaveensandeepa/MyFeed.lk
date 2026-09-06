@@ -16,7 +16,7 @@ import { AudioService } from './audio.service';
         [class.bottom-20]="true"
         [class.lg:bottom-6]="true">
         
-        <div class="relative overflow-hidden rounded-2xl bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl border border-black/10 dark:border-white/15 shadow-2xl p-3 sm:p-3.5 text-[#1d1d1f] dark:text-white">
+        <div class="relative overflow-hidden rounded-[24px] ios-glass-thick shadow-2xl p-3 sm:p-3.5 text-[#000000] dark:text-white border border-white/60 dark:border-white/15">
           
           <!-- Top Interactive Progress Scrub Bar -->
           <div 

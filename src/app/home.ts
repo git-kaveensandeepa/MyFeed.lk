@@ -23,7 +23,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
       <div 
         class="fixed top-2 left-0 right-0 z-[60] flex justify-center transition-all duration-200 pointer-events-none"
         [style.transform]="'translateY(' + (isRefreshing() ? 50 : Math.min(pullDistance() * 0.45, 90)) + 'px)'">
-        <div class="ios-glass shadow-xl rounded-full px-4 py-2 border border-black/5 dark:border-white/10 flex items-center gap-2.5">
+        <div class="ios-glass-thick shadow-xl rounded-full px-4 py-2 flex items-center gap-2.5">
           <div 
             class="w-5 h-5 rounded-full border-2 border-[#007AFF]/20 border-t-[#007AFF] animate-spin"
             [class.animate-none]="!isRefreshing()"
@@ -54,7 +54,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
       <!-- Desktop Editorial Page Header -->
       <header class="hidden lg:block mb-8 text-center animate-fade-in-up">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-xs font-bold uppercase tracking-widest text-[#007AFF] dark:text-blue-300 mb-4 border border-blue-100 dark:border-blue-900/40">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ios-glass-thin text-xs font-bold uppercase tracking-widest text-[#007AFF] dark:text-blue-400 mb-4 shadow-xs">
           <span class="w-2 h-2 rounded-full bg-[#007AFF] animate-pulse"></span>
           <span>Sri Lanka Tech Journal &bull; {{ currentDate }}</span>
         </div>
@@ -62,13 +62,13 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           My Feed <span class="text-[#007AFF]">Lk</span>
         </h1>
         <p class="text-base text-[#8e8e93] max-w-2xl mx-auto px-2 leading-relaxed">
-          Curated stories in Sinhala & English &bull; Sri Lanka's Modern Tech Edition
+          Curated stories in Sinhala &amp; English &bull; Sri Lanka's Modern Tech Edition
         </p>
       </header>
 
-      <!-- iOS Native Search Bar -->
+      <!-- iOS Native Glass Search Bar -->
       <div class="max-w-2xl mx-auto mb-4 sm:mb-6 animate-fade-in-up">
-        <div class="relative flex items-center bg-black/[0.04] dark:bg-white/[0.08] rounded-xl sm:rounded-2xl transition-all duration-200 px-3.5 py-2 border border-black/[0.04] dark:border-white/[0.06] focus-within:bg-white dark:focus-within:bg-[#1c1c1e] focus-within:ring-2 focus-within:ring-[#007AFF]/40 focus-within:shadow-md">
+        <div class="relative flex items-center ios-glass-input rounded-2xl transition-all duration-200 px-3.5 py-2">
           <mat-icon style="font-size: 19px; width: 19px; height: 19px;" class="text-[#8e8e93] shrink-0">search</mat-icon>
 
           <!-- Text Input -->
@@ -85,7 +85,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           @if (searchService.searchTerm().trim()) {
             <button 
               (click)="clearSearch()"
-              class="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/15 text-[#8e8e93] hover:text-[#000000] dark:hover:text-white transition-all cursor-pointer shrink-0"
+              class="p-1 rounded-full ios-glass-thin text-[#8e8e93] hover:text-[#000000] dark:hover:text-white transition-all cursor-pointer shrink-0 ios-touch"
               title="Clear search">
               <mat-icon style="font-size: 16px; width: 16px; height: 16px;">close</mat-icon>
             </button>
@@ -100,8 +100,8 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
             (click)="selectCategory(cat.id)"
             class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all duration-150 ios-touch cursor-pointer flex items-center gap-1.5"
             [class]="activeCategory() === cat.id 
-              ? 'bg-[#007AFF] text-white shadow-sm font-bold' 
-              : 'bg-white dark:bg-[#1c1c1e] text-[#000000] dark:text-white border border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'">
+              ? 'bg-[#007AFF] text-white shadow-md font-bold' 
+              : 'ios-glass-thin text-[#000000] dark:text-white hover:bg-black/10 dark:hover:bg-white/15'">
             <mat-icon style="font-size: 14px; width: 14px; height: 14px;">{{ cat.icon }}</mat-icon>
             <span>{{ cat.label }}</span>
           </button>
@@ -110,12 +110,12 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
       <!-- Search Active Indicator (if searching) -->
       @if (searchService.searchTerm().trim()) {
-        <div class="mb-8 p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 flex items-center justify-between animate-fade-in-up">
-          <div class="flex items-center gap-2 text-xs sm:text-sm text-blue-900 dark:text-blue-200">
-            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-blue-600">search</mat-icon>
+        <div class="mb-8 p-4 rounded-2xl ios-glass-thick flex items-center justify-between animate-fade-in-up">
+          <div class="flex items-center gap-2 text-xs sm:text-sm text-[#007AFF] dark:text-blue-300">
+            <mat-icon style="font-size: 18px; width: 18px; height: 18px;" class="text-[#007AFF]">search</mat-icon>
             <span>Showing results for <strong>"{{ searchService.searchTerm() }}"</strong> ({{ filteredArticles().length }} articles found)</span>
           </div>
-          <button (click)="clearSearch()" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+          <button (click)="clearSearch()" class="text-xs font-bold text-[#007AFF] dark:text-blue-400 hover:underline cursor-pointer ios-touch">
             Clear Search
           </button>
         </div>
@@ -136,13 +136,13 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           </div>
         </div>
       } @else if (filteredArticles().length === 0) {
-        <div class="text-center py-16 sm:py-24 text-[#1d1d1f]/40 dark:text-white/40 animate-fade-in-up bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-black/5 dark:border-white/10 mx-auto max-w-2xl mt-4 p-8">
-          <div class="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div class="text-center py-16 sm:py-24 text-[#1d1d1f]/40 dark:text-white/40 animate-fade-in-up ios-card mx-auto max-w-2xl mt-4 p-8">
+          <div class="w-16 h-16 ios-glass-thin rounded-full flex items-center justify-center mx-auto mb-4">
             <mat-icon class="opacity-40" style="font-size: 32px; width: 32px; height: 32px;">search_off</mat-icon>
           </div>
           <h2 class="text-xl font-bold tracking-tight text-[#1d1d1f]/80 dark:text-white/80 mb-1">ලිපි හමු නොවුණි (No Articles Found)</h2>
           <p class="text-sm">We couldn't find anything matching "{{ searchService.searchTerm() }}".</p>
-          <button (click)="clearSearch()" class="mt-5 px-5 py-2.5 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer shadow-md">
+          <button (click)="clearSearch()" class="mt-5 px-5 py-2.5 rounded-full bg-[#007AFF] text-white text-xs font-bold hover:bg-[#0062cc] transition-colors cursor-pointer shadow-md ios-touch">
             සියලු පුවත් පෙන්වන්න (View All Stories)
           </button>
         </div>
@@ -160,7 +160,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
               </div>
             </div>
 
-            <article [routerLink]="['/article', featured.slug || featured.id]" class="group relative bg-white dark:bg-[#1c1c1e] rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-300 cursor-pointer flex flex-col lg:flex-row border border-black/[0.06] dark:border-white/[0.08] ios-card">
+            <article [routerLink]="['/article', featured.slug || featured.id]" class="group relative rounded-[26px] sm:rounded-[32px] overflow-hidden shadow-lg transition-all duration-300 cursor-pointer flex flex-col lg:flex-row ios-card">
               <!-- Feature Image -->
               <div class="w-full lg:w-[55%] overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative min-h-[220px] sm:min-h-[320px] lg:min-h-[400px]">
                 <img [src]="featured.imageUrl" [alt]="featured.title" referrerpolicy="no-referrer" loading="lazy"
@@ -173,10 +173,10 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
                 <!-- Top Badges -->
                 <div class="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-wrap items-center gap-1.5">
-                  <span class="px-3 py-1 rounded-full bg-[#007AFF] text-white font-bold text-[10px] sm:text-xs tracking-tight shadow-sm">
+                  <span class="px-3 py-1 rounded-full bg-[#007AFF] text-white font-bold text-[10px] sm:text-xs tracking-tight shadow-md">
                     {{ featured.category }}
                   </span>
-                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white font-semibold text-[10px] sm:text-xs shadow-sm">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full ios-glass-thin text-white font-semibold text-[10px] sm:text-xs shadow-sm">
                     <mat-icon style="font-size: 13px; width: 13px; height: 13px;">visibility</mat-icon> {{ featured.views || 0 }}
                   </span>
                   @if (getFactCheck(featured); as fc) {
@@ -192,7 +192,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                 <!-- Bookmark Button -->
                 <button 
                   (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(featured.id)"
-                  class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-9 h-9 rounded-full bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-md shadow-sm text-[#000000] dark:text-white flex items-center justify-center ios-touch cursor-pointer border border-black/5 dark:border-white/10"
+                  class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-9 h-9 rounded-full ios-glass-thin shadow-sm text-[#000000] dark:text-white flex items-center justify-center ios-touch cursor-pointer"
                   [title]="bookmarkManager.isBookmarked(featured.id) ? 'Remove bookmark' : 'Bookmark article'">
                   <mat-icon style="font-size: 17px; width: 17px; height: 17px;" [class.text-[#007AFF]]="bookmarkManager.isBookmarked(featured.id)">
                     {{ bookmarkManager.isBookmarked(featured.id) ? 'bookmark' : 'bookmark_border' }}
@@ -201,7 +201,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
               </div>
               
               <!-- Content Pane -->
-              <div class="w-full lg:w-[45%] p-5 sm:p-7 lg:p-8 flex flex-col justify-between relative bg-white dark:bg-[#1c1c1e]">
+              <div class="w-full lg:w-[45%] p-5 sm:p-7 lg:p-8 flex flex-col justify-between relative">
                 <div>
                   <div class="flex flex-wrap items-center gap-2 mb-2 text-[10px] sm:text-xs font-semibold text-[#8e8e93]">
                     <span>{{ featured.date }}</span>
@@ -270,6 +270,34 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
             <div class="mb-6 animate-fade-in-up">
               <app-ad placement="home-top"></app-ad>
             </div>
+
+            <!-- iOS 26 Academy Spotlight Callout -->
+            <div class="mb-8 rounded-[24px] sm:rounded-[28px] ios-card p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-purple-500/20 shadow-md relative overflow-hidden animate-fade-in-up">
+              <div class="absolute -right-12 -top-12 w-44 h-44 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
+              
+              <div class="flex items-center gap-4 relative z-10">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shadow-lg shrink-0">
+                  <mat-icon style="font-size: 26px; width: 26px; height: 26px;">school</mat-icon>
+                </div>
+                <div>
+                  <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase tracking-wider mb-1">
+                    <mat-icon style="font-size: 12px; width: 12px; height: 12px;">auto_awesome</mat-icon>
+                    <span>MyFeed Academy &bull; Free Tech Learning</span>
+                  </div>
+                  <h3 class="text-sm sm:text-base font-black text-[#000000] dark:text-white leading-snug">
+                    AI, Cloud &amp; Full-Stack Micro-Courses &amp; Daily Quizzes
+                  </h3>
+                  <p class="text-[11px] sm:text-xs text-[#8e8e93]">
+                    මිනිත්තු 5න් ඉගෙන ගන්න පුළුවන් Bite-sized Lessons සහ Daily Tech Challenge එක අදම අත්හදා බලන්න.
+                  </p>
+                </div>
+              </div>
+
+              <a routerLink="/learn" class="w-full sm:w-auto shrink-0 py-2.5 px-5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md ios-touch cursor-pointer relative z-10">
+                <span>Start Learning</span>
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">arrow_forward</mat-icon>
+              </a>
+            </div>
           }
 
           <!-- iOS 3-Column News Grid -->
@@ -277,11 +305,11 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
             @for (article of visibleGridArticles(); track article.id; let i = $index) {
               <article 
                 [routerLink]="['/article', article.slug || article.id]" 
-                class="animate-fade-in-up group bg-white dark:bg-[#1c1c1e] p-3.5 sm:p-4 rounded-[20px] sm:rounded-[24px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col h-full border border-black/[0.06] dark:border-white/[0.08] relative overflow-hidden ios-card" 
+                class="animate-fade-in-up group p-3.5 sm:p-4 rounded-[22px] sm:rounded-[26px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col h-full relative overflow-hidden ios-card" 
                 [style.animation-delay]="(0.04 + ((i % 8) * 0.04)) + 's'">
                 
                 <!-- Card Cover Image -->
-                <div class="aspect-[16/10] w-full rounded-[14px] sm:rounded-[18px] overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative mb-3.5 shadow-inner">
+                <div class="aspect-[16/10] w-full rounded-[16px] sm:rounded-[18px] overflow-hidden bg-black/[0.03] dark:bg-white/[0.05] relative mb-3.5 shadow-inner">
                   <img [src]="article.imageUrl" [alt]="article.title" referrerpolicy="no-referrer" loading="lazy"
                        #gridImg (load)="gridImg.classList.remove('opacity-0', 'blur-xl', 'scale-110'); gridImg.classList.add('opacity-100', 'blur-0', 'scale-100')"
                        (error)="onImgError($event, article.title, article.category)"
@@ -293,7 +321,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                       {{ article.category }}
                     </span>
                     @if (article.authorType !== 'human') {
-                      <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white font-semibold text-[9px]">
+                      <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ios-glass-thin text-white font-semibold text-[9px]">
                         <mat-icon style="font-size: 10px; width: 10px; height: 10px;">smart_toy</mat-icon> AI
                       </span>
                     }
@@ -302,7 +330,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                   <!-- Quick Bookmark Button -->
                   <button 
                     (click)="$event.stopPropagation(); bookmarkManager.toggleBookmark(article.id)"
-                    class="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-md shadow-sm text-[#000000] dark:text-white flex items-center justify-center ios-touch cursor-pointer border border-black/5 dark:border-white/10"
+                    class="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full ios-glass-thin shadow-sm text-[#000000] dark:text-white flex items-center justify-center ios-touch cursor-pointer"
                     [title]="bookmarkManager.isBookmarked(article.id) ? 'Remove bookmark' : 'Bookmark article'">
                     <mat-icon style="font-size: 15px; width: 15px; height: 15px;" [class.text-[#007AFF]]="bookmarkManager.isBookmarked(article.id)">
                       {{ bookmarkManager.isBookmarked(article.id) ? 'bookmark' : 'bookmark_border' }}
@@ -376,73 +404,73 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
         <!-- ============================================== -->
         @if (!searchService.searchTerm().trim()) {
           
-          <!-- Tech Events & Meetups Showcase Section -->
+          <!-- Tech Quizzes & Challenges Showcase Section -->
           <section class="mb-10 sm:mb-14 pt-6 border-t border-black/[0.06] dark:border-white/[0.08] animate-fade-in-up">
             <div class="flex items-center justify-between mb-4 sm:mb-6">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-[10px] bg-[#FF9500] text-white flex items-center justify-center shadow-sm">
-                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">event_upcoming</mat-icon>
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">quiz</mat-icon>
                 </div>
                 <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#000000] dark:text-white">
-                  Tech Events &amp; Meetups <span class="text-[#8e8e93] font-normal text-sm">&bull; සම්මන්ත්‍රණ සහ වැඩමුළු</span>
+                  Tech Quizzes <span class="text-[#8e8e93] font-normal text-sm">&bull; දවසේ ප්‍රශ්න</span>
                 </h2>
               </div>
-              <a routerLink="/events" class="inline-flex items-center gap-1 text-xs font-bold text-[#FF9500] hover:gap-1.5 transition-all ios-touch cursor-pointer">
-                <span>View All Events</span>
+              <a routerLink="/quizzes" class="inline-flex items-center gap-1 text-xs font-bold text-[#FF9500] hover:gap-1.5 transition-all ios-touch cursor-pointer">
+                <span>Play Now</span>
                 <mat-icon style="font-size: 15px; width: 15px; height: 15px;">chevron_right</mat-icon>
               </a>
             </div>
 
-            <!-- Events Highlight Cards Grid -->
+            <!-- Quizzes Highlight Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div routerLink="/events" class="group bg-gradient-to-br from-[#1c1c1e] to-[#2c2c2e] text-white p-5 rounded-[24px] border border-white/10 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between ios-card">
+              <div routerLink="/quizzes" class="group bg-gradient-to-br from-[#1c1c1e] to-[#2c2c2e] text-white p-5 rounded-[24px] border border-white/10 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between ios-card">
                 <div>
                   <div class="flex items-center justify-between mb-3">
                     <span class="px-2.5 py-0.5 rounded-full bg-[#FF9500] text-white text-[9px] font-extrabold uppercase tracking-wider">
-                      Hackathon
+                      දවසේ අභියෝගය
                     </span>
                     <span class="text-xs text-white/70 font-semibold flex items-center gap-1">
-                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#FF9500]">schedule</mat-icon>
-                      Sep 12-13, 2026
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#FF9500]">stars</mat-icon>
+                      50 Pts
                     </span>
                   </div>
                   <h3 class="text-base sm:text-lg font-bold leading-snug group-hover:text-[#FF9500] transition-colors mb-2">
-                    Colombo AI Hackathon 2026: Agentic Intelligence &amp; Sinhala NLP
+                    AI මෙවලම් සහ Prompt Engineering
                   </h3>
                   <p class="text-xs text-white/70 line-clamp-2 leading-relaxed mb-4">
-                    36-hour physical hackathon bringing together top ML developers at Trace Expert City Maradana.
+                    AI මාදිලි සහ Prompt Engineering පිළිබඳ ඔබේ දැනුම උරගා බලන්න.
                   </p>
                 </div>
                 <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs font-bold text-[#FF9500]">
-                  <span class="text-white/80">Trace Expert City, Colombo</span>
+                  <span class="text-white/80">ප්‍රශ්න 5 &bull; මිනිත්තු 2</span>
                   <span class="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    Explore &amp; RSVP <mat-icon style="font-size: 15px; width: 15px; height: 15px;">arrow_forward</mat-icon>
+                    ආරම්භ කරන්න <mat-icon style="font-size: 15px; width: 15px; height: 15px;">arrow_forward</mat-icon>
                   </span>
                 </div>
               </div>
 
-              <div routerLink="/events" class="group bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-black/[0.06] dark:border-white/[0.08] shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between ios-card">
+              <div routerLink="/quizzes" class="group p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between ios-card">
                 <div>
                   <div class="flex items-center justify-between mb-3">
-                    <span class="px-2.5 py-0.5 rounded-full bg-[#007AFF]/15 text-[#007AFF] text-[9px] font-extrabold uppercase tracking-wider">
-                      Meetup
+                    <span class="px-2.5 py-0.5 rounded-full bg-[#34C759]/15 text-[#34C759] text-[9px] font-extrabold uppercase tracking-wider">
+                      කේතකරණය
                     </span>
                     <span class="text-xs text-[#8e8e93] font-semibold flex items-center gap-1">
-                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#007AFF]">schedule</mat-icon>
-                      Sep 05, 2026
+                      <mat-icon style="font-size: 14px; width: 14px; height: 14px;" class="text-[#34C759]">workspace_premium</mat-icon>
+                      30 Pts
                     </span>
                   </div>
-                  <h3 class="text-base sm:text-lg font-bold tracking-tight text-[#000000] dark:text-white leading-snug group-hover:text-[#007AFF] transition-colors mb-2">
-                    GDG Colombo: Modern Cloud &amp; Gemini Architecture Meetup
+                  <h3 class="text-base sm:text-lg font-bold tracking-tight text-[#000000] dark:text-white leading-snug group-hover:text-[#34C759] transition-colors mb-2">
+                    Python මූලික Data Structures
                   </h3>
                   <p class="text-xs text-[#3a3a3c] dark:text-[#aeaeb2] line-clamp-2 leading-relaxed mb-4">
-                    Serverless architectures, Gemini Flash, and cloud deployments live at WSO2 Auditorium.
+                    Python හි Lists, Tuples, Sets සහ Dictionaries ගැන ඔබේ දැනුම කොහොමද?
                   </p>
                 </div>
-                <div class="flex items-center justify-between pt-3 border-t border-black/[0.06] dark:border-white/[0.08] text-xs font-bold text-[#007AFF]">
-                  <span class="text-[#8e8e93]">WSO2 Auditorium, Colombo 04</span>
+                <div class="flex items-center justify-between pt-3 border-t border-black/[0.06] dark:border-white/[0.08] text-xs font-bold text-[#34C759]">
+                  <span class="text-[#8e8e93]">ප්‍රශ්න 10 &bull; මිනිත්තු 5</span>
                   <span class="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    Free RSVP <mat-icon style="font-size: 15px; width: 15px; height: 15px;">arrow_forward</mat-icon>
+                    ආරම්භ කරන්න <mat-icon style="font-size: 15px; width: 15px; height: 15px;">arrow_forward</mat-icon>
                   </span>
                 </div>
               </div>
@@ -458,7 +486,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                     <mat-icon style="font-size: 16px; width: 16px; height: 16px;">smart_toy</mat-icon>
                   </div>
                   <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#000000] dark:text-white">
-                    AI & Intelligence <span class="text-[#8e8e93] font-normal text-sm">&bull; කෘත්‍රිම බුද්ධිය</span>
+                    AI &amp; Intelligence <span class="text-[#8e8e93] font-normal text-sm">&bull; කෘත්‍රිම බුද්ධිය</span>
                   </h2>
                 </div>
                 <button (click)="selectCategory('AI')" class="inline-flex items-center gap-1 text-xs font-bold text-[#007AFF] dark:text-[#0A84FF] hover:gap-1.5 transition-all ios-touch cursor-pointer">
@@ -469,7 +497,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 @for (aiArt of getArticlesByCategory('AI').slice(0, 2); track aiArt.id) {
-                  <article [routerLink]="['/article', aiArt.slug || aiArt.id]" class="group bg-white dark:bg-[#1c1c1e] p-4 sm:p-5 rounded-[22px] border border-black/[0.06] dark:border-white/[0.08] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 items-center ios-card">
+                  <article [routerLink]="['/article', aiArt.slug || aiArt.id]" class="group p-4 sm:p-5 rounded-[22px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 items-center ios-card">
                     <img [src]="aiArt.imageUrl" [alt]="aiArt.title" referrerpolicy="no-referrer" (error)="onImgError($event, aiArt.title, aiArt.category)" class="w-full sm:w-32 h-32 rounded-[16px] object-cover shrink-0 shadow-inner group-hover:scale-102 transition-transform duration-300" />
                     <div class="flex-grow min-w-0">
                       <div class="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-[#5856D6] dark:text-[#BF5AF2]">
@@ -498,7 +526,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
                     <mat-icon style="font-size: 16px; width: 16px; height: 16px;">devices</mat-icon>
                   </div>
                   <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#000000] dark:text-white">
-                    Tech & Gadgets <span class="text-[#8e8e93] font-normal text-sm">&bull; තාක්ෂණික පුවත්</span>
+                    Tech &amp; Gadgets <span class="text-[#8e8e93] font-normal text-sm">&bull; තාක්ෂණික පුවත්</span>
                   </h2>
                 </div>
                 <button (click)="selectCategory('Tech')" class="inline-flex items-center gap-1 text-xs font-bold text-[#007AFF] dark:text-[#0A84FF] hover:gap-1.5 transition-all ios-touch cursor-pointer">
@@ -509,7 +537,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 @for (techArt of getArticlesByCategory('Tech').slice(0, 2); track techArt.id) {
-                  <article [routerLink]="['/article', techArt.slug || techArt.id]" class="group bg-white dark:bg-[#1c1c1e] p-4 sm:p-5 rounded-[22px] border border-black/[0.06] dark:border-white/[0.08] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 items-center ios-card">
+                  <article [routerLink]="['/article', techArt.slug || techArt.id]" class="group p-4 sm:p-5 rounded-[22px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 items-center ios-card">
                     <img [src]="techArt.imageUrl" [alt]="techArt.title" referrerpolicy="no-referrer" (error)="onImgError($event, techArt.title, techArt.category)" class="w-full sm:w-32 h-32 rounded-[16px] object-cover shrink-0 shadow-inner group-hover:scale-102 transition-transform duration-300" />
                     <div class="flex-grow min-w-0">
                       <div class="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-[#34C759]">
@@ -599,9 +627,9 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Set Base SEO tags for Home Page
-    this.titleService.setTitle('My Feed Lk | Sri Lanka Tech Journal');
+    this.titleService.setTitle('My Feed LK | Sri Lanka Tech Journal');
     this.metaService.updateTag({ name: 'description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
-    this.metaService.updateTag({ property: 'og:title', content: 'My Feed Lk | Sri Lanka Tech Journal' });
+    this.metaService.updateTag({ property: 'og:title', content: 'My Feed LK | Sri Lanka Tech Journal' });
     this.metaService.updateTag({ property: 'og:description', content: 'තාක්ෂණය, කෘත්‍රිම බුද්ධිය සහ නවෝත්පාදන පුවත්. Curated tech stories in Sinhala and English from Sri Lanka.' });
     this.metaService.updateTag({ property: 'og:type', content: 'website' });
 

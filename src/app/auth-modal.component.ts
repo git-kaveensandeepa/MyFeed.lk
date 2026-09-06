@@ -25,13 +25,13 @@ import { BookmarkManager } from './bookmark';
           class="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity">
         </div>
 
-        <!-- Modal Card -->
-        <div class="relative w-full max-w-md bg-white dark:bg-[#1c1c1e] rounded-3xl shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[92vh]">
+        <!-- Modal Card (iOS Glass Sheet) -->
+        <div class="relative w-full max-w-md ios-glass-thick rounded-[28px] shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh]">
           
           <!-- Modal Header -->
-          <div class="px-6 pt-6 pb-4 flex items-center justify-between border-b border-black/5 dark:border-white/10 shrink-0">
+          <div class="px-6 pt-6 pb-4 flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <div class="w-10 h-10 rounded-2xl bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] flex items-center justify-center ios-glass-thin">
                 @if (authService.authModalTab() === 'login') {
                   <mat-icon>login</mat-icon>
                 } @else if (authService.authModalTab() === 'signup') {
@@ -52,7 +52,7 @@ import { BookmarkManager } from './bookmark';
                 </h3>
                 <p class="text-xs text-[#1d1d1f]/60 dark:text-white/60 font-medium">
                   @if (authService.authModalTab() === 'login') {
-                    Welcome back to MyFeed.lk
+                    Welcome back to My Feed LK
                   } @else if (authService.authModalTab() === 'signup') {
                     Join Sri Lanka's curated news journal
                   } @else {
@@ -65,7 +65,7 @@ import { BookmarkManager } from './bookmark';
             <!-- Close Button -->
             <button 
               (click)="authService.closeAuthModal()"
-              class="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#1d1d1f] dark:text-white flex items-center justify-center transition-all cursor-pointer">
+              class="w-8 h-8 rounded-full ios-glass-btn text-[#1d1d1f] dark:text-white flex items-center justify-center transition-all cursor-pointer ios-touch">
               <mat-icon style="font-size: 18px; width: 18px; height: 18px;">close</mat-icon>
             </button>
           </div>
@@ -73,16 +73,15 @@ import { BookmarkManager } from './bookmark';
           <!-- Tab Selector (Only for Login & SignUp) -->
           @if (authService.authModalTab() !== 'forgot') {
             <div class="px-6 pt-4 shrink-0">
-              <div class="grid grid-cols-2 p-1 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5">
+              <div class="grid grid-cols-2 p-1 ios-glass-thin rounded-2xl">
                 <button
                   type="button"
                   (click)="authService.setAuthTab('login')"
-                  class="py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  [class.bg-white]="authService.authModalTab() === 'login'"
-                  [class.dark:bg-[#2c2c2e]]="authService.authModalTab() === 'login'"
-                  [class.text-blue-600]="authService.authModalTab() === 'login'"
-                  [class.dark:text-blue-400]="authService.authModalTab() === 'login'"
-                  [class.shadow-sm]="authService.authModalTab() === 'login'"
+                  class="py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ios-touch"
+                  [class.ios-glass]="authService.authModalTab() === 'login'"
+                  [class.text-[#007AFF]]="authService.authModalTab() === 'login'"
+                  [class.dark:text-[#0A84FF]]="authService.authModalTab() === 'login'"
+                  [class.shadow-xs]="authService.authModalTab() === 'login'"
                   [class.text-[#1d1d1f]/60]="authService.authModalTab() !== 'login'"
                   [class.dark:text-white/60]="authService.authModalTab() !== 'login'">
                   <mat-icon style="font-size: 16px; width: 16px; height: 16px;">login</mat-icon>
@@ -91,12 +90,11 @@ import { BookmarkManager } from './bookmark';
                 <button
                   type="button"
                   (click)="authService.setAuthTab('signup')"
-                  class="py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  [class.bg-white]="authService.authModalTab() === 'signup'"
-                  [class.dark:bg-[#2c2c2e]]="authService.authModalTab() === 'signup'"
-                  [class.text-blue-600]="authService.authModalTab() === 'signup'"
-                  [class.dark:text-blue-400]="authService.authModalTab() === 'signup'"
-                  [class.shadow-sm]="authService.authModalTab() === 'signup'"
+                  class="py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ios-touch"
+                  [class.ios-glass]="authService.authModalTab() === 'signup'"
+                  [class.text-[#007AFF]]="authService.authModalTab() === 'signup'"
+                  [class.dark:text-[#0A84FF]]="authService.authModalTab() === 'signup'"
+                  [class.shadow-xs]="authService.authModalTab() === 'signup'"
                   [class.text-[#1d1d1f]/60]="authService.authModalTab() !== 'signup'"
                   [class.dark:text-white/60]="authService.authModalTab() !== 'signup'">
                   <mat-icon style="font-size: 16px; width: 16px; height: 16px;">person_add</mat-icon>
@@ -111,7 +109,7 @@ import { BookmarkManager } from './bookmark';
             
             <!-- Alert / Error Banner -->
             @if (authService.authError()) {
-              <div class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/40 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 animate-shake">
+              <div class="p-3.5 rounded-2xl bg-rose-500/10 dark:bg-rose-950/40 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5 animate-shake ios-glass-thin">
                 <mat-icon class="shrink-0 text-rose-600 dark:text-rose-400" style="font-size: 18px; width: 18px; height: 18px;">error_outline</mat-icon>
                 <span class="leading-relaxed font-medium">{{ authService.authError() }}</span>
               </div>
@@ -119,7 +117,7 @@ import { BookmarkManager } from './bookmark';
 
             <!-- Success Banner -->
             @if (authService.authSuccess()) {
-              <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5 animate-fade-in">
+              <div class="p-3.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2.5 animate-fade-in ios-glass-thin">
                 <mat-icon class="shrink-0 text-emerald-600 dark:text-emerald-400" style="font-size: 18px; width: 18px; height: 18px;">check_circle</mat-icon>
                 <span class="leading-relaxed font-medium">{{ authService.authSuccess() }}</span>
               </div>
@@ -130,7 +128,7 @@ import { BookmarkManager } from './bookmark';
               <form (ngSubmit)="handleLogin()" class="space-y-4">
                 <div>
                   <label for="loginEmailInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider mb-1.5">
-                    Email Address <span class="text-blue-500">*</span>
+                    Email Address <span class="text-[#007AFF]">*</span>
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -143,19 +141,19 @@ import { BookmarkManager } from './bookmark';
                       name="loginEmail" 
                       required
                       placeholder="name@example.com"
-                      class="w-full pl-10 pr-4 py-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-4 py-3 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                   </div>
                 </div>
 
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <label for="loginPasswordInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider">
-                      Password <span class="text-blue-500">*</span>
+                      Password <span class="text-[#007AFF]">*</span>
                     </label>
                     <button 
                       type="button" 
                       (click)="authService.setAuthTab('forgot')"
-                      class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                      class="text-xs font-bold text-[#007AFF] dark:text-[#0A84FF] hover:underline cursor-pointer">
                       Forgot Password?
                     </button>
                   </div>
@@ -170,7 +168,7 @@ import { BookmarkManager } from './bookmark';
                       name="loginPassword" 
                       required
                       placeholder="••••••••"
-                      class="w-full pl-10 pr-11 py-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-11 py-3 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                     
                     <button 
                       type="button"
@@ -187,7 +185,7 @@ import { BookmarkManager } from './bookmark';
                 <button 
                   type="submit" 
                   [disabled]="authService.isProcessing() || !loginEmail || !loginPassword"
-                  class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-blue-600/20 hover:shadow-xl active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2">
+                  class="w-full py-3.5 px-4 bg-[#007AFF] hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-[#007AFF]/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 ios-touch">
                   @if (authService.isProcessing()) {
                     <mat-icon class="animate-spin" style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
                     <span>Signing in...</span>
@@ -206,7 +204,7 @@ import { BookmarkManager } from './bookmark';
                 <!-- Full Name -->
                 <div>
                   <label for="signupNameInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider mb-1">
-                    Full Name (නම) <span class="text-blue-500">*</span>
+                    Full Name (නම) <span class="text-[#007AFF]">*</span>
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -219,14 +217,14 @@ import { BookmarkManager } from './bookmark';
                       name="signupName" 
                       required
                       placeholder="e.g. Kasun Perera"
-                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                   </div>
                 </div>
 
                 <!-- Email -->
                 <div>
                   <label for="signupEmailInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider mb-1">
-                    Email Address (ඊමේල්) <span class="text-blue-500">*</span>
+                    Email Address (ඊමේල්) <span class="text-[#007AFF]">*</span>
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -239,14 +237,14 @@ import { BookmarkManager } from './bookmark';
                       name="signupEmail" 
                       required
                       placeholder="name@example.com"
-                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                   </div>
                 </div>
 
                 <!-- Password -->
                 <div>
                   <label for="signupPasswordInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider mb-1">
-                    Password (මුරපදය) <span class="text-blue-500">*</span>
+                    Password (මුරපදය) <span class="text-[#007AFF]">*</span>
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -260,7 +258,7 @@ import { BookmarkManager } from './bookmark';
                       required
                       minlength="6"
                       placeholder="At least 6 characters"
-                      class="w-full pl-10 pr-11 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-11 py-2.5 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                     
                     <button 
                       type="button"
@@ -283,7 +281,7 @@ import { BookmarkManager } from './bookmark';
                 <div>
                   <div class="flex items-center justify-between mb-1">
                     <label for="signupBirthdayInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider">
-                      Birthday (උපන් දිනය) <span class="text-blue-500">*</span>
+                      Birthday (උපන් දිනය) <span class="text-[#007AFF]">*</span>
                     </label>
                     <span class="text-[11px] text-gray-400 font-mono">Date of Birth</span>
                   </div>
@@ -299,7 +297,7 @@ import { BookmarkManager } from './bookmark';
                       required
                       max="2020-01-01"
                       min="1920-01-01"
-                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-4 py-2.5 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white focus:outline-none text-sm font-medium transition-all" />
                   </div>
                 </div>
 
@@ -310,8 +308,8 @@ import { BookmarkManager } from './bookmark';
                       type="checkbox" 
                       [(ngModel)]="agreeTerms" 
                       name="agreeTerms"
-                      class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                    <span>I agree to MyFeed.lk <a routerLink="/terms" (click)="authService.closeAuthModal()" class="text-blue-600 dark:text-blue-400 underline">Terms</a> & <a routerLink="/privacy" (click)="authService.closeAuthModal()" class="text-blue-600 dark:text-blue-400 underline">Privacy Policy</a></span>
+                      class="mt-0.5 rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF]" />
+                    <span>I agree to My Feed LK <a routerLink="/terms" (click)="authService.closeAuthModal()" class="text-[#007AFF] dark:text-[#0A84FF] underline font-semibold">Terms</a> & <a routerLink="/privacy" (click)="authService.closeAuthModal()" class="text-[#007AFF] dark:text-[#0A84FF] underline font-semibold">Privacy Policy</a></span>
                   </label>
                 </div>
 
@@ -319,7 +317,7 @@ import { BookmarkManager } from './bookmark';
                 <button 
                   type="submit" 
                   [disabled]="authService.isProcessing() || !signupName || !signupEmail || !signupPassword || !signupBirthday || !agreeTerms || signupPassword.length < 6"
-                  class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-blue-600/20 hover:shadow-xl active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2">
+                  class="w-full py-3.5 px-4 bg-[#007AFF] hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-[#007AFF]/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 ios-touch">
                   @if (authService.isProcessing()) {
                     <mat-icon class="animate-spin" style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
                     <span>Creating account...</span>
@@ -336,7 +334,7 @@ import { BookmarkManager } from './bookmark';
               <form (ngSubmit)="handleForgotPassword()" class="space-y-4">
                 <div>
                   <label for="forgotEmailInput" class="block text-xs font-bold text-[#1d1d1f]/70 dark:text-white/70 uppercase tracking-wider mb-1.5">
-                    Registered Email Address <span class="text-blue-500">*</span>
+                    Registered Email Address <span class="text-[#007AFF]">*</span>
                   </label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -349,14 +347,14 @@ import { BookmarkManager } from './bookmark';
                       name="forgotEmail" 
                       required
                       placeholder="name@example.com"
-                      class="w-full pl-10 pr-4 py-3 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium transition-all" />
+                      class="w-full pl-10 pr-4 py-3 rounded-2xl ios-glass-input text-[#1d1d1f] dark:text-white placeholder:text-gray-400 focus:outline-none text-sm font-medium transition-all" />
                   </div>
                 </div>
 
                 <button 
                   type="submit" 
                   [disabled]="authService.isProcessing() || !forgotEmail"
-                  class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-blue-600/20 hover:shadow-xl active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                  class="w-full py-3.5 px-4 bg-[#007AFF] hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-[#007AFF]/25 transition-all flex items-center justify-center gap-2 cursor-pointer ios-touch">
                   @if (authService.isProcessing()) {
                     <mat-icon class="animate-spin" style="font-size: 18px; width: 18px; height: 18px;">sync</mat-icon>
                     <span>Sending email...</span>
@@ -370,7 +368,7 @@ import { BookmarkManager } from './bookmark';
                   <button 
                     type="button" 
                     (click)="authService.setAuthTab('login')"
-                    class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer inline-flex items-center gap-1">
+                    class="text-xs font-bold text-[#007AFF] dark:text-[#0A84FF] hover:underline cursor-pointer inline-flex items-center gap-1">
                     <mat-icon style="font-size: 14px; width: 14px; height: 14px;">arrow_back</mat-icon>
                     <span>Back to Log In</span>
                   </button>
@@ -382,18 +380,18 @@ import { BookmarkManager } from './bookmark';
           </div>
 
           <!-- Modal Footer -->
-          <div class="px-6 py-3.5 bg-black/[0.02] dark:bg-white/[0.02] border-t border-black/5 dark:border-white/10 text-center shrink-0">
+          <div class="px-6 py-3.5 border-t border-black/[0.06] dark:border-white/[0.08] text-center shrink-0 ios-glass-thin">
             @if (authService.authModalTab() === 'login') {
               <p class="text-xs text-[#1d1d1f]/70 dark:text-white/70">
                 Don't have an account? 
-                <button (click)="authService.setAuthTab('signup')" class="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer ml-1">
+                <button (click)="authService.setAuthTab('signup')" class="font-bold text-[#007AFF] dark:text-[#0A84FF] hover:underline cursor-pointer ml-1">
                   Sign Up Free
                 </button>
               </p>
             } @else if (authService.authModalTab() === 'signup') {
               <p class="text-xs text-[#1d1d1f]/70 dark:text-white/70">
                 Already registered? 
-                <button (click)="authService.setAuthTab('login')" class="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer ml-1">
+                <button (click)="authService.setAuthTab('login')" class="font-bold text-[#007AFF] dark:text-[#0A84FF] hover:underline cursor-pointer ml-1">
                   Log In
                 </button>
               </p>

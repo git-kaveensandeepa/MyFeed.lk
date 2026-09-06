@@ -38,6 +38,9 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    match /system_config/{document} {
+      allow read, write: if true;
+    }
     match /autopilot_logs/{document} {
       allow read, write: if true;
     }
@@ -66,6 +69,18 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /bytes/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /quizzes/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /store_items/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /users/{document} {
       allow read: if true;
       allow create, update: if request.auth != null && (request.auth.uid == document || isAdmin());

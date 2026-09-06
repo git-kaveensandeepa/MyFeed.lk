@@ -511,7 +511,7 @@ export function getArticleFactCheck(article: Partial<Article>): FactCheckData {
       score: 100,
       status: 'verified_100',
       statusBadge: '100% සත්‍යාපිත මූලාශ්‍රයකි (Fully Verified)',
-      reason: 'ප්‍රධාන නිල මූලාශ්‍ර (Official Press Release / Verified Newsroom) සහ MyFeed.lk සංස්කාරක මණ්ඩලයේ සත්‍යාපන ක්‍රමවේද මඟින් පුවත 100% ක් සනාථ කර ඇත.',
+      reason: 'ප්‍රධාන නිල මූලාශ්‍ර (Official Press Release / Verified Newsroom) සහ My Feed LK සංස්කාරක මණ්ඩලයේ සත්‍යාපන ක්‍රමවේද මඟින් පුවත 100% ක් සනාථ කර ඇත.',
       sources,
       metrics: {
         sourceReliability: 100,

@@ -14,6 +14,7 @@ import {
   doc as serverDoc,
   setDoc as serverSetDoc,
   updateDoc as serverUpdateDoc,
+  deleteDoc as serverDeleteDoc,
   type Firestore
 } from 'firebase/firestore';
 
@@ -110,16 +111,13 @@ let cachedNews: TranslatedServerArticle[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-// 100% Free, Official Direct RSS Feeds with Authentic HD Featured Images
+// 100% Free, Official RSS Feeds for Server Live Cache (AI, Local Sri Lanka, Tech)
 const SERVER_RSS_FEEDS = [
-  { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
-  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
-  { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index' },
-  { name: '9to5Google', url: 'https://9to5google.com/feed/' },
-  { name: '9to5Mac', url: 'https://9to5mac.com/feed/' },
-  { name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
+  { name: 'The Verge AI', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
+  { name: 'Google News AI', url: 'https://news.google.com/rss/search?q=Artificial+Intelligence+OR+ChatGPT+OR+Gemini+AI&hl=en-US&gl=US&ceid=US:en' },
   { name: 'Ada Derana', url: 'http://www.adaderana.lk/rss.php' },
+  { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
   { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
 ];
@@ -578,8 +576,8 @@ async function sendWebPushToAllSubscribers(article: {
     }
 
     const payload = JSON.stringify({
-      title: (article.title ? `📰 ${article.title}` : 'MyFeed.lk News Alert').slice(0, 80),
-      body: (article.summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
+      title: (article.title ? `📰 ${article.title}` : 'My Feed LK News Alert').slice(0, 80),
+      body: (article.summary || 'නව පුවතක් My Feed LK හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
       url: article.articleUrl || '/',
       icon: '/favicon.ico',
       image: article.imageUrl || undefined,
@@ -747,6 +745,222 @@ async function saveAutoPilotConfigToFirestore(cfg: AutoPilotConfig): Promise<voi
 
 // Kick off initial load in the background
 loadAutoPilotConfigFromFirestore().catch(e => console.warn('[Auto-Pilot] Startup load warning:', e));
+
+
+let isBytesGenerating = false;
+let lastBytesGeneratedDate = '';
+
+async function executeDailyBytesGeneration(trigger?: string): Promise<{ success: boolean; count?: number; error?: string }> {
+  if (isBytesGenerating) {
+    console.log('[Bytes-Generator] Generation already in progress, skipping...');
+    return { success: false, error: 'Bytes generation already in progress' };
+  }
+  isBytesGenerating = true;
+  console.log(`[Bytes-Generator] ⚡ Starting daily 60s bytes generation (${trigger || 'manual'})...`);
+  try {
+    const ai = getGeminiClient();
+    if (!ai) {
+      console.warn('[Bytes-Generator] GEMINI_API_KEY missing.');
+      return { success: false, error: 'GEMINI_API_KEY missing' };
+    }
+
+    const prompt = `You are an expert tech educator and content creator for "My Feed LK", Sri Lanka's leading digital tech journal.
+Generate exactly 6 fresh, engaging, and high-value "60-Second Bytes" (flashcards) in natural Sinhala for mobile users and learners.
+Topics to cover:
+1. Artificial Intelligence & LLMs (e.g. Prompting, AI Agents, Context Windows)
+2. Mobile & Smartphone Tech (e.g. Battery health, Fast charging, 5G standalone)
+3. Cybersecurity & Privacy (e.g. 2FA, Phishing, Passkeys, Social Engineering)
+4. Coding & Web Dev (e.g. API keys, Git basics, Cloud computing, Edge functions)
+5. Science, Space & Emerging Hardware (e.g. Quantum Computing, Starlink, EV batteries)
+6. Digital Life & Daily Productivity Hacks (e.g. Cloud backup, shortcut keys, password managers)
+
+Return the result STRICTLY as a JSON array of objects with this exact structure (no markdown fences, just JSON):
+[
+  {
+    "id": "byte_placeholder",
+    "topic": "English Topic Name (e.g. Passkeys vs Passwords)",
+    "category": "English Category (e.g. Cybersecurity, AI, Mobile Tech, Cloud, Coding)",
+    "icon": "valid-material-icon-name (e.g. lock, psychology, phone_android, terminal, cloud, bolt, rocket_launch)",
+    "question": "Engaging Question in Sinhala?",
+    "answer": "Clear, concise, easily understandable explanation in natural Sinhala (2-3 sentences max).",
+    "sinhalaNote": "A very punchy 1-line key takeaway or practical tip in Sinhala."
+  }
+]`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.6-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    
+    let generatedBytes: any[] = [];
+    try {
+      const text = response.text || '';
+      const cleanJson = text.replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
+      generatedBytes = JSON.parse(cleanJson);
+    } catch (e: any) {
+      console.error('[Bytes-Generator] JSON Parse Error:', e);
+      return { success: false, error: 'JSON parse error: ' + e.message };
+    }
+
+    if (!Array.isArray(generatedBytes) || generatedBytes.length === 0) {
+      console.warn('[Bytes-Generator] Invalid format returned.');
+      return { success: false, error: 'Invalid or empty bytes returned' };
+    }
+
+    const db = getServerDb();
+
+    // Delete old bytes
+    try {
+      const oldSnap = await serverGetDocs(serverCollection(db, 'bytes'));
+      for (const doc of oldSnap.docs) {
+        await serverDeleteDoc(serverDoc(db, 'bytes', doc.id));
+      }
+    } catch (delErr) {
+      console.warn('[Bytes-Generator] Notice while clearing old bytes:', delErr);
+    }
+
+    // Insert new bytes
+    const nowIso = new Date().toISOString();
+    for (let i = 0; i < generatedBytes.length; i++) {
+      const b = generatedBytes[i];
+      b.id = 'byte_' + Date.now().toString(36) + '_' + i + '_' + Math.random().toString(36).substring(2, 7);
+      b.createdAt = nowIso;
+      await serverSetDoc(serverDoc(db, 'bytes', b.id), b);
+    }
+
+    const colombo = getColomboDateTimeParts();
+    lastBytesGeneratedDate = colombo.dateString + '_' + colombo.timeString;
+
+    console.log(`[Bytes-Generator] ✅ Successfully generated and published ${generatedBytes.length} new 60s Bytes.`);
+    return { success: true, count: generatedBytes.length };
+  } catch (err: any) {
+    console.error('[Bytes-Generator] Failed to generate bytes:', err);
+    return { success: false, error: err?.message || 'Unknown error' };
+  } finally {
+    isBytesGenerating = false;
+  }
+}
+
+let isQuizGenerating = false;
+let lastQuizGeneratedSlot = '';
+
+async function executeDailyQuizGeneration(trigger?: string): Promise<{ success: boolean; count?: number; error?: string }> {
+  if (isQuizGenerating) {
+    console.log('[Quiz-Generator] Generation is already in progress, skipping...');
+    return { success: false, error: 'Quiz generation already in progress' };
+  }
+  isQuizGenerating = true;
+  console.log(`[Quiz-Generator] 🎯 Starting daily quizzes generation (${trigger || 'manual'})...`);
+  try {
+    const ai = getGeminiClient();
+    if (!ai) {
+      console.warn('[Quiz-Generator] GEMINI_API_KEY missing.');
+      return { success: false, error: 'GEMINI_API_KEY missing' };
+    }
+
+    const prompt = `You are an expert Sinhala tech content creator and quiz master for "My Feed LK" - Sri Lanka's premier digital tech journal.
+Generate exactly 6 engaging, authentic, and modern quizzes in natural Sinhala for mobile users.
+Include these diverse topics:
+1. Daily Tech & Generative AI Challenge (Featured - 50 Pts)
+2. Coding, Python & Web Development Basics (40 Pts)
+3. Cybersecurity, Online Safety & Phishing Awareness (35 Pts)
+4. Sri Lanka Tech Landscape, Digital Payments & Startups (30 Pts)
+5. Science, Space & Future Emerging Tech (40 Pts)
+6. Smartphone Tech, Digital Life & Productivity Hacks (30 Pts)
+
+Each quiz must have 3 to 4 multiple-choice questions.
+Make sure:
+- 'title': Catchy English title (e.g., "AI & Prompt Engineering 2026", "Python Fundamentals Challenge")
+- 'titleSinhala': Clear, natural Sinhala title (e.g., "AI මෙවලම් සහ Prompt Engineering", "Python මූලික සංකල්ප")
+- 'category': Sinhala category name (e.g., "තාක්ෂණය", "අභියෝගය", "කේතකරණය", "ආරක්ෂාව", "විද්‍යාව", "ලෝක දැනුම")
+- 'categoryColor': Pick one of:
+  - "bg-[#FF9500]/15 text-[#FF9500]"
+  - "bg-[#34C759]/15 text-[#34C759]"
+  - "bg-[#FF3B30]/15 text-[#FF3B30]"
+  - "bg-[#007AFF]/15 text-[#007AFF]"
+  - "bg-[#AF52DE]/15 text-[#AF52DE]"
+- 'points': Points for completing (30 to 60)
+- 'durationMins': Estimated completion time (2 to 5 mins)
+- 'questions': Array of 3-4 objects:
+  - 'text': Clear question in natural Sinhala
+  - 'options': Exactly 4 distinct answer choices in Sinhala/English
+  - 'correctIndex': Integer index of correct option (0, 1, 2, or 3)
+
+Return the output STRICTLY as a JSON array of objects without any markdown formatting or backticks:
+[
+  {
+    "id": "quiz_placeholder",
+    "title": "...",
+    "titleSinhala": "...",
+    "category": "...",
+    "categoryColor": "...",
+    "points": 50,
+    "durationMins": 3,
+    "questions": [
+      {
+        "text": "...",
+        "options": ["...", "...", "...", "..."],
+        "correctIndex": 0
+      }
+    ]
+  }
+]`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.6-flash',
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+
+    let generatedQuizzes: any[] = [];
+    try {
+      const text = response.text || '';
+      const cleanJson = text.replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
+      generatedQuizzes = JSON.parse(cleanJson);
+    } catch (e: any) {
+      console.error('[Quiz-Generator] JSON Parse Error:', e);
+      return { success: false, error: 'JSON parse error: ' + e.message };
+    }
+
+    if (!Array.isArray(generatedQuizzes) || generatedQuizzes.length === 0) {
+      console.warn('[Quiz-Generator] Invalid or empty quizzes returned.');
+      return { success: false, error: 'Empty quiz array returned' };
+    }
+
+    const db = getServerDb();
+
+    // Clear old quizzes to ensure fresh active daily content
+    try {
+      const oldSnap = await serverGetDocs(serverCollection(db, 'quizzes'));
+      for (const d of oldSnap.docs) {
+        await serverDeleteDoc(serverDoc(db, 'quizzes', d.id));
+      }
+    } catch (delErr) {
+      console.warn('[Quiz-Generator] Notice while clearing old quizzes:', delErr);
+    }
+
+    // Insert new quizzes
+    const nowIso = new Date().toISOString();
+    for (let i = 0; i < generatedQuizzes.length; i++) {
+      const q = generatedQuizzes[i];
+      const qId = 'quiz_' + Date.now().toString(36) + '_' + i + '_' + Math.random().toString(36).substring(2, 6);
+      q.id = qId;
+      q.createdAt = nowIso;
+      await serverSetDoc(serverDoc(db, 'quizzes', qId), q);
+    }
+
+    const colombo = getColomboDateTimeParts();
+    lastQuizGeneratedSlot = colombo.dateString + '_' + colombo.timeString;
+    console.log(`[Quiz-Generator] ✅ Successfully generated and published ${generatedQuizzes.length} new quizzes.`);
+    return { success: true, count: generatedQuizzes.length };
+  } catch (err: any) {
+    console.error('[Quiz-Generator] Failed to generate quizzes:', err);
+    return { success: false, error: err?.message || 'Unknown error' };
+  } finally {
+    isQuizGenerating = false;
+  }
+}
 
 // Colombo / Sri Lanka Timezone Helpers (Asia/Colombo UTC+5:30)
 export function getColomboDateTimeParts(): {
@@ -1187,7 +1401,7 @@ async function executeAutoPilotSync(triggerType: 'scheduled_cron' | 'webhook_cro
           }
         }
 
-        const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for MyFeed.lk (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
+        const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for My Feed LK (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
 Your job is to examine this incoming breaking story and write an in-depth, prestigious, highly engaging technology news article in fluent, professional Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්).
 
 === CRITICAL AI SEMANTIC DEDUPLICATION SHIELD ===
@@ -1215,7 +1429,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
    - <ul><li><strong>විශේෂාංගය:</strong> විස්තරය...</li></ul>
    - <h2>පරිශීලකයින්ට සහ තාක්ෂණ ක්ෂේත්‍රයට ඇතිවන බලපෑම</h2>
    - <p>Practical user implications and industry context</p>
-   - <h2>අවසන් විග්‍රහය සහ MyFeed.lk නිගමනය</h2>
+   - <h2>අවසන් විග්‍රහය සහ My Feed LK නිගමනය</h2>
    - <p>Final verdict</p>
 4. 'suggestedCategory': Classify strictly into 'AI', 'Tech', or 'Local'.
 5. 'readTime': e.g. '4 min read'
@@ -1227,7 +1441,7 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
         for (let i = 0; i < retries; i++) {
           try {
             geminiRes = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
+              model: 'gemini-3.6-flash',
               contents: prompt,
               config: {
                 responseMimeType: 'application/json',
@@ -1249,7 +1463,9 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
             });
             break; // Success
           } catch (err: any) {
-            const isTransient = err?.status === 429 || err?.status === 503 || err?.message?.includes('503') || err?.message?.includes('429');
+            const errStr = String(err?.message || '').toLowerCase();
+            const isSpendingCap = errStr.includes('spending cap') || errStr.includes('resource_exhausted') || errStr.includes('exceeded');
+            const isTransient = !isSpendingCap && (err?.status === 429 || err?.status === 503 || errStr.includes('503') || errStr.includes('429'));
             if (i === retries - 1 || !isTransient) throw err;
             console.warn(`[Auto-Pilot] Gemini API error (attempt ${i + 1}/${retries}), retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -1406,8 +1622,13 @@ EDITORIAL GUIDELINES (when isDuplicate is false):
 
         // Add to existing set to avoid same-run duplicates
         existingTitlesSet.add(newDocPayload.title.toLowerCase().trim());
-      } catch (itemGenErr) {
+      } catch (itemGenErr: any) {
         console.error('[Auto-Pilot] Error processing item:', itemGenErr);
+        const errStr = String(itemGenErr?.message || '').toLowerCase();
+        if (errStr.includes('spending cap') || errStr.includes('resource_exhausted') || errStr.includes('quota')) {
+          console.error('[Auto-Pilot] 🛑 FATAL: Monthly spending cap or quota exceeded. Aborting Auto-Pilot sync.');
+          throw new Error('Gemini API monthly spending cap or quota exceeded. Please check your AI Studio billing.');
+        }
       }
     }
 
@@ -1549,13 +1770,13 @@ export async function synthesizeAiVoiceScript(
     const chunk = targetChunks[i];
     try {
       const speechRes = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-tts-preview',
+        model: 'gemini-3.6-flash',
         contents: [
           {
             role: 'user',
             parts: [
               {
-                text: `You are the chief broadcaster and official voice for MyFeed.lk Sri Lanka.
+                text: `You are the chief broadcaster and official voice for My Feed LK Sri Lanka.
 Read and speak the following news text naturally in fluent, energetic radio/podcast style (fluent Sinhala with clear English technical words):
 
 ${chunk}`
@@ -1687,7 +1908,7 @@ export async function executeMorningAudioGeneration(triggerType: 'scheduled' | '
     const editionsSnap = await serverGetDocs(serverCollection(db, 'audio_editions'));
     const editionNumber = editionsSnap.size + 1;
 
-    const audioPrompt = `You are the Lead Morning Audio Producer and Sinhala Voice Broadcaster for MyFeed.lk (Sri Lanka's premier technology news media).
+    const audioPrompt = `You are the Lead Morning Audio Producer and Sinhala Voice Broadcaster for My Feed LK (Sri Lanka's premier technology news media).
 Every morning, MyFeed publishes the "MyFeed Daily Morning Tech Wrap" (පසුගිය පැය 24 පුවත් විනාඩි 15න්) — a curated, high-impact 15-minute audio briefing for morning commuters across Sri Lanka.
 
 Target Time Window: ${windowStart} to ${windowEnd} (Past 24 Hours)
@@ -1724,7 +1945,7 @@ Important Rules for Chapters:
 - Respond ONLY with valid JSON.`;
 
     const aiRes = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
+      model: 'gemini-3.6-flash',
       contents: audioPrompt,
       config: {
         responseMimeType: 'application/json',
@@ -2031,6 +2252,27 @@ setInterval(async () => {
     }
   }
 
+
+  // Daily 60s Bytes (4:00 AM)
+  const colomboCron = getColomboDateTimeParts();
+  const isBytesTime = colomboCron.timeString === '04:00';
+  const currentBytesSlot = colomboCron.dateString + '_' + colomboCron.timeString;
+  
+  if (isBytesTime && lastBytesGeneratedDate !== currentBytesSlot && !isBytesGenerating) {
+    lastBytesGeneratedDate = currentBytesSlot;
+    console.log(`[Bytes-Generator] Triggered at Sri Lanka Time (${colomboCron.dateString} ${colomboCron.timeString})...`);
+    await executeDailyBytesGeneration('scheduled');
+  }
+
+  // Daily Quizzes (4:00 AM and 4:00 PM Sri Lanka Time)
+  const isQuizTime = colomboCron.timeString === '04:00' || colomboCron.timeString === '16:00';
+  const currentQuizSlot = colomboCron.dateString + '_' + colomboCron.timeString;
+  if (isQuizTime && lastQuizGeneratedSlot !== currentQuizSlot && !isQuizGenerating) {
+    lastQuizGeneratedSlot = currentQuizSlot;
+    console.log(`[Quiz-Generator] ⏰ 4:00 AM / 4:00 PM Scheduled cron triggered at Sri Lanka Time (${colomboCron.dateString} ${colomboCron.timeString})...`);
+    await executeDailyQuizGeneration('scheduled_cron');
+  }
+
   // 2. Automated AI Audio Pipeline (3:30 AM Generate -> 4:00 AM Daily Publish)
   if (audioPipelineConfig.enabled) {
     const colombo = getColomboDateTimeParts();
@@ -2112,37 +2354,12 @@ async function fetchAndTranslateNews(): Promise<TranslatedServerArticle[]> {
 
   for (let index = 0; index < articles.length; index++) {
     const article = articles[index];
-    
-    // Always ensure we have the real authentic original HD image from the source article page
-    if ((!article.imageUrl || !isValidServerImage(article.imageUrl)) && article.url) {
-      try {
-        const pageRes = await fetch(article.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
-          },
-          redirect: 'follow',
-          signal: AbortSignal.timeout(15000)
-        });
-        if (pageRes.ok) {
-          const html = await pageRes.text();
-          const finalUrl = pageRes.url || article.url;
-          const extractedImg = extractOriginalImageFromHtml(html, finalUrl);
-          if (extractedImg && isValidServerImage(extractedImg)) {
-            article.imageUrl = extractedImg;
-          }
-        }
-      } catch (scrapeErr) {
-        console.warn('[News Image Scraper] Fallback notice:', scrapeErr);
-      }
-    }
-
     try {
       let genResponseText = '';
       let attempt = 0;
       const maxAttempts = 3;
       
-      const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading technology news platform.
+      const prompt = `You are a senior chief technology journalist and editor for My Feed LK, Sri Lanka's leading technology news platform.
 Write a FULL, comprehensive, highly engaging, and in-depth news article in natural, fluent Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් ලිපියක්) based on the provided news story.
 
 CRITICAL INSTRUCTIONS:
@@ -2168,7 +2385,7 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
       while (attempt < maxAttempts) {
         try {
           const response = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
+            model: 'gemini-3.6-flash',
             contents: prompt,
             config: {
               responseMimeType: 'application/json',
@@ -2343,8 +2560,8 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
       });
     }
 
-    // Public RSS & JSON Feed for Social Media Automation (Make.com, Zapier, Buffer, IFTTT)
-    if ((url.pathname === '/api/rss' || url.pathname === '/api/rss/' || url.pathname === '/rss.xml' || url.pathname === '/feed.xml' || url.pathname === '/rss' || url.pathname === '/api/posts/latest' || url.pathname === '/api/latest-articles') && (request.method === 'GET' || request.method === 'HEAD')) {
+    // Public RSS Feed for Social Media Automation (Make.com, Zapier, Buffer, IFTTT)
+    if ((url.pathname === '/api/rss' || url.pathname === '/api/rss/' || url.pathname === '/rss.xml' || url.pathname === '/feed.xml' || url.pathname === '/rss') && (request.method === 'GET' || request.method === 'HEAD')) {
       try {
         const db = getServerDb();
         const articlesSnap = await serverGetDocs(serverCollection(db, 'articles'));
@@ -2363,44 +2580,6 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
 
         const baseUrl = 'https://myfeedlk.com';
         const topArticles = allArticles.slice(0, 20);
-
-        // Check if caller wants JSON format (e.g. Make.com HTTP module)
-        const isJson = url.pathname === '/api/posts/latest' || 
-                       url.pathname === '/api/latest-articles' || 
-                       url.searchParams.get('format') === 'json' ||
-                       request.headers.get('accept')?.includes('application/json');
-
-        if (isJson) {
-          const formattedItems = topArticles.map(art => {
-            const itemUrl = art.slug ? `${baseUrl}/article/${art.slug}` : (art.id ? `${baseUrl}/article/${art.id}` : baseUrl);
-            const imgUrl = art.imageUrl || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80';
-            return {
-              id: art.id,
-              title: art.title || '',
-              summary: art.summary || art.description || '',
-              content: art.content || art.body || art.summary || '',
-              url: itemUrl,
-              imageUrl: imgUrl,
-              category: art.category || 'Tech',
-              readTime: art.readTime || '3 min',
-              publishedAt: art.publishedAt || new Date().toISOString()
-            };
-          });
-
-          return new Response(JSON.stringify({
-            status: 'success',
-            total: formattedItems.length,
-            latest: formattedItems[0] || null,
-            items: formattedItems
-          }, null, 2), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json; charset=utf-8',
-              'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=60, s-maxage=60'
-            }
-          });
-        }
 
         const rssItemsXml = topArticles.map(art => {
           const itemUrl = art.slug ? `${baseUrl}/article/${art.slug}` : (art.id ? `${baseUrl}/article/${art.id}` : baseUrl);
@@ -2421,7 +2600,7 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
         const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>MyFeed.lk - Breaking Sri Lanka &amp; Global Tech News</title>
+    <title>My Feed LK - Breaking Sri Lanka &amp; Global Tech News</title>
     <link>${baseUrl}</link>
     <description>ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය</description>
     <language>si-LK</language>
@@ -2450,6 +2629,71 @@ ${rssItemsXml}
     // ==========================================
 
     // Auto-Pilot Status & Live History
+
+    // Bytes Generation Endpoint (Manual Trigger & Auto-Scheduler)
+    if ((url.pathname === '/api/admin/bytes/generate-now' || url.pathname === '/api/bytes/generate-now') && (request.method === 'POST' || request.method === 'GET')) {
+      try {
+        const result = await executeDailyBytesGeneration('manual_api');
+        return new Response(JSON.stringify(result), {
+          status: result.success ? 200 : 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Bytes Schedule Status
+    if (url.pathname === '/api/bytes/schedule-status' && request.method === 'GET') {
+      const colombo = getColomboDateTimeParts();
+      return new Response(JSON.stringify({
+        status: 'active',
+        timezone: 'Asia/Colombo (UTC+5:30)',
+        currentColomboTime: `${colombo.dateString} ${colombo.timeString}`,
+        scheduledDailyTimes: ['04:00 AM (04:00)'],
+        isGenerating: isBytesGenerating,
+        lastGeneratedSlot: lastBytesGeneratedDate || 'Ready for next run'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Quiz Generation Endpoint (Manual Trigger & Auto-Scheduler)
+    if ((url.pathname === '/api/admin/quizzes/generate-now' || url.pathname === '/api/quizzes/generate-now') && (request.method === 'POST' || request.method === 'GET')) {
+      try {
+        const result = await executeDailyQuizGeneration('manual_api');
+        return new Response(JSON.stringify(result), {
+          status: result.success ? 200 : 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Quiz Schedule Status
+    if (url.pathname === '/api/quizzes/schedule-status' && request.method === 'GET') {
+      const colombo = getColomboDateTimeParts();
+      return new Response(JSON.stringify({
+        status: 'active',
+        timezone: 'Asia/Colombo (UTC+5:30)',
+        currentColomboTime: `${colombo.dateString} ${colombo.timeString}`,
+        scheduledDailyTimes: ['04:00 AM (04:00)', '04:00 PM (16:00)'],
+        isGenerating: isQuizGenerating,
+        lastGeneratedSlot: lastQuizGeneratedSlot || 'Ready for next run'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (url.pathname === '/api/admin/autopilot/status' && request.method === 'GET') {
       return new Response(JSON.stringify({
         config: autoPilotConfig,
@@ -2709,6 +2953,127 @@ ${rssItemsXml}
       }
     }
 
+    // Interactive AI Tutor (අකුරෙන් අකුර සරලව ඉගෙනුම් සහායක)
+    if (url.pathname === '/api/ai-tutor' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const courseTitle = body.courseTitle || '';
+        const lessonTitle = body.lessonTitle || '';
+        const level = body.level || 'Beginner';
+        const query = body.query || body.question || 'මේ පාඩම මුල සිට අකුරෙන් අකුර සරලව පැහැදිලි කරන්න';
+        const codeSnippet = body.codeSnippet || '';
+        const mode = body.mode || 'step_by_step_sinhala';
+
+        const prompt = `You are "MyFeed Academy AI Master Guru" - a world-class, extremely friendly, patient, and pedagogical educator who explains programming, technology, AI, and digital skills to Sri Lankan students, developers, seniors, and beginners in crystal clear, engaging Sinhala (with English technical terms in brackets where helpful).
+
+CONTEXT:
+- Course: ${courseTitle}
+- Lesson: ${lessonTitle} (${level} Level)
+- Learner Query: ${query}
+- Mode: ${mode}
+${codeSnippet ? `- Code / Blueprint:\n\`\`\`\n${codeSnippet}\n\`\`\`` : ''}
+
+INSTRUCTIONS:
+1. Explain thoroughly from the absolute ground up without skipping any intermediate steps ("අකුරෙන් අකුර මුල සිට සරලව").
+2. Provide a memorable, everyday real-life analogy (සරල උපමාවක්).
+3. If code is provided or relevant, break down each line / component step-by-step so a complete novice understands what every keyword does.
+4. Give 3-4 actionable key takeaways or pro tips.
+5. Tone: Encouraging, respectful, highly educational, in warm Sinhala.
+
+RESPONSE SCHEMA (JSON strictly):
+{
+  "sinhalaTitle": "ආකර්ෂණීය මාතෘකාව",
+  "explanationSinhala": "සම්පූර්ණ පැහැදිලි කිරීම (detailed markdown-friendly text)",
+  "analogy": "ජීවිතයට ගැලපෙන සරල උපමාව",
+  "stepByStep": [
+    { "step": 1, "title": "පියවර 1", "description": "විස්තරය..." },
+    { "step": 2, "title": "පියවර 2", "description": "විස්තරය..." },
+    { "step": 3, "title": "පියවර 3", "description": "විස්තරය..." }
+  ],
+  "lineByLineCodeExplanation": [
+    { "code": "පළමු පේළිය", "meaning": "මෙයින් කරන්නේ කුමක්ද..." }
+  ],
+  "proTips": [
+    "පළමු රීතිය...",
+    "දෙවන රීතිය..."
+  ]
+}`;
+
+        const ai = getGeminiClient();
+        if (!ai) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'AI capability is currently unavailable'
+          }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const geminiRes = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                sinhalaTitle: { type: Type.STRING },
+                explanationSinhala: { type: Type.STRING },
+                analogy: { type: Type.STRING },
+                stepByStep: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      step: { type: Type.NUMBER },
+                      title: { type: Type.STRING },
+                      description: { type: Type.STRING }
+                    },
+                    required: ['step', 'title', 'description']
+                  }
+                },
+                lineByLineCodeExplanation: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      code: { type: Type.STRING },
+                      meaning: { type: Type.STRING }
+                    },
+                    required: ['code', 'meaning']
+                  }
+                },
+                proTips: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING }
+                }
+              },
+              required: ['sinhalaTitle', 'explanationSinhala', 'analogy', 'stepByStep', 'proTips']
+            }
+          }
+        });
+
+        const result = JSON.parse(geminiRes.text || '{}');
+        return new Response(JSON.stringify({
+          success: true,
+          data: result
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (tutorErr: any) {
+        console.error('AI Tutor generation error:', tutorErr);
+        return new Response(JSON.stringify({
+          success: false,
+          error: tutorErr?.message || 'AI Tutor failed to respond'
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // 1. Trending Tech News Feed for Admin Auto-Crawler (with Cross-Feed Deduplication)
     if (url.pathname === '/api/admin/trending-news' && request.method === 'GET') {
       try {
@@ -2858,7 +3223,7 @@ ${rssItemsXml}
 
         const pricingInstruction = includeLKR ? 'When mentioning any international USD prices, provide approximate Sri Lankan Rupee (LKR) conversion estimates.' : '';
 
-        const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for MyFeed.lk (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
+        const prompt = `You are the Editor-in-Chief and Chief Technology Journalist for My Feed LK (ශ්‍රී ලංකාවේ ප්‍රමුඛතම තාක්ෂණික පුවත් වෙබ් අඩවිය).
 Write an outstanding, professional, high-journalistic quality news article in natural, fluent Sinhala (පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්).
 
 INPUT DETAILS:
@@ -2884,10 +3249,10 @@ CONTENT FORMATTING ('sinhalaFullContent'):
 - High standards of modern Sinhala technical language and grammar (නූතන තාක්ෂණික වචන නිවැරදිව භාවිත කරන්න).
 
 SOCIAL COPY ('socialShareText'):
-- Create a complete, formatted WhatsApp Channel & Social Media post in Sinhala with eye-catching emojis, title, 3 key bullet points, and call-to-action to read on MyFeed.lk.`;
+- Create a complete, formatted WhatsApp Channel & Social Media post in Sinhala with eye-catching emojis, title, 3 key bullet points, and call-to-action to read on My Feed LK.`;
 
         const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
+          model: 'gemini-3.6-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -2966,7 +3331,7 @@ SOCIAL COPY ('socialShareText'):
         const title = body.title || '';
         const action = body.action || 'polish_all'; // 'polish_all', 'fix_grammar', 'add_subheadings', 'create_summary', 'generate_social'
 
-        const prompt = `You are a chief Sinhala tech copyeditor for MyFeed.lk.
+        const prompt = `You are a chief Sinhala tech copyeditor for My Feed LK.
 Given this article content and title, perform the requested action: ${action}
 
 Title: ${title}
@@ -2976,7 +3341,7 @@ ${content}
 Return a valid JSON object matching the schema with the improved/transformed content.`;
 
         const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
+          model: 'gemini-3.6-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -3032,7 +3397,7 @@ Return a valid JSON object matching the schema with the improved/transformed con
 
         for (let i = 0; i < Math.min(items.length, 5); i++) {
           const item = items[i];
-          const prompt = `Write a comprehensive, professional Sinhala news article for MyFeed.lk based on:
+          const prompt = `Write a comprehensive, professional Sinhala news article for My Feed LK based on:
 Headline: ${item.title}
 Summary: ${item.description || ''}
 Source URL: ${item.url || ''}
@@ -3046,7 +3411,7 @@ REQUIREMENTS:
 - Ready-to-share WhatsApp post copy ('socialShareText')`;
 
           const res = await ai.models.generateContent({
-            model: 'gemini-3.7-flash',
+            model: 'gemini-3.6-flash',
             contents: prompt,
             config: {
               responseMimeType: 'application/json',
@@ -3126,7 +3491,7 @@ REQUIREMENTS:
           .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '')
           .substring(0, 150000); // cap to ~150k characters just in case it's massive
 
-        const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading tech publication.
+        const prompt = `You are a senior chief technology journalist and editor for My Feed LK, Sri Lanka's leading tech publication.
 I will provide you with the raw HTML source code of a news webpage. Your job is to extract the MAIN article content (ignore navbars, footers, ads, sidebars), figure out what the story is about, and then write a comprehensive, in-depth, long-form news article in fluent, professional Sinhala (දීර්ඝ පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) based on that story.
 
 RAW HTML EXTRACT:
@@ -3147,7 +3512,7 @@ REQUIREMENTS:
 6. Classify 'suggestedCategory' as strictly one of: 'AI', 'Local' (Sri Lanka), or 'Tech'.`;
 
         const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
+          model: 'gemini-3.6-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -3257,7 +3622,7 @@ REQUIREMENTS:
         const topic = body.topic || body.title || 'Latest Technology Breakthrough';
         const contextInfo = body.context || '';
 
-        const prompt = `You are a senior chief technology journalist and editor for MyFeed.lk, Sri Lanka's leading tech publication.
+        const prompt = `You are a senior chief technology journalist and editor for My Feed LK, Sri Lanka's leading tech publication.
 Write a comprehensive, in-depth, long-form news article in fluent, professional Sinhala (දීර්ඝ පූර්ණ මාධ්‍යවේදී පුවත් වාර්තාවක්) on the following topic:
 
 Topic: ${topic}
@@ -3274,13 +3639,13 @@ REQUIREMENTS:
    - <p>Industry impact and user experience</p>
    - <h2>වෙළඳපොළ තරඟකාරිත්වය සහ අනාගතය</h2>
    - <p>Comparison with rivals and roadmap</p>
-   - <h2>අවසාන නිගමනය සහ MyFeed.lk විග්‍රහය</h2>
+   - <h2>අවසාන නිගමනය සහ My Feed LK විග්‍රහය</h2>
    - <p>Final verdict and takeaway</p>
 3. High journalistic standard in modern Sinhala.
 4. Classify 'suggestedCategory' as strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenAI, LLMs, robotics), 'Local' (for Sri Lanka tech/news), or 'Tech' (for Apple, Samsung, hardware, gadgets).`;
 
         const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
+          model: 'gemini-3.6-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -3333,7 +3698,7 @@ REQUIREMENTS:
         if (ai) {
           try {
             const promptRes = await ai.models.generateContent({
-              model: 'gemini-3.7-flash',
+              model: 'gemini-3.6-flash',
               contents: `Translate and convert this news article title into a short, descriptive 20-30 word visual prompt for generating a photorealistic, ultra-high-quality tech editorial image.
 Title: "${title}"
 Category: "${category}"
@@ -3387,7 +3752,7 @@ Rules:
         const waRecipient = process.env['WHATSAPP_RECIPIENT_ID'] || process.env['WHATSAPP_CHANNEL_ID'];
         const waWebhookUrl = process.env['WHATSAPP_WEBHOOK_URL'];
 
-        const formattedPost = customMessage || `*🚀 NEW ON MYFEED.LK (${category || 'Tech'})*
+        const formattedPost = customMessage || `*🚀 NEW ON My Feed LK (${category || 'Tech'})*
 
 *${title}*
 
@@ -3396,7 +3761,7 @@ ${summary}
 ⏱️ ${readTime || '3 min read'}
 🔗 *Read full story:* ${articleUrl || (process.env['SITE_URL'] || 'https://myfeedlk.com')}
 
-_Curated with precision by MyFeed.lk Sri Lanka_`;
+_Curated with precision by My Feed LK Sri Lanka_`;
 
         // 1. If custom Webhook is configured (Zapier / Make / Evolution API / Baileys / WhatsApp Gateway)
         if (waWebhookUrl) {
@@ -3484,7 +3849,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
         const fbPageAccessToken = process.env['FACEBOOK_PAGE_ACCESS_TOKEN'] || process.env['FB_PAGE_TOKEN'];
         const fbPageId = process.env['FACEBOOK_PAGE_ID'] || process.env['FB_PAGE_ID'];
 
-        const formattedPost = customMessage || `📰 ${title || 'MyFeed.lk Breaking News'}
+        const formattedPost = customMessage || `📰 ${title || 'My Feed LK Breaking News'}
 
 ${summary || ''}
 
@@ -3577,8 +3942,8 @@ ${summary || ''}
         const { title, summary, articleUrl, topic = 'myfeedlk_kaveen', imageUrl } = body;
 
         const cleanTopic = (topic || 'myfeedlk_kaveen').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'myfeedlk_kaveen';
-        const safeTitle = (title ? `📰 ${title}` : '📰 MyFeed.lk: New Story').slice(0, 120);
-        const safeMessage = (summary ? `${summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on MyFeed.lk. Tap to read!').slice(0, 800);
+        const safeTitle = (title ? `📰 ${title}` : '📰 My Feed LK: New Story').slice(0, 120);
+        const safeMessage = (summary ? `${summary}\n\n🔗 Tap to read full story →` : 'A new article has just been published on My Feed LK. Tap to read!').slice(0, 800);
         const safeUrl = (articleUrl || 'https://myfeedlk.web.app').trim();
         
         const payload: Record<string, unknown> = {
@@ -3671,8 +4036,8 @@ ${summary || ''}
 
         if (Array.isArray(subscriptions) && subscriptions.length > 0) {
           const payload = JSON.stringify({
-            title: (title ? `📰 ${title}` : 'MyFeed.lk Breaking News').slice(0, 80),
-            body: (summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
+            title: (title ? `📰 ${title}` : 'My Feed LK Breaking News').slice(0, 80),
+            body: (summary || 'නව පුවතක් My Feed LK හි ප්‍රකාශයට පත් කෙරිණි. දැන්ම කියවන්න!').slice(0, 180),
             url: articleUrl || '/',
             icon: '/favicon.ico',
             image: imageUrl || undefined,
@@ -3693,8 +4058,8 @@ ${summary || ''}
           });
         } else {
           const result = await sendWebPushToAllSubscribers({
-            title: title || 'MyFeed.lk Breaking News',
-            summary: summary || 'නව පුවතක් MyFeed.lk හි ප්‍රකාශයට පත් කෙරිණි.',
+            title: title || 'My Feed LK Breaking News',
+            summary: summary || 'නව පුවතක් My Feed LK හි ප්‍රකාශයට පත් කෙරිණි.',
             articleUrl: articleUrl || '/',
             imageUrl,
             category

@@ -11,25 +11,25 @@ import { ArticleService } from './article.service';
   imports: [CommonModule, MatIconModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="min-h-screen bg-[#f2f2f7] dark:bg-[#000000] text-[#000000] dark:text-white transition-colors duration-300 pb-36 pt-3 sm:pt-6">
+    <div class="min-h-screen bg-transparent text-[#000000] dark:text-white transition-colors duration-300 pb-36 pt-3 sm:pt-6">
       
       <main class="max-w-4xl w-full mx-auto px-4 sm:px-6">
         
         <!-- Navigation Header -->
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-2">
-            <a routerLink="/" class="inline-flex items-center gap-1 text-xs font-bold text-[#007AFF] hover:opacity-80 transition-opacity ios-touch">
-              <mat-icon style="font-size: 20px; width: 20px; height: 20px;">chevron_left</mat-icon>
-              <span>News</span>
+            <a routerLink="/" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full ios-glass-thin text-xs font-bold text-[#007AFF] hover:opacity-80 transition-opacity ios-touch">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">chevron_left</mat-icon>
+              <span>Journal</span>
             </a>
           </div>
           
           <div class="text-center">
             <h1 class="text-base sm:text-lg font-black text-[#000000] dark:text-white tracking-tight flex items-center justify-center gap-1.5">
-              <mat-icon class="text-blue-500" style="font-size: 22px; width: 22px; height: 22px;">podcasts</mat-icon>
+              <mat-icon class="text-[#007AFF]" style="font-size: 22px; width: 22px; height: 22px;">podcasts</mat-icon>
               <span>Morning Commute Audio</span>
             </h1>
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+            <p class="text-[10px] text-[#8e8e93] font-medium">
               Daily 15-Minute Curated Tech Wrap
             </p>
           </div>
@@ -39,11 +39,9 @@ import { ArticleService } from './article.service';
             <button 
               type="button"
               (click)="audioService.toggleCarMode()"
-              [class.bg-blue-600]="audioService.carMode()"
+              [class.bg-[#007AFF]]="audioService.carMode()"
               [class.text-white]="audioService.carMode()"
-              [class.bg-black/5]="!audioService.carMode()"
-              [class.dark:bg-white/10]="!audioService.carMode()"
-              class="px-2.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ios-touch cursor-pointer">
+              class="px-3 py-1.5 rounded-full ios-glass-thin text-xs font-bold flex items-center gap-1.5 transition-all ios-touch cursor-pointer">
               <mat-icon style="font-size: 16px; width: 16px; height: 16px;">directions_car</mat-icon>
               <span class="hidden sm:inline">Drive Mode</span>
             </button>
@@ -153,7 +151,7 @@ import { ArticleService } from './article.service';
           }
 
           <!-- Normal Studio Card (Featured Daily 15-Min Brief) -->
-          <div class="relative overflow-hidden rounded-[28px] bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-white p-6 sm:p-8 shadow-sm border border-black/[0.06] dark:border-white/[0.08] mb-8">
+          <div class="relative overflow-hidden rounded-[28px] ios-card text-[#000000] dark:text-white p-6 sm:p-8 mb-8">
             
             <!-- Background Glow Accent -->
             <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>

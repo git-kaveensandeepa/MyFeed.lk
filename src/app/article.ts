@@ -167,7 +167,7 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                   <span>Kaveen Sandeepa</span>
                   <mat-icon style="font-size: 15px; width: 15px; height: 15px;" class="text-[#007AFF]">verified</mat-icon>
                 </div>
-                <div class="text-xs font-normal text-[#8e8e93]">Editor-in-Chief &bull; MyFeed.lk</div>
+                <div class="text-xs font-normal text-[#8e8e93]">Editor-in-Chief &bull; My Feed LK</div>
               </div>
             } @else {
               <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-[14px] bg-[#007AFF] flex items-center justify-center text-white shadow-sm shrink-0">
@@ -664,7 +664,7 @@ import {onSnapshot, Unsubscribe} from 'firebase/firestore';
                 <span>AI Transparency &amp; Editorial Oversight</span>
               </div>
               <p class="text-[#3a3a3c] dark:text-[#aeaeb2] text-[11px] leading-relaxed">
-                මෙම තාක්ෂණික පුවත් වාර්තාව MyFeed.lk ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු MyFeed.lk සංස්කාරක මණ්ඩලය (Editorial Team) විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
+                මෙම තාක්ෂණික පුවත් වාර්තාව My Feed LK ස්වයංක්‍රීය කෘත්‍රිම බුද්ධි (AI Intelligence) පද්ධතිය මඟින් ගෝලීය පුවත් මූලාශ්‍ර විශ්ලේෂණය කර සම්පාදනය කරන ලද්දකි. ජාත්‍යන්තර AI අන්තර්ගත විනිවිදභාවය පිළිබඳ ප්‍රමිතීන්ට (Global AI Content Transparency Standards) අනුකූලව මෙම තොරතුරු My Feed LK සංස්කාරක මණ්ඩලය (Editorial Team) විසින් අධීක්ෂණය කර ප්‍රකාශයට පත් කරනු ලබයි.
               </p>
             </div>
           }
@@ -1187,7 +1187,7 @@ export class ArticleComponent implements OnDestroy {
       const currentArt = this.article();
       if (currentArt) {
         // Update SEO Tags dynamically for search engines and social media
-        this.titleService.setTitle(`${currentArt.title} | MyFeed.lk`);
+        this.titleService.setTitle(`${currentArt.title} | My Feed LK`);
         this.metaService.updateTag({ name: 'description', content: currentArt.summary });
         
         // Open Graph tags for Facebook / LinkedIn / WhatsApp
@@ -1465,7 +1465,7 @@ export class ArticleComponent implements OnDestroy {
       : window.location.origin;
     const articleUrl = `${domain}/article/${article.slug || article.id}`;
 
-    const formattedPost = `*🚀 NEW ON MYFEED.LK (${article.category || 'News'})*
+    const formattedPost = `*🚀 NEW ON My Feed LK (${article.category || 'News'})*
 
 *${article.title}*
 
@@ -1474,7 +1474,7 @@ ${article.summary}
 ⏱️ ${article.readTime || '3 min read'}
 🔗 *Read full story:* ${articleUrl}
 
-_Curated with precision by MyFeed.lk Sri Lanka_`;
+_Curated with precision by My Feed LK Sri Lanka_`;
 
     // 1. Check if device supports Web Share API with files (Android / iOS / Mobile Chrome & Safari)
     if (article.imageUrl && typeof navigator !== 'undefined' && 'share' in navigator) {
@@ -1575,7 +1575,7 @@ _Curated with precision by MyFeed.lk Sri Lanka_`;
     const current = this.article();
     const title = current?.title || 'Story';
     const link = window.location.href;
-    const msg = `*MyFeed.lk Fact-Check Update Request*\n\n📌 *ලිපිය (Article):* ${title}\n🔗 *සබැඳිය (Link):* ${link}\n\n📝 *නිවැරදි කිරීම / අදහස (Correction / Details):* `;
+    const msg = `*My Feed LK Fact-Check Update Request*\n\n📌 *ලිපිය (Article):* ${title}\n🔗 *සබැඳිය (Link):* ${link}\n\n📝 *නිවැරදි කිරීම / අදහස (Correction / Details):* `;
     const waUrl = `https://wa.me/94775467475?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
   }

@@ -15,7 +15,8 @@ import {RouterLink} from '@angular/router';
       </a>
 
       <header class="mb-10 sm:mb-14">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100 dark:border-blue-900/40">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ios-glass-thin text-[#007AFF] dark:text-[#0A84FF] text-xs font-bold uppercase tracking-wider mb-4">
+          <mat-icon style="font-size: 16px; width: 16px; height: 16px;">gavel</mat-icon>
           <span>Legal & Compliance</span>
         </div>
         <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-3">
@@ -26,17 +27,17 @@ import {RouterLink} from '@angular/router';
         </p>
       </header>
 
-      <div class="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 sm:p-10 md:p-14 shadow-sm border border-black/[0.06] dark:border-white/10 text-[#1d1d1f]/80 dark:text-white/80 leading-relaxed font-sans space-y-8">
+      <div class="ios-glass-card p-6 sm:p-10 md:p-14 text-[#1d1d1f]/80 dark:text-white/80 leading-relaxed font-sans space-y-8">
         <p class="text-base sm:text-lg font-serif italic text-[#1d1d1f]/70 dark:text-white/70">
-          Welcome to MyFeed.lk. By accessing or using our website, you agree to be bound by these Terms of Service and our editorial guidelines.
+          Welcome to My Feed LK. By accessing or using our website, you agree to be bound by these Terms of Service and our editorial guidelines.
         </p>
 
         <section>
           <h2 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 1. Editorial Integrity & Intellectual Property
+            <span class="w-2 h-2 rounded-full bg-[#007AFF]"></span> 1. Editorial Integrity & Intellectual Property
           </h2>
           <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
-            Content published on MyFeed.lk includes original reporting, synthesized digests, and curated news from reputable global sources with clear attribution. Users may share links and excerpts with appropriate back-links. Commercial reproduction without consent is strictly prohibited.
+            Content published on My Feed LK includes original reporting, synthesized digests, and curated news from reputable global sources with clear attribution. Users may share links and excerpts with appropriate back-links. Commercial reproduction without consent is strictly prohibited.
           </p>
         </section>
 
@@ -45,7 +46,7 @@ import {RouterLink} from '@angular/router';
             <span class="w-2 h-2 rounded-full bg-blue-600"></span> 2. AI Content Attribution & Transparency
           </h2>
           <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
-            In accordance with international AI governance best practices, MyFeed.lk visibly discloses AI-assisted reporting. Stories compiled with machine intelligence carry the <em>MyFeed AI Intelligence Desk</em> tag. All automated feeds are subject to editorial oversight to ensure accuracy and community standards.
+            In accordance with international AI governance best practices, My Feed LK visibly discloses AI-assisted reporting. Stories compiled with machine intelligence carry the <em>MyFeed AI Intelligence Desk</em> tag. All automated feeds are subject to editorial oversight to ensure accuracy and community standards.
           </p>
         </section>
 
@@ -54,7 +55,7 @@ import {RouterLink} from '@angular/router';
             <span class="w-2 h-2 rounded-full bg-blue-600"></span> 3. Disclaimer of Warranties
           </h2>
           <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
-            This website and its publications are provided on an "as is" and "as available" basis. While we make every effort to verify news accuracy, MyFeed.lk makes no warranties, express or implied, regarding commercial fitness or exhaustive timeliness.
+            This website and its publications are provided on an "as is" and "as available" basis. While we make every effort to verify news accuracy, My Feed LK makes no warranties, express or implied, regarding commercial fitness or exhaustive timeliness.
           </p>
         </section>
 

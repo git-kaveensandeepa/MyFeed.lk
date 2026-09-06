@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component, signal, ElementRef, ViewChildren, QueryList, AfterViewInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-shorts',
-  standalone: true,
-  imports: [MatIconModule, RouterLink, CommonModule],
+  imports: [MatIconModule, CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Full Height Container (minus navbar) -->

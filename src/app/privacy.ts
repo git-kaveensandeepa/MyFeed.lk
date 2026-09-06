@@ -15,7 +15,8 @@ import {RouterLink} from '@angular/router';
       </a>
 
       <header class="mb-10 sm:mb-14">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-4 border border-blue-100 dark:border-blue-900/40">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full ios-glass-thin text-[#007AFF] dark:text-[#0A84FF] text-xs font-bold uppercase tracking-wider mb-4">
+          <mat-icon style="font-size: 16px; width: 16px; height: 16px;">verified_user</mat-icon>
           <span>Trust, Privacy & Advertising Standards</span>
         </div>
         <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-[#1d1d1f] dark:text-white mb-3">
@@ -26,30 +27,30 @@ import {RouterLink} from '@angular/router';
         </p>
       </header>
 
-      <div class="bg-white dark:bg-[#1a1a1a] rounded-3xl p-6 sm:p-10 md:p-14 shadow-sm border border-black/[0.06] dark:border-white/10 text-[#1d1d1f]/80 dark:text-white/80 leading-relaxed font-sans space-y-8">
+      <div class="ios-glass-card p-6 sm:p-10 md:p-14 text-[#1d1d1f]/80 dark:text-white/80 leading-relaxed font-sans space-y-8">
         <p class="text-base sm:text-lg font-serif italic text-[#1d1d1f]/70 dark:text-white/70">
-          At <strong>MyFeed.lk</strong> (www.myfeedlk.com), accessible from https://www.myfeedlk.com, one of our main priorities is the privacy of our visitors. This Privacy Policy document outlines the types of information collected and recorded by MyFeed.lk and how we use it.
+          At <strong>My Feed LK</strong> (www.myfeedlk.com), accessible from https://www.myfeedlk.com, one of our main priorities is the privacy of our visitors. This Privacy Policy document outlines the types of information collected and recorded by My Feed LK and how we use it.
         </p>
 
         <!-- Section 1 -->
         <section>
           <h2 class="text-xl sm:text-2xl font-black text-[#1d1d1f] dark:text-white mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 1. Information We Collect & Use
+            <span class="w-2 h-2 rounded-full bg-[#007AFF]"></span> 1. Information We Collect & Use
           </h2>
           <p class="mb-3 text-sm sm:text-base">
             We collect only the essential information needed to provide a high-quality news and technology discovery platform:
           </p>
           <ul class="list-disc pl-6 space-y-2 text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
             <li><strong>Personal Information:</strong> If you voluntarily create an account, subscribe to our newsletter, or submit contact requests, we may collect your name, email address, and profile photo (if authenticated via Google).</li>
-            <li><strong>Log Files & Analytics:</strong> MyFeed.lk follows standard procedure for using log files and Google Analytics. This information includes internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date/time stamps, referring/exit pages, and click counts to analyze trends and administer the site.</li>
+            <li><strong>Log Files & Analytics:</strong> My Feed LK follows standard procedure for using log files and Google Analytics. This information includes internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date/time stamps, referring/exit pages, and click counts to analyze trends and administer the site.</li>
             <li><strong>Local Storage:</strong> Your theme preferences (Dark/Light mode), read articles, and saved bookmarks are stored securely on your local device.</li>
           </ul>
         </section>
 
         <!-- Section 2 - Google AdSense & Cookies (MANDATORY FOR ADSENSE APPROVAL) -->
-        <section class="bg-blue-50/50 dark:bg-blue-950/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/40">
-          <h2 class="text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-blue-600"></span> 2. Google AdSense & DoubleClick DART Cookies
+        <section class="ios-glass-thin p-6 rounded-2xl">
+          <h2 class="text-xl sm:text-2xl font-black text-[#007AFF] dark:text-[#0A84FF] mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#007AFF]"></span> 2. Google AdSense & DoubleClick DART Cookies
           </h2>
           <p class="text-sm sm:text-base mb-3 text-[#1d1d1f]/80 dark:text-white/80">
             Google is one of the third-party vendors on our site. It uses cookies, known as DART cookies, to serve ads to our site visitors based upon their visit to www.myfeedlk.com and other sites on the internet.
@@ -68,7 +69,7 @@ import {RouterLink} from '@angular/router';
             <span class="w-2 h-2 rounded-full bg-blue-600"></span> 3. Third-Party Privacy Policies
           </h2>
           <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
-            MyFeed.lk's Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the respective Privacy Policies of these third-party ad servers (such as Google AdSense) for more detailed information. It may include their practices and instructions about how to opt-out of certain options.
+            My Feed LK's Privacy Policy does not apply to other advertisers or websites. Thus, we are advising you to consult the respective Privacy Policies of these third-party ad servers (such as Google AdSense) for more detailed information. It may include their practices and instructions about how to opt-out of certain options.
           </p>
         </section>
 
@@ -78,7 +79,7 @@ import {RouterLink} from '@angular/router';
             <span class="w-2 h-2 rounded-full bg-blue-600"></span> 4. AI Curation & Editorial Standards
           </h2>
           <p class="text-sm sm:text-base text-[#1d1d1f]/70 dark:text-white/70">
-            MyFeed.lk utilizes automated intelligence systems for content translation, multi-source aggregation, and summarization to make news accessible to Sinhala and English readers. No personal visitor data is utilized to train AI language models.
+            My Feed LK utilizes automated intelligence systems for content translation, multi-source aggregation, and summarization to make news accessible to Sinhala and English readers. No personal visitor data is utilized to train AI language models.
           </p>
         </section>
 
@@ -102,7 +103,7 @@ import {RouterLink} from '@angular/router';
           <h2 class="text-lg font-black text-[#1d1d1f] dark:text-white mb-3">6. Contact & Data Controller Inquiries</h2>
           <div class="bg-black/[0.02] dark:bg-white/[0.03] p-5 rounded-2xl border border-black/5 dark:border-white/10 space-y-1.5 text-xs sm:text-sm">
             <p class="font-bold text-[#1d1d1f] dark:text-white">Kaveen Sandeepa (Founder & Editor-in-Chief)</p>
-            <p>Platform: <strong>MyFeed.lk</strong> (<a href="https://www.myfeedlk.com" class="text-blue-600 hover:underline">www.myfeedlk.com</a>)</p>
+            <p>Platform: <strong>My Feed LK</strong> (<a href="https://www.myfeedlk.com" class="text-blue-600 hover:underline">www.myfeedlk.com</a>)</p>
             <p>Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a></p>
             <p>Direct / WhatsApp: <a href="https://wa.me/94710947861" target="_blank" class="text-blue-600 hover:underline font-mono">+94 71 094 7861</a></p>
           </div>

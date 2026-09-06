@@ -25,6 +25,9 @@ export interface UserProfile {
   lastSeen?: any;
   createdAt?: any;
   updatedAt?: any;
+  completedQuizzes?: string[];
+  quizPoints?: number;
+  purchasedItems?: string[];
 }
 
 @Injectable({

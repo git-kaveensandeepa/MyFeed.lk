@@ -12,13 +12,12 @@ import {WebPushService} from './web-push.service';
 import {AnalyticsService} from './analytics.service';
 import {AuthService} from './auth.service';
 import {AuthModalComponent} from './auth-modal.component';
-import {AudioMiniPlayerComponent} from './audio-mini-player.component';
-import {AudioService} from './audio.service';
+import {HapticService} from './haptic.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
-  imports: [MatIconModule, RouterOutlet, RouterLink, RouterLinkActive, AuthModalComponent, AudioMiniPlayerComponent],
+  imports: [MatIconModule, RouterOutlet, RouterLink, RouterLinkActive, AuthModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
   host: {
@@ -29,8 +28,8 @@ import {AudioService} from './audio.service';
   }
 })
 export class App implements OnInit {
+  readonly haptic = inject(HapticService);
   readonly authService = inject(AuthService);
-  readonly audioService = inject(AudioService);
   readonly searchService = inject(SearchService);
   readonly subscriberService = inject(SubscriberService);
   readonly themeManager = inject(ThemeManager);
@@ -89,10 +88,34 @@ export class App implements OnInit {
     event.preventDefault();
   }
 
+  private scrollTimer: any = null;
+
   ngOnInit() {
     this.analyticsService.trackDeviceVisit();
     
     if (typeof window !== 'undefined') {
+      // Apple-style scroll listener: reveals scrollbars dynamically only during active scrolling
+      window.addEventListener('scroll', () => {
+        document.documentElement.classList.add('is-scrolling');
+        clearTimeout(this.scrollTimer);
+        this.scrollTimer = setTimeout(() => {
+          document.documentElement.classList.remove('is-scrolling');
+        }, 900);
+      }, { passive: true });
+
+      document.addEventListener('scroll', (e) => {
+        const target = e.target as HTMLElement;
+        if (target && target.classList) {
+          target.classList.add('is-scrolling');
+        }
+        document.documentElement.classList.add('is-scrolling');
+        clearTimeout(this.scrollTimer);
+        this.scrollTimer = setTimeout(() => {
+          document.querySelectorAll('.is-scrolling').forEach(el => el.classList.remove('is-scrolling'));
+          document.documentElement.classList.remove('is-scrolling');
+        }, 900);
+      }, { capture: true, passive: true });
+
       setTimeout(() => {
         this.splashFading.set(true);
         setTimeout(() => {
@@ -175,7 +198,7 @@ export class App implements OnInit {
     const message = this.feedbackMessage().trim() || 'No additional comment provided.';
     const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://myfeedlk.com';
 
-    const text = `*MyFeed.lk Feedback & Support*\n\n📌 *Category:* ${category}\n💬 *Message:* ${message}\n🔗 *Page URL:* ${currentUrl}\n\n_Sent via MyFeed.lk Support Portal_`;
+    const text = `*My Feed LK Feedback & Support*\n\n📌 *Category:* ${category}\n💬 *Message:* ${message}\n🔗 *Page URL:* ${currentUrl}\n\n_Sent via My Feed LK Support Portal_`;
 
     const encodedText = encodeURIComponent(text);
     const whatsappUrl = `https://wa.me/94710947871?text=${encodedText}`;

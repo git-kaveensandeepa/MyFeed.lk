@@ -132,7 +132,7 @@ import { SubscriberService } from './subscriber.service';
                 <mat-icon style="font-size: 32px; width: 32px; height: 32px;">account_circle</mat-icon>
               </div>
               <h2 class="text-xl font-bold text-[#000000] dark:text-white mb-1">
-                Sign in to MyFeed.lk
+                Sign in to My Feed LK
               </h2>
               <p class="text-xs text-[#8e8e93] max-w-sm mx-auto mb-5 leading-relaxed">
                 Save your favorite stories, sync bookmarks, join community discussions, and customize your tech reading experience.
@@ -294,7 +294,38 @@ import { SubscriberService } from './subscriber.service';
         </section>
 
         <!-- ========================================== -->
-        <!-- 4. OFFICIAL SOCIAL MEDIA CHANNELS (MYFEED.LK) -->
+        <!-- 3.5 SERVICES & REWARDS MARKETPLACE         -->
+        <!-- ========================================== -->
+        <section class="mb-6">
+          <div class="flex items-center justify-between px-3 mb-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8e8e93]">
+              Services &amp; Rewards
+            </h2>
+          </div>
+          <div class="bg-white dark:bg-[#1c1c1e] rounded-[20px] shadow-xs border border-black/[0.06] dark:border-white/[0.08] overflow-hidden ios-card">
+            <a routerLink="/store" class="w-full p-4 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors ios-touch cursor-pointer group">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-[9px] bg-gradient-to-tr from-[#FF9500] to-[#FFCC00] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">storefront</mat-icon>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-[#000000] dark:text-white">Quiz Marketplace</div>
+                  <div class="text-[11px] text-[#8e8e93]">Exchange points for items</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-[#FF9500]/10 text-[#FF9500] rounded-full text-[10px] font-bold">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">stars</mat-icon>
+                  {{ authService.userProfile()?.quizPoints || 0 }} Pts
+                </span>
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;" class="text-[#8e8e93] group-hover:translate-x-0.5 transition-transform">chevron_right</mat-icon>
+              </div>
+            </a>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 4. OFFICIAL SOCIAL MEDIA CHANNELS (My Feed LK) -->
         <!-- ========================================== -->
         <section class="mb-6">
           <div class="flex items-center justify-between px-3 mb-2">
@@ -358,7 +389,7 @@ import { SubscriberService } from './subscriber.service';
 
             <!-- Instagram Page Row -->
             <a 
-              href="https://www.instagram.com/myfeed.lk?igsi=bmluczhwZHJpZ3Ez" 
+              href="https://www.instagram.com/My Feed LK?igsi=bmluczhwZHJpZ3Ez" 
               target="_blank" 
               rel="noopener noreferrer"
               class="w-full p-4 flex items-center justify-between text-left hover:bg-pink-50/50 dark:hover:bg-pink-950/20 transition-colors ios-touch cursor-pointer group">
@@ -369,7 +400,7 @@ import { SubscriberService } from './subscriber.service';
                 <div>
                   <div class="text-sm font-bold text-[#000000] dark:text-white flex items-center gap-2">
                     <span>Instagram Profile</span>
-                    <span class="text-[11px] text-[#8e8e93] font-mono">&#64;myfeed.lk</span>
+                    <span class="text-[11px] text-[#8e8e93] font-mono">&#64;My Feed LK</span>
                   </div>
                   <div class="text-xs text-[#8e8e93] mt-0.5">Visual tech news, reels &amp; product reviews</div>
                 </div>
@@ -466,7 +497,7 @@ import { SubscriberService } from './subscriber.service';
             
             <!-- Direct WhatsApp Chat Row -->
             <a 
-              href="https://wa.me/94710947871?text=Hello%20MyFeed.lk%20Team!%20I%20need%20support%20or%20have%20an%20inquiry." 
+              href="https://wa.me/94710947871?text=Hello%20My Feed LK%20Team!%20I%20need%20support%20or%20have%20an%20inquiry." 
               target="_blank" 
               rel="noopener noreferrer"
               class="w-full p-4 flex items-center justify-between text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors ios-touch cursor-pointer group">
@@ -542,7 +573,7 @@ import { SubscriberService } from './subscriber.service';
                   <mat-icon style="font-size: 18px; width: 18px; height: 18px;">info</mat-icon>
                 </div>
                 <div>
-                  <div class="text-xs font-bold text-[#000000] dark:text-white">About MyFeed.lk</div>
+                  <div class="text-xs font-bold text-[#000000] dark:text-white">About My Feed LK</div>
                   <div class="text-[11px] text-[#8e8e93]">Sri Lanka's leading tech news &amp; AI journalism hub</div>
                 </div>
               </div>
@@ -589,6 +620,30 @@ import { SubscriberService } from './subscriber.service';
               <span class="font-bold text-[#000000] dark:text-white font-mono">v2.4.0 (iOS Edition)</span>
             </div>
 
+          </div>
+        </section>
+
+                <!-- ========================================== -->
+        <!-- DEVELOPER PROFILE -->
+        <!-- ========================================== -->
+        <section class="mb-6">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8e8e93] px-3 mb-2">
+            Creator & Developer
+          </h2>
+
+          <div class="bg-white dark:bg-[#1c1c1e] rounded-[20px] shadow-xs border border-black/[0.06] dark:border-white/[0.08] overflow-hidden ios-card">
+            <a routerLink="/developer" class="p-4 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-[9px] bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">code</mat-icon>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-[#000000] dark:text-white">Developer Profile</div>
+                  <div class="text-[11px] text-[#8e8e93]">Kaveen Sandeepa</div>
+                </div>
+              </div>
+              <mat-icon class="text-purple-500 group-hover:translate-x-0.5 transition-transform" style="font-size: 18px; width: 18px; height: 18px;">chevron_right</mat-icon>
+            </a>
           </div>
         </section>
 
@@ -762,7 +817,7 @@ import { SubscriberService } from './subscriber.service';
                   <mat-icon style="font-size: 18px; width: 18px; height: 18px;">info</mat-icon>
                 </div>
                 <div>
-                  <h3 class="text-base font-bold text-[#000000] dark:text-white">About MyFeed.lk</h3>
+                  <h3 class="text-base font-bold text-[#000000] dark:text-white">About My Feed LK</h3>
                   <p class="text-[10px] text-[#8e8e93]">Sri Lanka's Premier Tech Journalism Hub</p>
                 </div>
               </div>
@@ -773,7 +828,7 @@ import { SubscriberService } from './subscriber.service';
 
             <div class="space-y-3.5 text-xs text-[#3a3a3c] dark:text-[#d1d1d6] leading-relaxed">
               <p>
-                <strong>MyFeed.lk</strong> is dedicated to delivering accurate, fast, and insightful technology news, AI developments, gadget reviews, and startup stories to Sri Lanka and the global tech community.
+                <strong>My Feed LK</strong> is dedicated to delivering accurate, fast, and insightful technology news, AI developments, gadget reviews, and startup stories to Sri Lanka and the global tech community.
               </p>
               
               <div class="p-3.5 rounded-[16px] bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08]">
@@ -791,7 +846,7 @@ import { SubscriberService } from './subscriber.service';
               </div>
 
               <div class="text-[11px] text-[#8e8e93] pt-2">
-                Have a tip, partnership, or story? Contact us at: <span class="font-bold text-[#007AFF]">contact&#64;myfeed.lk</span>
+                Have a tip, partnership, or story? Contact us at: <span class="font-bold text-[#007AFF]">contact&#64;My Feed LK</span>
               </div>
             </div>
 
@@ -831,7 +886,7 @@ import { SubscriberService } from './subscriber.service';
               <div>
                 <h4 class="font-bold text-[#000000] dark:text-white mb-1">1. User Privacy &amp; Advertising Standards</h4>
                 <p class="text-[#8e8e93] text-[11px]">
-                  MyFeed.lk (www.myfeedlk.com) values your privacy. We store essential authentication credentials and local preferences securely. We use Google AdSense to serve non-intrusive, relevant advertisements. Google may use DART cookies to serve ads based on browsing activity. You can customize ad settings via Google Ads Preferences.
+                  My Feed LK (www.myfeedlk.com) values your privacy. We store essential authentication credentials and local preferences securely. We use Google AdSense to serve non-intrusive, relevant advertisements. Google may use DART cookies to serve ads based on browsing activity. You can customize ad settings via Google Ads Preferences.
                 </p>
               </div>
 
@@ -1073,11 +1128,11 @@ export class ProfileComponent {
     const userEmail = this.authService.currentUser()?.email || 'Guest';
     const msg = this.feedbackMessage.trim() || 'No specific text provided.';
 
-    const formattedText = `*MyFeed.lk Feedback & Support Request*\n\n` +
+    const formattedText = `*My Feed LK Feedback & Support Request*\n\n` +
       `📌 *Category:* ${this.feedbackCategory}\n` +
       `👤 *User:* ${userName} (${userEmail})\n\n` +
       `💬 *Message:* \n${msg}\n\n` +
-      `📱 *Sent from:* MyFeed.lk iOS Web App`;
+      `📱 *Sent from:* My Feed LK iOS Web App`;
 
     const encoded = encodeURIComponent(formattedText);
     const waUrl = `https://wa.me/94710947871?text=${encoded}`;

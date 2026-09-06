@@ -52,7 +52,7 @@ const INITIAL_MORNING_EDITIONS: MorningEdition[] = [
     durationFormatted: '15:15',
     narratorName: 'Kaveen Sandeepa & MyFeed Tech Voice',
     narratorRole: 'Editor-in-Chief & AI Audio Studio',
-    summarySinhala: 'පසුගිය පැය 24 (අගෝ 26 4:00 AM සිට අගෝ 27 4:00 AM දක්වා) තුළ MyFeed.lk හි පළවූ වැදගත්ම තාක්ෂණික පුවත් 7ක් පිළිබඳ විනාඩි 15ක සම්පූර්ණ හඬ විග්‍රහය. කාර්යාලයට යන අතරතුර සවන් දෙන්න.',
+    summarySinhala: 'පසුගිය පැය 24 (අගෝ 26 4:00 AM සිට අගෝ 27 4:00 AM දක්වා) තුළ My Feed LK හි පළවූ වැදගත්ම තාක්ෂණික පුවත් 7ක් පිළිබඳ විනාඩි 15ක සම්පූර්ණ හඬ විග්‍රහය. කාර්යාලයට යන අතරතුර සවන් දෙන්න.',
     keyStoriesCount: 7,
     isFeatured: true,
     listenCount: 1420,
@@ -223,9 +223,18 @@ export class AudioService {
     return this.formatSeconds(this.currentTime());
   });
 
+  readonly formattedDuration = computed(() => {
+    return this.formatSeconds(this.duration());
+  });
+
   readonly formattedRemainingTime = computed(() => {
     const rem = Math.max(0, this.duration() - this.currentTime());
     return '-' + this.formatSeconds(rem);
+  });
+
+  // Backward compatibility alias for currentEdition
+  readonly currentEpisode = computed(() => {
+    return this.currentEdition();
   });
 
   constructor() {
@@ -509,7 +518,7 @@ export class AudioService {
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${edition.title} (${edition.windowStart} - ${edition.windowEnd})`,
-      artist: edition.narratorName || 'MyFeed.lk Morning Audio',
+      artist: edition.narratorName || 'My Feed LK Morning Audio',
       album: 'MyFeed Tech Commute 15-Min Briefings',
       artwork: [
         { src: '/assets/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
