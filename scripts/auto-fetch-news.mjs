@@ -29,13 +29,8 @@ const RSS_FEEDS = [
     category: 'AI'
   },
   {
-    name: 'The Verge AI',
-    url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml',
-    category: 'AI'
-  },
-  {
-    name: 'VentureBeat AI',
-    url: 'https://venturebeat.com/category/ai/feed/',
+    name: 'The Verge',
+    url: 'https://www.theverge.com/rss/index.xml',
     category: 'AI'
   },
   {
@@ -50,31 +45,11 @@ const RSS_FEEDS = [
     url: 'https://www.ft.lk/rss/it-telecom-technology',
     category: 'Local'
   },
-  {
-    name: 'Ada Derana Biz & Tech',
-    url: 'http://bizenglish.adaderana.lk/feed/',
-    category: 'Local'
-  },
-  {
-    name: 'Daily Mirror - Sri Lanka Business & Tech',
-    url: 'https://www.dailymirror.lk/rss/business-main/36',
-    category: 'Local'
-  },
 
   // --- Tech (Smartphones, Hardware, Apple, Samsung, Gadgets) ---
   {
-    name: 'The Verge',
-    url: 'https://www.theverge.com/rss/index.xml',
-    category: 'Tech'
-  },
-  {
     name: 'TechCrunch',
     url: 'https://techcrunch.com/feed/',
-    category: 'Tech'
-  },
-  {
-    name: 'Engadget',
-    url: 'https://www.engadget.com/rss.xml',
     category: 'Tech'
   },
   {
@@ -85,11 +60,6 @@ const RSS_FEEDS = [
   {
     name: 'Wired',
     url: 'https://www.wired.com/feed/rss',
-    category: 'Tech'
-  },
-  {
-    name: 'Ars Technica',
-    url: 'https://feeds.arstechnica.com/arstechnica/index',
     category: 'Tech'
   },
   {
@@ -527,21 +497,10 @@ async function fetchFromRssFeeds() {
   console.log('Fetching live articles from fast RSS Feeds...');
   const allArticles = [];
 
-  // Pick 1 AI, 1 Local, and 1 Tech feed to guarantee variety while remaining ultra-fast
-  const aiFeeds = RSS_FEEDS.filter(f => f.category === 'AI');
-  const localFeeds = RSS_FEEDS.filter(f => f.category === 'Local');
-  const techFeeds = RSS_FEEDS.filter(f => f.category === 'Tech');
-
-  const selectedFeeds = [
-    aiFeeds[Math.floor(Math.random() * aiFeeds.length)],
-    localFeeds[Math.floor(Math.random() * localFeeds.length)],
-    techFeeds[Math.floor(Math.random() * techFeeds.length)]
-  ].filter(Boolean);
-
-  for (const feed of selectedFeeds) {
+  const feedPromises = RSS_FEEDS.map(async (feed) => {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const response = await fetch(feed.url, {
         signal: controller.signal,
         headers: {
@@ -552,16 +511,23 @@ async function fetchFromRssFeeds() {
 
       if (!response.ok) {
         console.warn(`Could not fetch RSS from ${feed.name}: ${response.status}`);
-        continue;
+        return [];
       }
 
       const xml = await response.text();
       const parsed = parseRssXml(xml, feed.name, feed.category);
       console.log(`✓ Fetched ${parsed.length} articles from ${feed.name}`);
-      // Take only top 3 freshest items per feed
-      allArticles.push(...parsed.slice(0, 3));
+      return parsed.slice(0, 4);
     } catch (e) {
       console.warn(`Notice fetching ${feed.name}:`, e.message || e);
+      return [];
+    }
+  });
+
+  const results = await Promise.allSettled(feedPromises);
+  for (const r of results) {
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      allArticles.push(...r.value);
     }
   }
 
@@ -767,10 +733,9 @@ async function runAutoNewsUpload() {
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
     let uploadedCount = 0;
-    const candidates = articles.slice(0, 6);
 
-    for (let index = 0; index < candidates.length; index++) {
-      const article = candidates[index];
+    for (let index = 0; index < articles.length; index++) {
+      const article = articles[index];
       const sourceUrl = (article.url || '').trim().toLowerCase();
       const normalizedTitleKey = getNormalizedKey(article.title);
 

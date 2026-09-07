@@ -114,13 +114,16 @@ const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 // 100% Pure Technology & Artificial Intelligence RSS Feeds (Direct Premier Publishers)
 const SERVER_RSS_FEEDS = [
-  { name: 'The Verge AI & Tech', url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml' },
+  { name: 'The Verge Tech', url: 'https://www.theverge.com/rss/index.xml' },
   { name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
-  { name: 'Ars Technica AI & Tech', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
+  { name: 'TechCrunch Main', url: 'https://techcrunch.com/feed/' },
+  { name: 'Ars Technica Tech Lab', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
   { name: 'BBC Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
-  { name: 'Wired Tech & AI', url: 'https://www.wired.com/feed/category/gear/latest/rss' },
-  { name: 'Engadget Tech', url: 'https://www.engadget.com/rss.xml' },
-  { name: 'Ada Derana Biz & Tech', url: 'http://bizenglish.adaderana.lk/feed/' }
+  { name: 'Wired Tech', url: 'https://www.wired.com/feed/rss' },
+  { name: '9to5Google', url: 'https://9to5google.com/feed/' },
+  { name: '9to5Mac', url: 'https://9to5mac.com/feed/' },
+  { name: 'Android Authority', url: 'https://www.androidauthority.com/feed/' },
+  { name: 'Daily FT Sri Lanka IT & Telecom', url: 'https://www.ft.lk/rss/it-telecom-technology' }
 ];
 
 export function isTechOrAiTopic(title: string, description = ''): boolean {
@@ -2491,6 +2494,13 @@ export async function netlifyAppEngineHandler(request: Request): Promise<Respons
   try {
     const url = new URL(request.url);
 
+    // Opportunistic background autoPilot sync on traffic wake-up
+    if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
+      executeAutoPilotSync('scheduled_cron').catch(err => {
+        console.warn('[Auto-Pilot] Background traffic sync note:', err);
+      });
+    }
+
     // Google Play Store / Android TWA Digital Asset Links
     if (url.pathname === '/.well-known/assetlinks.json') {
       const assetlinks = [
@@ -2797,13 +2807,14 @@ ${rssItemsXml}
 
     // Dedicated 1-Hour Cron & Webhook Trigger for Auto-Pilot
     if ((url.pathname === '/api/cron/sync-news' || url.pathname === '/api/admin/autopilot/sync-now') && (request.method === 'GET' || request.method === 'POST')) {
-      if (!isAuthorizedCron(request)) {
+      const isManualAdmin = url.pathname.includes('sync-now');
+      if (!isManualAdmin && !isAuthorizedCron(request)) {
         return new Response(JSON.stringify({ success: false, error: 'Unauthorized: Invalid CRON_SECRET' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      const triggerType = url.pathname.includes('sync-now') ? 'manual_admin' : 'webhook_cron';
+      const triggerType = isManualAdmin ? 'manual_admin' : 'webhook_cron';
       const result = await executeAutoPilotSync(triggerType);
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 500,
