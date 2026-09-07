@@ -2490,6 +2490,29 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
 export async function netlifyAppEngineHandler(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
+
+    // Google Play Store / Android TWA Digital Asset Links
+    if (url.pathname === '/.well-known/assetlinks.json') {
+      const assetlinks = [
+        {
+          "relation": ["delegate_permission/common.handle_all_urls"],
+          "target": {
+            "namespace": "android_app",
+            "package_name": "lk.myfeed.app",
+            "sha256_cert_fingerprints": [
+              "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+            ]
+          }
+        }
+      ];
+      return new Response(JSON.stringify(assetlinks, null, 2), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
     
     // Custom API Route for Single Latest News (for Make.com / Zapier / Social Media Webhooks)
     if (url.pathname === '/api/latest-news') {

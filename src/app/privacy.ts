@@ -105,7 +105,7 @@ import {RouterLink} from '@angular/router';
             <p class="font-bold text-[#1d1d1f] dark:text-white">Kaveen Sandeepa (Founder & Editor-in-Chief)</p>
             <p>Platform: <strong>My Feed LK</strong> (<a href="https://www.myfeedlk.com" class="text-blue-600 hover:underline">www.myfeedlk.com</a>)</p>
             <p>Email: <a href="mailto:mail.kaveensandeepa@gmail.com" class="text-blue-600 hover:underline">mail.kaveensandeepa@gmail.com</a></p>
-            <p>Direct / WhatsApp: <a href="https://wa.me/94710947861" target="_blank" class="text-blue-600 hover:underline font-mono">+94 71 094 7861</a></p>
+            <p>Direct / WhatsApp: <a href="https://wa.me/94710947871" target="_blank" class="text-blue-600 hover:underline font-mono">+94 71 094 7871</a></p>
           </div>
         </section>
       </div>

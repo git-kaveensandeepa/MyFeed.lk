@@ -1,0 +1,52 @@
+{
+  "packageId": "lk.myfeed.app",
+  "host": "myfeed.lk",
+  "name": "MyFeed.lk - Sri Lanka Tech Feed",
+  "launcherName": "MyFeed.lk",
+  "themeColor": "#2563eb",
+  "navigationColor": "#09090b",
+  "navigationColorDark": "#09090b",
+  "navigationDividerColor": "#00000000",
+  "navigationDividerColorDark": "#00000000",
+  "backgroundColor": "#09090b",
+  "enableNotifications": true,
+  "startUrl": "/?source=pwa",
+  "iconUrl": "/assets/icons/icon-512x512.png",
+  "maskableIconUrl": "/assets/icons/maskable-icon-512x512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Latest News",
+      "shortName": "News",
+      "url": "/?source=pwa_shortcut",
+      "icon": "/assets/icons/icon-192x192.png"
+    },
+    {
+      "name": "Tech Quizzes",
+      "shortName": "Quizzes",
+      "url": "/quizzes?source=pwa_shortcut",
+      "icon": "/assets/icons/icon-192x192.png"
+    },
+    {
+      "name": "Learn & Courses",
+      "shortName": "Learn",
+      "url": "/learn?source=pwa_shortcut",
+      "icon": "/assets/icons/icon-192x192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://myfeed.lk/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": false
+    },
+    "locationDelegation": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  }
+}
