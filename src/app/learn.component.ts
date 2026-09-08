@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { ALL_COURSES, CourseTrackData, TargetAudienceType } from './courses.data';
+import { AdComponent } from './ad.component';
 
 export interface ByteCard {
   id: string | number;
@@ -28,8 +29,7 @@ export interface AudienceOption {
 
 @Component({
   selector: 'app-learn',
-  standalone: true,
-  imports: [CommonModule, MatIconModule, RouterLink],
+  imports: [CommonModule, MatIconModule, RouterLink, AdComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-screen bg-transparent text-[#000000] dark:text-white transition-colors duration-300 pb-36 pt-3 sm:pt-6" [class.text-base]="largeTextMode()" [class.text-sm]="!largeTextMode()">
@@ -127,6 +127,11 @@ export interface AudienceOption {
               <div class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full transition-all duration-500" [style.width.%]="progressPercentage()"></div>
             </div>
           </div>
+        </div>
+
+        <!-- ACADEMY TOP AD SLOT -->
+        <div class="mb-8 animate-fade-in-up">
+          <app-ad placement="learn-top" format="leaderboard"></app-ad>
         </div>
 
         <!-- NEW: Age / Audience Mode Selector (Whom is Learning?) -->
@@ -338,6 +343,11 @@ export interface AudienceOption {
             }
           </div>
         }
+
+        <!-- ACADEMY BOTTOM AD SLOT -->
+        <div class="mt-12 pt-8 border-t border-black/5 dark:border-white/10 animate-fade-in-up">
+          <app-ad placement="learn-bottom" format="leaderboard"></app-ad>
+        </div>
 
       </main>
 

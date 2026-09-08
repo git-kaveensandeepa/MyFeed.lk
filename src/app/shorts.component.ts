@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, signal, ElementRef, ViewChildren, QueryList, AfterViewInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
+import { AdComponent } from './ad.component';
 
 @Component({
   selector: 'app-shorts',
-  imports: [MatIconModule, CommonModule],
+  imports: [MatIconModule, CommonModule, AdComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Full Height Container (minus navbar) -->
@@ -91,6 +92,29 @@ import { CommonModule } from '@angular/common';
 
           </div>
         </div>
+
+        @if (i === 1) {
+          <!-- SPONSORED TECH REEL / AD SLOT -->
+          <div class="relative w-full h-full snap-start snap-always flex items-center justify-center bg-[#0a0a0a] overflow-hidden p-4">
+            <div class="relative w-full sm:max-w-[400px] h-full bg-[#1c1c1e] z-10 sm:shadow-2xl sm:my-4 sm:rounded-[2rem] sm:h-[calc(100%-2rem)] overflow-hidden border border-white/10 p-6 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                  <mat-icon style="font-size: 14px; width: 14px; height: 14px;">campaign</mat-icon>
+                  Sponsored
+                </span>
+                <span class="text-white/40 text-[10px] font-mono">Bites Ad Slot</span>
+              </div>
+
+              <div class="my-auto py-6">
+                <app-ad placement="bytes-feed" format="in-feed"></app-ad>
+              </div>
+
+              <div class="text-center text-white/50 text-[11px] pb-2">
+                Swipe up for next Bite &bull; ඊළඟ කෙටි පුවත සඳහා ඉහළට ස්වයිප් කරන්න
+              </div>
+            </div>
+          </div>
+        }
       }
     </div>
   `

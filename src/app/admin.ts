@@ -1928,12 +1928,11 @@ export interface PolishedResult {
                   </div>
                 </div>
                 <div>
-                  <label for="adFormPlacement" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Placement Slot</label>
+                  <label for="adFormPlacement" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Placement Slot (දැන්වීම් ස්ථානය)</label>
                   <select id="adFormPlacement" [(ngModel)]="adFormPlacement" name="placement" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#2c2c2e] focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
-                    <option value="home-top">Home Page - Top Banner</option>
-                    <option value="home-bottom">Home Page - Bottom</option>
-                    <option value="article-inline">Inside Article (Inline)</option>
-                    <option value="sidebar">Sidebar / Additional</option>
+                    @for (slot of adService.availableSlots; track slot.id) {
+                      <option [value]="slot.id">{{ slot.name }} &bull; ({{ slot.recommendedSize }})</option>
+                    }
                   </select>
                 </div>
                 <div class="flex items-center gap-2 py-1">
@@ -1988,9 +1987,81 @@ export interface PolishedResult {
                 }
                 @if (adService.ads().length === 0) {
                   <div class="p-10 text-center text-gray-400 font-medium text-xs">
-                    No ads created yet.
+                    No ads created yet. All slots are currently displaying "Advertise Here" placeholders directing clients to WhatsApp!
                   </div>
                 }
+              </div>
+            </div>
+
+            <!-- AD SLOTS INVENTORY & MONETIZATION MATRIX -->
+            <div class="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-2xl shadow-sm border border-black/5 dark:border-white/10 overflow-hidden mt-8">
+              <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/5 dark:border-white/10">
+                <div>
+                  <h3 class="text-base font-bold text-[#1d1d1f] dark:text-white flex items-center gap-2">
+                    <mat-icon class="text-amber-500">grid_view</mat-icon>
+                    <span>Site-Wide Ad Inventory &amp; Monetization Slots</span>
+                  </h3>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Total {{ adService.availableSlots.length }} ad slots live across MyFeed.lk. Slots without active ads show the WhatsApp booking placeholder.
+                  </p>
+                </div>
+                <button (click)="openCreateAd()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#007AFF] text-white rounded-xl font-bold text-xs shadow-sm hover:bg-[#0062cc] active:scale-95 transition-all">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px;">add</mat-icon>
+                  <span>New Ad Campaign</span>
+                </button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-gray-600 dark:text-gray-300">
+                  <thead class="bg-gray-50/80 dark:bg-white/[0.04] text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-black/5 dark:border-white/5">
+                    <tr>
+                      <th class="py-3 px-5">Slot ID &amp; Location</th>
+                      <th class="py-3 px-4">Page</th>
+                      <th class="py-3 px-4">Recommended Size</th>
+                      <th class="py-3 px-4">Current Status</th>
+                      <th class="py-3 px-5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-black/5 dark:divide-white/5 font-medium">
+                    @for (slot of adService.availableSlots; track slot.id) {
+                      <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                        <td class="py-3.5 px-5">
+                          <div class="font-bold text-[#1d1d1f] dark:text-white">{{ slot.name }}</div>
+                          <div class="font-mono text-[10px] text-gray-400 mt-0.5">{{ slot.id }}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            {{ slot.page }}
+                          </span>
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-[11px] text-gray-500">
+                          {{ slot.recommendedSize }}
+                        </td>
+                        <td class="py-3.5 px-4">
+                          @if (getActiveAdForSlot(slot.id); as activeAd) {
+                            <div class="flex items-center gap-1.5">
+                              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] truncate max-w-[140px]" [title]="activeAd.title">
+                                Live: {{ activeAd.title }}
+                              </span>
+                            </div>
+                          } @else {
+                            <div class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[11px]">
+                              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                              <span>Placeholder (WhatsApp)</span>
+                            </div>
+                          }
+                        </td>
+                        <td class="py-3.5 px-5 text-right">
+                          <button (click)="createAdForSlot(slot.id)" class="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-[#007AFF] hover:text-white text-xs font-bold transition-all active:scale-95 inline-flex items-center gap-1">
+                            <mat-icon style="font-size: 14px; width: 14px; height: 14px;">campaign</mat-icon>
+                            <span>{{ getActiveAdForSlot(slot.id) ? 'Replace' : 'Add Ad' }}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               </div>
             </div>
           }
@@ -3878,6 +3949,35 @@ export class AdminComponent {
     this.adFormIsActive = true;
     this.adFormPlacement = 'home-top';
     this.isAdding.set(false);
+  }
+
+  openCreateAd() {
+    this.editingAdId.set(null);
+    this.adFormTitle = '';
+    this.adFormLink = '';
+    this.adFormImageUrl = '';
+    this.adFormIsActive = true;
+    this.adFormPlacement = 'home-top';
+    this.isAdding.set(true);
+  }
+
+  createAdForSlot(slotId: string) {
+    const existing = this.getActiveAdForSlot(slotId);
+    if (existing) {
+      this.editAd(existing);
+      return;
+    }
+    this.editingAdId.set(null);
+    this.adFormTitle = '';
+    this.adFormLink = '';
+    this.adFormImageUrl = '';
+    this.adFormIsActive = true;
+    this.adFormPlacement = slotId;
+    this.isAdding.set(true);
+  }
+
+  getActiveAdForSlot(slotId: string): Ad | undefined {
+    return this.adService.ads().find(ad => ad.placement === slotId && ad.isActive);
   }
 
   async toggleAdStatus(ad: Ad) {

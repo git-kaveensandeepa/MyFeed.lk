@@ -5,6 +5,7 @@ import { UserProfile } from './auth.service';
 import { db } from './firebase';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { AdComponent } from './ad.component';
 
 interface Question {
   text: string;
@@ -25,7 +26,7 @@ interface Quiz {
 
 @Component({
   selector: 'app-quizzes',
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, AdComponent],
   template: `
     <div class="min-h-[100dvh] bg-[#F2F2F7] dark:bg-black text-black dark:text-white pb-24">
       
@@ -208,11 +209,16 @@ interface Quiz {
               <span class="font-semibold text-black dark:text-white">{{ activeQuiz()!.titleSinhala }}</span>
             </p>
 
-            <div class="w-full bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 mb-8 shadow-sm">
+            <div class="w-full bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 mb-6 shadow-sm">
               <div class="text-xs text-[#8E8E93] font-bold uppercase tracking-wider mb-2">ලබාගත් ලකුණු</div>
               <div class="text-4xl font-black text-[#FF9500] flex items-center justify-center gap-2">
                 +{{ earnedPoints() }} <mat-icon style="font-size: 28px; width: 28px; height: 28px;">stars</mat-icon>
               </div>
+            </div>
+
+            <!-- Quizzes Result Screen Ad Slot -->
+            <div class="w-full mb-8 animate-fade-in-up">
+              <app-ad placement="quizzes-finish" format="leaderboard"></app-ad>
             </div>
 
             <button 

@@ -8,10 +8,9 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    // Anyone can read and manage articles
+    // Anyone can read and manage ads
     match /ads/{document} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /articles/{document} {

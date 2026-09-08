@@ -14,11 +14,12 @@ import {auth, db} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
 import {onSnapshot, Unsubscribe} from 'firebase/firestore';
 import {formatWhatsAppPost} from './whatsapp-format.util';
+import {AdComponent} from './ad.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-article',
-  imports: [MatIconModule, RouterLink, SkeletonLoaderComponent, FormsModule, DatePipe],
+  imports: [MatIconModule, RouterLink, SkeletonLoaderComponent, FormsModule, DatePipe, AdComponent],
   template: `
     @if (articleService.loading() && !article()) {
       <app-skeleton-loader type="article-detail"></app-skeleton-loader>
@@ -228,10 +229,36 @@ import {formatWhatsAppPost} from './whatsapp-format.util';
             </div>
           }
 
-          <!-- Article Body Content -->
-          <div 
-            class="prose prose-base sm:prose-lg max-w-none text-[#2c2c2e] dark:text-[#d1d1d6] leading-[1.8] font-sans break-words overflow-hidden [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:text-[#000000] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_li]:mb-2 [&_strong]:font-bold [&_strong]:text-[#000000] [&_strong]:dark:text-white"
-            [innerHTML]="article.content">
+          <!-- ARTICLE TOP AD SLOT -->
+          <div class="my-6">
+            <app-ad placement="article-top" format="leaderboard"></app-ad>
+          </div>
+
+          <!-- Article Body Content with In-Article Ad Slot -->
+          @if (splitContent().second) {
+            <div 
+              class="prose prose-base sm:prose-lg max-w-none text-[#2c2c2e] dark:text-[#d1d1d6] leading-[1.8] font-sans break-words overflow-hidden [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:text-[#000000] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_li]:mb-2 [&_strong]:font-bold [&_strong]:text-[#000000] [&_strong]:dark:text-white"
+              [innerHTML]="splitContent().first">
+            </div>
+
+            <div class="my-8">
+              <app-ad placement="article-inline" format="in-article"></app-ad>
+            </div>
+
+            <div 
+              class="prose prose-base sm:prose-lg max-w-none text-[#2c2c2e] dark:text-[#d1d1d6] leading-[1.8] font-sans break-words overflow-hidden [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:text-[#000000] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_li]:mb-2 [&_strong]:font-bold [&_strong]:text-[#000000] [&_strong]:dark:text-white"
+              [innerHTML]="splitContent().second">
+            </div>
+          } @else {
+            <div 
+              class="prose prose-base sm:prose-lg max-w-none text-[#2c2c2e] dark:text-[#d1d1d6] leading-[1.8] font-sans break-words overflow-hidden [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:text-[#000000] [&_h2]:dark:text-white [&_h2]:mt-6 [&_h2]:mb-3 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-4 [&_li]:mb-2 [&_strong]:font-bold [&_strong]:text-[#000000] [&_strong]:dark:text-white"
+              [innerHTML]="article.content">
+            </div>
+          }
+
+          <!-- ARTICLE BOTTOM AD SLOT -->
+          <div class="my-8">
+            <app-ad placement="article-bottom" format="leaderboard"></app-ad>
           </div>
 
           <!-- ======================================================== -->
@@ -1101,6 +1128,22 @@ export class ArticleComponent implements OnDestroy {
   readonly isAdmin = signal(false);
   readonly showDeleteConfirmModal = signal(false);
   readonly isDeletingArticle = signal(false);
+
+  readonly splitContent = computed(() => {
+    const art = this.article();
+    if (!art || !art.content) return { first: '', second: '' };
+    const content = art.content;
+    const pMatches = [...content.matchAll(/<\/p>/gi)];
+    if (pMatches.length >= 2) {
+      const midIndex = Math.floor(pMatches.length / 2);
+      const splitPos = pMatches[midIndex].index! + 4;
+      return {
+        first: content.substring(0, splitPos),
+        second: content.substring(splitPos)
+      };
+    }
+    return { first: content, second: '' };
+  });
 
   // Quick Cover Image Editor Signals
   readonly quickImageArticle = signal<Article | null>(null);

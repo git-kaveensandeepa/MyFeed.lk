@@ -253,7 +253,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           <!-- ACTIVE ADS BANNER / WIDGET -->
           @if (!searchService.searchTerm()) {
             <div class="mb-6 animate-fade-in-up">
-              <app-ad placement="home-top"></app-ad>
+              <app-ad placement="home-top" format="leaderboard"></app-ad>
             </div>
 
             <!-- iOS 26 Academy Spotlight Callout -->
@@ -288,6 +288,16 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
           <!-- iOS 3-Column News Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             @for (article of visibleGridArticles(); track article.id; let i = $index) {
+              @if (i === 3) {
+                <div class="col-span-full my-2 animate-fade-in-up">
+                  <app-ad placement="home-feed-1" format="in-feed"></app-ad>
+                </div>
+              }
+              @if (i === 6) {
+                <div class="col-span-full my-2 animate-fade-in-up">
+                  <app-ad placement="home-feed-2" format="in-feed"></app-ad>
+                </div>
+              }
               <article 
                 [routerLink]="['/article', article.slug || article.id]" 
                 class="animate-fade-in-up group p-3.5 sm:p-4 rounded-[22px] sm:rounded-[26px] shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col h-full relative overflow-hidden ios-card" 
@@ -388,6 +398,10 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
         <!-- 3. TOPICAL SECTIONS -->
         <!-- ============================================== -->
         @if (!searchService.searchTerm().trim()) {
+          <!-- Mid-Feed Ad Slot -->
+          <div class="my-8 animate-fade-in-up">
+            <app-ad placement="home-sidebar-1" format="leaderboard"></app-ad>
+          </div>
           
           <!-- Tech Quizzes & Challenges Showcase Section -->
           <section class="mb-10 sm:mb-14 pt-6 border-t border-black/[0.06] dark:border-white/[0.08] animate-fade-in-up">
@@ -541,6 +555,11 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
               </div>
             </section>
           }
+
+          <!-- Home Bottom Leaderboard Ad Slot -->
+          <div class="mt-12 pt-6 border-t border-black/[0.06] dark:border-white/[0.08] animate-fade-in-up">
+            <app-ad placement="home-bottom" format="leaderboard"></app-ad>
+          </div>
         }
       }
     </main>
