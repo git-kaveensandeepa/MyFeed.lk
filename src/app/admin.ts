@@ -13,6 +13,7 @@ import {db, auth} from './firebase';
 import {signInWithEmailAndPassword, signOut, onAuthStateChanged, User} from 'firebase/auth';
 import {UserProfile} from './auth.service';
 import {formatWhatsAppPost} from './whatsapp-format.util';
+import {safeApiFetch, buildApiUrl} from './api-client.util';
 
 export interface TrendingNewsItem {
   id: string;
@@ -4266,18 +4267,12 @@ export class AdminComponent {
 
     this.isGeneratingAi.set(true);
     try {
-      const res = await fetch('/api/generate-ai-article', {
+      const data = await safeApiFetch('/api/generate-ai-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: this.aiTopicPrompt })
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to generate article with AI');
-      }
-
-      const data = await res.json();
       this.formTitle = data.sinhalaTitle || this.aiTopicPrompt;
       this.formSummary = data.sinhalaDescription || '';
       this.formContent = data.sinhalaFullContent || '';
@@ -4303,14 +4298,11 @@ export class AdminComponent {
     this.isGeneratingAi.set(true);
 
     try {
-      const res = await fetch('/api/generate-from-url', {
+      const data = await safeApiFetch('/api/generate-from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: this.aiUrlPrompt })
       });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate');
 
       this.formTitle = data.sinhalaTitle || '';
       this.formSummary = data.sinhalaDescription || '';
@@ -4889,14 +4881,14 @@ export class AdminComponent {
       });
 
       // Also sync to server autopilot config
-      await fetch('/api/admin/autopilot/config', {
+      await safeApiFetch('/api/admin/autopilot/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fbWebhookUrl: this.fbWebhookUrl
         })
       }).catch((fetchErr) => {
-        console.warn('Sync autopilot fb config error:', fetchErr);
+        console.warn('Sync autopilot fb config note:', fetchErr);
       });
 
       alert('Facebook webhook settings saved successfully!');
@@ -5475,11 +5467,7 @@ ${article.summary}
   async loadTrendingNews() {
     this.isLoadingTrending.set(true);
     try {
-      const res = await fetch('/api/admin/trending-news');
-      if (!res.ok) {
-        throw new Error('Failed to scan live tech trends');
-      }
-      const data = await res.json();
+      const data = await safeApiFetch('/api/admin/trending-news');
       this.trendingNews.set(data.items || []);
     } catch (err: unknown) {
       const e = err as { message?: string };
@@ -5495,7 +5483,7 @@ ${article.summary}
     this.studioTopic = item.title;
     this.studioContext = item.description || '';
     try {
-      const res = await fetch('/api/admin/generate-full-article', {
+      const generated = await safeApiFetch('/api/admin/generate-full-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -5511,12 +5499,6 @@ ${article.summary}
         })
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate article');
-      }
-
-      const generated = await res.json();
       this.generatedStudioArticle.set(generated);
       this.autoStudioSubTab.set('topic');
       this.deleteToast.set('✨ Full Sinhala Article & AI Visual Generated! Review below.');
@@ -6062,31 +6044,28 @@ ${article.summary}
     this.isLoadingAutoPilot.set(true);
     try {
       if (typeof window !== 'undefined') {
-        this.cronWebhookUrl = `${window.location.origin}/api/cron/sync-news`;
+        this.cronWebhookUrl = buildApiUrl('/api/cron/sync-news');
       }
-      const res = await fetch('/api/admin/autopilot/status');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.config) {
-          this.autoPilotEnabled = data.config.enabled ?? true;
-          this.autoPilotScheduleMode = data.config.scheduleMode || 'interval';
-          this.autoPilotIntervalMinutes = data.config.intervalMinutes ?? 60;
-          if (Array.isArray(data.config.scheduledDailyTimes)) {
-            this.autoPilotScheduledDailyTimes = data.config.scheduledDailyTimes;
-          }
-          this.autoPilotAutoPublish = data.config.autoPublish ?? true;
-          this.autoPilotNotifyPhone = data.config.notifyPhone ?? true;
-          this.autoPilotPostWhatsApp = data.config.postWhatsApp ?? true;
-          this.autoPilotPostFacebook = data.config.postFacebook ?? true;
-          this.autoPilotMaxArticles = data.config.maxArticlesPerRun ?? 2;
+      const data = await safeApiFetch('/api/admin/autopilot/status');
+      if (data && data.config) {
+        this.autoPilotEnabled = data.config.enabled ?? true;
+        this.autoPilotScheduleMode = data.config.scheduleMode || 'interval';
+        this.autoPilotIntervalMinutes = data.config.intervalMinutes ?? 60;
+        if (Array.isArray(data.config.scheduledDailyTimes)) {
+          this.autoPilotScheduledDailyTimes = data.config.scheduledDailyTimes;
         }
-        if (data.logs) {
-          this.autoPilotLogs.set(data.logs);
-        }
-        if (data.nextRunTime) {
-          this.autoPilotNextTargetTime = data.nextRunTime;
-          this.updateAutoPilotCountdown();
-        }
+        this.autoPilotAutoPublish = data.config.autoPublish ?? true;
+        this.autoPilotNotifyPhone = data.config.notifyPhone ?? true;
+        this.autoPilotPostWhatsApp = data.config.postWhatsApp ?? true;
+        this.autoPilotPostFacebook = data.config.postFacebook ?? true;
+        this.autoPilotMaxArticles = data.config.maxArticlesPerRun ?? 2;
+      }
+      if (data && data.logs) {
+        this.autoPilotLogs.set(data.logs);
+      }
+      if (data && data.nextRunTime) {
+        this.autoPilotNextTargetTime = data.nextRunTime;
+        this.updateAutoPilotCountdown();
       }
     } catch (err) {
       console.warn('Failed to fetch auto-pilot status:', err);
@@ -6098,7 +6077,7 @@ ${article.summary}
   async saveAutoPilotConfig() {
     this.isSavingAutoPilotConfig.set(true);
     try {
-      const res = await fetch('/api/admin/autopilot/config', {
+      const data = await safeApiFetch('/api/admin/autopilot/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -6117,13 +6096,7 @@ ${article.summary}
         })
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to save auto-pilot config');
-      }
-
-      const data = await res.json();
-      if (data.nextRunTime) {
+      if (data && data.nextRunTime) {
         this.autoPilotNextTargetTime = data.nextRunTime;
         this.updateAutoPilotCountdown();
       }
@@ -6133,7 +6106,7 @@ ${article.summary}
       await this.loadAutoPilotStatus();
     } catch (err: unknown) {
       const e = err as { message?: string };
-      alert('Save Error: ' + (e.message || String(err)));
+      alert('Save Notice: ' + (e.message || String(err)));
     } finally {
       this.isSavingAutoPilotConfig.set(false);
     }
@@ -6142,17 +6115,12 @@ ${article.summary}
   async triggerAutoPilotNow() {
     this.isTriggeringAutoPilot.set(true);
     try {
-      const res = await fetch('/api/admin/autopilot/sync-now', {
+      const data = await safeApiFetch('/api/admin/autopilot/sync-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || data.message || 'Auto-pilot sync failed');
-      }
-
-      if (data.count > 0) {
+      if (data && data.count > 0) {
         this.deleteToast.set(`🚀 Synced & Published ${data.count} New Articles on Auto-Pilot!`);
         this.articleService.loadArticles(); // Refresh article list in dashboard
       } else {
@@ -6162,7 +6130,7 @@ ${article.summary}
       await this.loadAutoPilotStatus();
     } catch (err: unknown) {
       const e = err as { message?: string };
-      alert('Auto-Pilot Error: ' + (e.message || String(err)));
+      alert('Auto-Pilot Notice: ' + (e.message || String(err)));
     } finally {
       this.isTriggeringAutoPilot.set(false);
     }
@@ -6309,9 +6277,8 @@ ${article.summary}
   async loadAudioPipelineStatus() {
     this.loadingAudioPipeline.set(true);
     try {
-      const res = await fetch('/api/admin/audio-pipeline/status');
-      if (res.ok) {
-        const data = await res.json();
+      const data = await safeApiFetch('/api/admin/audio-pipeline/status');
+      if (data) {
         this.audioPipelineStatus.set(data);
       }
     } catch (e) {
@@ -6379,19 +6346,17 @@ ${article.summary}
     try {
       const current = this.audioPipelineStatus()?.config || {};
       const payload = { ...current, ...configUpdates };
-      const res = await fetch('/api/admin/audio-pipeline/config', {
+      await safeApiFetch('/api/admin/audio-pipeline/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        await this.loadAudioPipelineStatus();
-        this.audioPipelineToast.set('✅ Audio Pipeline settings updated successfully!');
-        setTimeout(() => this.audioPipelineToast.set(null), 4000);
-      }
+      await this.loadAudioPipelineStatus();
+      this.audioPipelineToast.set('✅ Audio Pipeline settings updated successfully!');
+      setTimeout(() => this.audioPipelineToast.set(null), 4000);
     } catch (e) {
       console.error('Error saving audio pipeline config:', e);
-      alert('Failed to save audio pipeline config');
+      alert('Failed to save audio pipeline config: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       this.isSavingAudioConfig.set(false);
     }
@@ -6400,16 +6365,15 @@ ${article.summary}
   async triggerAudioDraftGenerationNow() {
     this.isGeneratingAudioDraft.set(true);
     try {
-      const res = await fetch('/api/admin/audio-pipeline/generate-now', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await safeApiFetch('/api/admin/audio-pipeline/generate-now', { method: 'POST' });
+      if (data && data.success) {
         this.audioPipelineToast.set('🎙️ 3:30 AM Commute Draft synthesized successfully!');
         await this.loadAudioPipelineStatus();
         if (data.draft) {
           this.applyDraftToForm(data.draft);
         }
       } else {
-        alert('Generation failed: ' + (data.message || 'Unknown error'));
+        alert('Generation failed: ' + (data?.message || 'Unknown error'));
       }
     } catch (e) {
       alert('Error triggering audio generation: ' + (e instanceof Error ? e.message : String(e)));
@@ -6422,14 +6386,13 @@ ${article.summary}
   async triggerAudioPublishNow() {
     this.isPublishingAudioEdition.set(true);
     try {
-      const res = await fetch('/api/admin/audio-pipeline/publish-now', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await safeApiFetch('/api/admin/audio-pipeline/publish-now', { method: 'POST' });
+      if (data && data.success) {
         this.audioPipelineToast.set('🚀 4:00 AM Morning Edition Published to App & Web Push Dispatched!');
         await this.loadAudioPipelineStatus();
         await this.audioService.loadEditions();
       } else {
-        alert('Publish failed: ' + (data.message || 'Unknown error'));
+        alert('Publish failed: ' + (data?.message || 'Unknown error'));
       }
     } catch (e) {
       alert('Error publishing audio edition: ' + (e instanceof Error ? e.message : String(e)));

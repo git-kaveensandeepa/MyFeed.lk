@@ -1,3 +1,8 @@
 name = "myfeed-lk"
+main = "worker.js"
 compatibility_date = "2024-09-01"
-pages_build_output_dir = "dist/app/browser"
+
+[assets]
+directory = "dist/app/browser"
+binding = "ASSETS"
+not_found_handling = "single-page-application"

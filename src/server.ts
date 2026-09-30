@@ -2490,9 +2490,22 @@ Classify into strictly one of: 'AI' (for Artificial Intelligence, ChatGPT, OpenA
   return translatedArticles;
 }
 
-export async function netlifyAppEngineHandler(request: Request): Promise<Response> {
+async function internalNetlifyAppEngineHandler(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
+
+    // Handle CORS preflight requests for API endpoints
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-cron-secret, Accept, Origin, X-Requested-With',
+          'Access-Control-Max-Age': '86400'
+        }
+      });
+    }
 
     // Opportunistic background autoPilot sync on traffic wake-up
     if (autoPilotConfig.enabled && !isAutoPilotSyncing && Date.now() >= autoPilotNextRunTime) {
@@ -4165,6 +4178,21 @@ ${summary || ''}
     console.error('Netlify SSR Error:', err);
     return new Response('SSR Error: ' + (err instanceof Error ? err.message : String(err)), { status: 500 });
   }
+}
+
+export async function netlifyAppEngineHandler(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const response = await internalNetlifyAppEngineHandler(request);
+  if (url.pathname.startsWith('/api/')) {
+    try {
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-cron-secret, Accept, Origin, X-Requested-With');
+    } catch {
+      // Immutable response headers fallback
+    }
+  }
+  return response;
 }
 
 export const reqHandler = createRequestHandler(netlifyAppEngineHandler);
