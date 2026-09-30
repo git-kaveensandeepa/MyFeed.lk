@@ -1935,6 +1935,24 @@ export interface PolishedResult {
                     }
                   </select>
                 </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label for="adFormStartDate" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Start Date (ආරම්භක දිනය)</label>
+                    <input id="adFormStartDate" type="date" [(ngModel)]="adFormStartDate" name="startDate" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#2c2c2e] focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                  </div>
+                  <div>
+                    <label for="adFormEndDate" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">End Date (අවසන් දිනය)</label>
+                    <input id="adFormEndDate" type="date" [(ngModel)]="adFormEndDate" name="endDate" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#2c2c2e] focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                  </div>
+                </div>
+
+                <div>
+                  <label for="adFormMaxViews" class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wider">Max Views Limit (උපරිම වාර ගණන)</label>
+                  <input id="adFormMaxViews" type="number" [(ngModel)]="adFormMaxViews" name="maxViews" placeholder="Leave empty for unlimited views" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#2c2c2e] focus:ring-2 focus:ring-[#007AFF] outline-none text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                  <p class="text-[10px] text-gray-500 mt-1">If set, the ad will automatically stop showing once it reaches this many views.</p>
+                </div>
+
                 <div class="flex items-center gap-2 py-1">
                   <input type="checkbox" id="adIsActive" [(ngModel)]="adFormIsActive" name="isActive" class="w-4 h-4 rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF]">
                   <label for="adIsActive" class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer">Ad is Active</label>
@@ -2039,11 +2057,17 @@ export interface PolishedResult {
                         </td>
                         <td class="py-3.5 px-4">
                           @if (getActiveAdForSlot(slot.id); as activeAd) {
-                            <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-1.5 mb-1">
                               <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                               <span class="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] truncate max-w-[140px]" [title]="activeAd.title">
                                 Live: {{ activeAd.title }}
                               </span>
+                            </div>
+                            <div class="text-[10px] text-gray-500 font-medium">
+                              👁️ {{ activeAd.views || 0 }} Views <br>
+                              🖱️ {{ activeAd.clicks || 0 }} Clicks <br>
+                              @if (activeAd.maxViews) { Limit: {{ activeAd.maxViews }} <br> }
+                              @if (activeAd.endDate) { Until: {{ activeAd.endDate }} }
                             </div>
                           } @else {
                             <div class="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[11px]">
@@ -3783,6 +3807,10 @@ export class AdminComponent {
   adFormImageUrl = '';
   adFormIsActive = true;
   adFormPlacement = 'home-top';
+  
+  adFormStartDate = '';
+  adFormEndDate = '';
+  adFormMaxViews: number | null = null;
 
   aiTopicPrompt = '';
   aiUrlPrompt = '';
@@ -3915,6 +3943,9 @@ export class AdminComponent {
     this.adFormImageUrl = ad.imageUrl;
     this.adFormIsActive = ad.isActive;
     this.adFormPlacement = ad.placement || 'home-top';
+    this.adFormStartDate = ad.startDate || '';
+    this.adFormEndDate = ad.endDate || '';
+    this.adFormMaxViews = ad.maxViews || null;
     this.isAdding.set(true);
   }
 
@@ -3929,7 +3960,10 @@ export class AdminComponent {
       link: this.adFormLink,
       imageUrl: this.adFormImageUrl,
       isActive: this.adFormIsActive,
-      placement: this.adFormPlacement
+      placement: this.adFormPlacement,
+      startDate: this.adFormStartDate || null,
+      endDate: this.adFormEndDate || null,
+      maxViews: this.adFormMaxViews || null,
     };
 
     if (this.editingAdId()) {
@@ -3948,6 +3982,9 @@ export class AdminComponent {
     this.adFormImageUrl = '';
     this.adFormIsActive = true;
     this.adFormPlacement = 'home-top';
+    this.adFormStartDate = '';
+    this.adFormEndDate = '';
+    this.adFormMaxViews = null;
     this.isAdding.set(false);
   }
 
@@ -3958,6 +3995,9 @@ export class AdminComponent {
     this.adFormImageUrl = '';
     this.adFormIsActive = true;
     this.adFormPlacement = 'home-top';
+    this.adFormStartDate = '';
+    this.adFormEndDate = '';
+    this.adFormMaxViews = null;
     this.isAdding.set(true);
   }
 
@@ -3973,6 +4013,9 @@ export class AdminComponent {
     this.adFormImageUrl = '';
     this.adFormIsActive = true;
     this.adFormPlacement = slotId;
+    this.adFormStartDate = '';
+    this.adFormEndDate = '';
+    this.adFormMaxViews = null;
     this.isAdding.set(true);
   }
 

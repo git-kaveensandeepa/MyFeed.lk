@@ -1,5 +1,5 @@
 import {Injectable, signal} from '@angular/core';
-import {collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, orderBy} from 'firebase/firestore';
+import {collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, orderBy, increment} from 'firebase/firestore';
 import {db} from './firebase';
 
 export interface Ad {
@@ -10,6 +10,11 @@ export interface Ad {
   isActive: boolean;
   placement: string;
   createdAt: unknown;
+  startDate?: string | null;
+  endDate?: string | null;
+  maxViews?: number | null;
+  views?: number;
+  clicks?: number;
 }
 
 export interface AdSlotDefinition {
@@ -60,6 +65,8 @@ export class AdManagerService {
   async addAd(ad: Omit<Ad, 'id' | 'createdAt'>) {
     await addDoc(collection(db, 'ads'), {
       ...ad,
+      views: 0,
+      clicks: 0,
       createdAt: serverTimestamp()
     });
   }
@@ -70,5 +77,13 @@ export class AdManagerService {
 
   async deleteAd(id: string) {
     await deleteDoc(doc(db, 'ads', id));
+  }
+
+  async trackView(id: string) {
+    try { await updateDoc(doc(db, 'ads', id), { views: increment(1) }); } catch { /* ignore */ }
+  }
+
+  async trackClick(id: string) {
+    try { await updateDoc(doc(db, 'ads', id), { clicks: increment(1) }); } catch { /* ignore */ }
   }
 }

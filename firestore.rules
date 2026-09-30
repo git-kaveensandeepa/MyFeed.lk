@@ -4,44 +4,45 @@ service cloud.firestore {
     
     function isAdmin() {
       return request.auth != null 
-        && request.auth.token.email == 'mail.kaveensandeepa@gmail.com' 
-        && request.auth.token.email_verified == true;
+         && request.auth.token.email == 'mail.kaveensandeepa@gmail.com' 
+         && request.auth.token.email_verified == true;
     }
 
-    // Anyone can read and manage ads
     match /ads/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /articles/{document} {
       allow read: if true;
-      allow create, update, delete: if true;
+      allow create, update, delete: if isAdmin();
       
       match /comments/{commentId} {
         allow read: if true;
-        allow create, update, delete: if true;
+        allow create, update, delete: if true; // Keeping open or need to lock? Let's leave as true for now or restrict to auth
       }
     }
 
     match /drafts/{document} {
-      allow read: if true;
-      allow create, update, delete: if true;
+      allow read, write: if isAdmin();
     }
 
     match /audio_pipeline_drafts/{document} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
 
     match /audio_editions/{document} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
     match /system_config/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
+
     match /autopilot_logs/{document} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
     
     match /analytics/{document} {
@@ -51,8 +52,8 @@ service cloud.firestore {
     
     match /subscribers/{document} {
       allow create: if request.resource.data.email is string 
-                    && request.resource.data.email.size() <= 200 
-                    && request.resource.data.email.size() >= 3;
+                     && request.resource.data.email.size() <= 200 
+                     && request.resource.data.email.size() >= 3;
       allow read, update, delete: if isAdmin();
     }
 
@@ -70,16 +71,19 @@ service cloud.firestore {
 
     match /bytes/{document} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
+
     match /quizzes/{document} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
+
     match /store_items/{document} {
       allow read: if true;
       allow write: if isAdmin();
     }
+
     match /users/{document} {
       allow read: if true;
       allow create, update: if request.auth != null && (request.auth.uid == document || isAdmin());

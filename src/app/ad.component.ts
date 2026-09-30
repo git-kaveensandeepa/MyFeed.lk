@@ -1,12 +1,12 @@
-import {Component, Input, computed, inject} from '@angular/core';
+import {Component, Input, computed, inject, effect, untracked, PLATFORM_ID} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
 import {AdManagerService} from './ad-manager.service';
 import {MatIconModule} from '@angular/material/icon';
-import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-ad',
   standalone: true,
-  imports: [MatIconModule, RouterLink],
+  imports: [MatIconModule],
   template: `
     @if (activeAd()) {
       <!-- ACTIVE SPONSORED CAMPAIGN -->
@@ -23,8 +23,7 @@ import {RouterLink} from '@angular/router';
             <span class="text-[10px] text-[#8e8e93] font-medium hidden sm:inline-block">MyFeed.lk Verified Partner</span>
           </div>
         }
-
-        <a [href]="activeAd()!.link" target="_blank" rel="noopener noreferrer" 
+        <a [href]="activeAd()!.link" target="_blank" rel="noopener noreferrer" (click)="onAdClick(activeAd()!.id)"
            class="block group/ad relative rounded-[20px] sm:rounded-[24px] overflow-hidden border border-black/[0.08] dark:border-white/[0.1] shadow-sm hover:shadow-md transition-all duration-300 w-full bg-black/5 dark:bg-white/5"
            [class.h-28]="format === 'compact'"
            [class.sm:h-36]="format === 'compact'"
@@ -50,7 +49,6 @@ import {RouterLink} from '@angular/router';
                 {{ activeAd()!.title }}
               </h4>
             </div>
-
             <span class="shrink-0 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white text-white hover:text-black text-xs font-bold backdrop-blur-md transition-all duration-200 shadow-sm group-hover/ad:bg-[#007AFF] group-hover/ad:text-white">
               <span>Visit Now</span>
               <mat-icon style="font-size: 15px; width: 15px; height: 15px;">arrow_forward</mat-icon>
@@ -72,7 +70,6 @@ import {RouterLink} from '@angular/router';
               {{ slotTitle() }}
             </span>
           </div>
-
           <span class="px-2.5 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#8e8e93] text-[10px] font-mono font-semibold">
             {{ slotSize() }}
           </span>
@@ -88,16 +85,14 @@ import {RouterLink} from '@angular/router';
               Reach thousands of daily tech enthusiasts, developers, and Sri Lankan readers.
             </p>
           </div>
-
           <div class="flex items-center gap-2 shrink-0">
-            <a [href]="waContactUrl()" target="_blank" rel="noopener noreferrer" 
+            <a [href]="waContactUrl()" target="_blank" rel="noopener noreferrer"
                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold tracking-tight shadow-sm hover:shadow transition-all ios-touch cursor-pointer active:scale-95">
               <mat-icon style="font-size: 15px; width: 15px; height: 15px;">chat</mat-icon>
               <span>Advertise Here &bull; විමසන්න</span>
             </a>
           </div>
         </div>
-
       </div>
     }
   `
@@ -110,11 +105,45 @@ export class AdComponent {
   @Input() showPlaceholder = true;
 
   private adService = inject(AdManagerService);
+  private platformId = inject(PLATFORM_ID);
 
   activeAd = computed(() => {
     const ads = this.adService.ads();
-    return ads.find(ad => ad.isActive && (ad.placement === this.placement || ad.placement === 'all'));
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    return ads.find(ad => {
+      if (!ad.isActive) return false;
+      if (ad.placement !== this.placement && ad.placement !== 'all') return false;
+
+      if (ad.startDate && ad.startDate > todayStr) return false;
+      if (ad.endDate && ad.endDate < todayStr) return false;
+      if (ad.maxViews && (ad.views || 0) >= ad.maxViews) return false;
+
+      return true;
+    });
   });
+
+  constructor() {
+    effect(() => {
+      const ad = this.activeAd();
+      if (ad && isPlatformBrowser(this.platformId)) {
+        untracked(() => {
+          const viewedKey = `ad_viewed_${ad.id}_${this.placement}`;
+          if (!sessionStorage.getItem(viewedKey)) {
+            sessionStorage.setItem(viewedKey, 'true');
+            this.adService.trackView(ad.id);
+          }
+        });
+      }
+    });
+  }
+
+  onAdClick(adId: string) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.adService.trackClick(adId);
+    }
+  }
 
   slotTitle = computed(() => {
     if (this.slotName) return this.slotName;
