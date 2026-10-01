@@ -653,14 +653,27 @@ import { SubscriberService } from './subscriber.service';
         <!-- 7. ACCOUNT ACTIONS (DESTRUCTIVE / LOGOUT) -->
         <!-- ========================================== -->
         @if (authService.currentUser()) {
-          <section class="mb-8">
-            <div class="bg-white dark:bg-[#1c1c1e] rounded-[20px] shadow-xs border border-black/[0.06] dark:border-white/[0.08] overflow-hidden ios-card">
+          <section class="mb-8 space-y-2.5">
+            <div class="bg-white dark:bg-[#1c1c1e] rounded-[20px] shadow-xs border border-black/[0.06] dark:border-white/[0.08] overflow-hidden ios-card divide-y divide-black/[0.06] dark:divide-white/[0.08]">
               <button 
                 (click)="handleLogout()"
                 class="w-full p-4 text-center font-bold text-xs sm:text-sm text-[#FF3B30] hover:bg-[#FF3B30]/5 transition-colors ios-touch cursor-pointer flex items-center justify-center gap-1.5">
                 <mat-icon style="font-size: 17px; width: 17px; height: 17px;">logout</mat-icon>
                 <span>Sign Out of Account</span>
               </button>
+
+              <button 
+                (click)="openDeleteAccountConfirm()"
+                class="w-full p-3.5 text-center font-bold text-xs text-[#FF3B30]/80 hover:text-[#FF3B30] hover:bg-[#FF3B30]/5 transition-colors ios-touch cursor-pointer flex items-center justify-center gap-1.5">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete_forever</mat-icon>
+                <span>Delete Account &amp; Data (ගිණුම ඉවත් කරන්න)</span>
+              </button>
+            </div>
+
+            <div class="text-center">
+              <a routerLink="/delete-account" class="text-[11px] text-[#8e8e93] hover:text-[#007AFF] underline transition-colors">
+                Account Deletion &amp; Data Privacy Policy
+              </a>
             </div>
           </section>
         }
@@ -1019,6 +1032,67 @@ import { SubscriberService } from './subscriber.service';
         </div>
       }
 
+      <!-- ========================================== -->
+      <!-- MODAL: DELETE ACCOUNT CONFIRMATION -->
+      <!-- ========================================== -->
+      @if (showDeleteAccountModal()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div class="bg-white dark:bg-[#1c1c1e] rounded-[28px] max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-500/20 relative animate-scale-up">
+            
+            <div class="w-14 h-14 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-4">
+              <mat-icon style="font-size: 30px; width: 30px; height: 30px;">warning</mat-icon>
+            </div>
+
+            <h3 class="text-xl font-bold text-center text-[#000000] dark:text-white mb-2">
+              Delete Account &amp; All Data?
+            </h3>
+            
+            <p class="text-xs sm:text-sm text-center text-[#8e8e93] leading-relaxed mb-4">
+              ඔබගේ ගිණුම, Bookmark කළ ලිපි, Quiz ලකුණු සහ සියලුම පුද්ගලික දත්ත ස්ථිරවම මකා දැමෙනු ඇත. මෙම ක්‍රියාව ආපසු හැරවිය නොහැක.
+            </p>
+
+            <div class="p-3.5 rounded-[14px] bg-red-500/5 border border-red-500/15 mb-5 text-[11px] text-red-600 dark:text-red-400 space-y-1">
+              <div class="font-bold flex items-center gap-1">
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">info</mat-icon>
+                <span>Google Play Policy &amp; Data Deletion:</span>
+              </div>
+              <p>All authentication records and profile details will be permanently wiped immediately.</p>
+            </div>
+
+            @if (deleteError()) {
+              <div class="p-3 mb-4 rounded-[12px] bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-semibold">
+                {{ deleteError() }}
+              </div>
+            }
+
+            <div class="flex flex-col gap-2">
+              <button 
+                type="button" 
+                (click)="confirmDeleteAccount()"
+                [disabled]="isDeleting()"
+                class="w-full py-3 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-full font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 ios-touch cursor-pointer">
+                @if (isDeleting()) {
+                  <mat-icon class="animate-spin" style="font-size: 16px; width: 16px; height: 16px;">sync</mat-icon>
+                  <span>Deleting Account...</span>
+                } @else {
+                  <mat-icon style="font-size: 18px; width: 18px; height: 18px;">delete_forever</mat-icon>
+                  <span>Permanently Delete My Account</span>
+                }
+              </button>
+
+              <button 
+                type="button" 
+                (click)="closeDeleteAccountConfirm()"
+                [disabled]="isDeleting()"
+                class="w-full py-2.5 px-4 rounded-full bg-black/[0.05] dark:bg-white/[0.1] text-[#000000] dark:text-white font-bold text-xs ios-touch cursor-pointer">
+                Cancel / Keep Account
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
     </div>
   `
 })
@@ -1212,6 +1286,38 @@ export class ProfileComponent {
     });
     if (ok) {
       this.isEditingProfile.set(false);
+    }
+  }
+
+  showDeleteAccountModal = signal(false);
+  isDeleting = signal(false);
+  deleteError = signal<string | null>(null);
+
+  openDeleteAccountConfirm() {
+    this.showDeleteAccountModal.set(true);
+    this.deleteError.set(null);
+  }
+
+  closeDeleteAccountConfirm() {
+    if (!this.isDeleting()) {
+      this.showDeleteAccountModal.set(false);
+      this.deleteError.set(null);
+    }
+  }
+
+  async confirmDeleteAccount() {
+    this.isDeleting.set(true);
+    this.deleteError.set(null);
+
+    const res = await this.authService.deleteCurrentAccount();
+    this.isDeleting.set(false);
+
+    if (res.success) {
+      this.showDeleteAccountModal.set(false);
+      this.router.navigate(['/']);
+    } else {
+      this.deleteError.set(res.error || 'ගිණුම මකා දැමීම අසාර්ථක විය. කරුණාකර නැවත උත්සාහ කරන්න.');
+      this.cdr.markForCheck();
     }
   }
 

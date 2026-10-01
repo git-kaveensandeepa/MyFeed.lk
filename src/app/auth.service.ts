@@ -6,9 +6,10 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   sendPasswordResetEmail, 
-  updateProfile 
+  updateProfile,
+  deleteUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, getCountFromServer, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc, deleteDoc, getCountFromServer, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 export interface UserProfile {
@@ -465,6 +466,48 @@ export class AuthService {
       this.userProfile.set(null);
     } catch (err) {
       console.error('Sign out error:', err);
+    }
+  }
+
+  /**
+   * Delete Account & All Associated Data
+   * Permanently deletes user profile from Firestore and Firebase Authentication
+   */
+  async deleteCurrentAccount(): Promise<{ success: boolean; error?: string }> {
+    const user = this.currentUser();
+    if (!user) return { success: false, error: 'No user signed in' };
+
+    this.isProcessing.set(true);
+    try {
+      // 1. Delete Firestore User Document
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await deleteDoc(userRef);
+      } catch (firestoreErr) {
+        console.warn('Firestore doc deletion warning:', firestoreErr);
+      }
+
+      // 2. Delete Auth User
+      await deleteUser(user);
+
+      // 3. Clear State
+      this.currentUser.set(null);
+      this.userProfile.set(null);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Delete account error:', err);
+      if (err?.code === 'auth/requires-recent-login') {
+        return {
+          success: false,
+          error: 'ආරක්ෂිත හේතූන් මත කරුණාකර නැවත Log In වී ගිණුම ඉවත් කරන්න. (Please sign in again before deleting your account for security reasons.)'
+        };
+      }
+      return {
+        success: false,
+        error: err?.message || 'ගිණුම ඉවත් කිරීම අසාර්ථක විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+      };
+    } finally {
+      this.isProcessing.set(false);
     }
   }
 

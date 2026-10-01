@@ -87,7 +87,14 @@ service cloud.firestore {
     match /users/{document} {
       allow read: if true;
       allow create, update: if request.auth != null && (request.auth.uid == document || isAdmin());
-      allow delete: if isAdmin();
+      allow delete: if request.auth != null && (request.auth.uid == document || isAdmin());
+    }
+
+    match /account_deletion_requests/{document} {
+      allow create: if request.resource.data.email is string
+                     && request.resource.data.email.size() <= 200
+                     && request.resource.data.email.size() >= 3;
+      allow read, update, delete: if isAdmin();
     }
   }
 }

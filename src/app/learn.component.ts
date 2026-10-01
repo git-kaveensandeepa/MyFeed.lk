@@ -462,10 +462,18 @@ export class LearnComponent implements OnInit, OnDestroy {
   });
   ngOnInit() {
     // Realtime listener for 60-second bytes
-    const q = query(collection(db, 'bytes'));
-    this.unsubBytes = onSnapshot(q, (snapshot) => {
-      this.byteCards.set(snapshot.docs.map(doc => doc.data() as ByteCard));
-    });
+    try {
+      const q = query(collection(db, 'bytes'));
+      this.unsubBytes = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          this.byteCards.set(snapshot.docs.map(doc => doc.data() as ByteCard));
+        }
+      }, (err) => {
+        console.warn('Bytes Firestore listener notice (using default cards):', err.message || err);
+      });
+    } catch (e) {
+      console.warn('Error starting bytes listener:', e);
+    }
 
     if (typeof localStorage !== 'undefined') {
       try {

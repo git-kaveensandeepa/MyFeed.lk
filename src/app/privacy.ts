@@ -96,6 +96,9 @@ import {RouterLink} from '@angular/router';
             <li><strong>The right to rectification:</strong> You have the right to request correction of inaccurate data.</li>
             <li><strong>The right to erasure:</strong> You have the right to request that we erase your personal data under certain conditions.</li>
           </ul>
+          <p class="mt-3 text-sm">
+            To submit an account or personal data deletion request directly, please visit our <a routerLink="/delete-account" class="text-blue-600 dark:text-blue-400 font-bold underline">Account &amp; Data Deletion Page</a>.
+          </p>
         </section>
 
         <!-- Section 6 - Contact -->

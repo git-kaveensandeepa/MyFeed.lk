@@ -60,6 +60,24 @@ export interface PolishedResult {
   imports: [MatIconModule, RouterLink, FormsModule],
   template: `
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-[calc(100vh-200px)]">
+      @if (firestoreQuotaExceeded()) {
+        <div class="mb-6 p-5 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-400 text-xs sm:text-sm font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in shadow-sm">
+          <div class="flex items-start sm:items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <mat-icon style="font-size: 24px; width: 24px; height: 24px;">error_outline</mat-icon>
+            </div>
+            <div>
+              <div class="font-bold text-gray-900 dark:text-white text-sm">Firestore Daily Free Quota Exceeded</div>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Your Firestore Spark Plan limit has been reached. Please upgrade to the Blaze plan (or wait for the daily quota reset) to resume loading subscribers, settings, and real-time features.</p>
+            </div>
+          </div>
+          <a href="https://console.firebase.google.com/project/gen-lang-client-0797933634/firestore/databases/ai-studio-myfeedlk-576ec80c-841c-44ac-9b2a-8b4ec4ec22e7/data?openUpgradeDialog=true" target="_blank" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all shadow-sm shrink-0 text-center text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer no-underline">
+            <mat-icon style="font-size: 16px; width: 16px; height: 16px;">upgrade</mat-icon>
+            <span>Upgrade Database</span>
+          </a>
+        </div>
+      }
+
       @if (loading()) {
         <div class="flex justify-center items-center py-32 animate-pulse">
           <div class="w-10 h-10 rounded-full border-3 border-[#007AFF]/30 border-t-[#007AFF] animate-spin"></div>
@@ -3823,6 +3841,7 @@ export class AdminComponent {
   adminEmailInput = 'mail.kaveensandeepa@gmail.com';
   adminPasswordInput = '';
   readonly adminAuthError = signal<string | null>(null);
+  readonly firestoreQuotaExceeded = signal<boolean>(false);
 
   constructor() {
     onAuthStateChanged(auth, async user => {
@@ -3835,9 +3854,14 @@ export class AdminComponent {
       }
       this.loading.set(false);
       if (this.user()) {
-        this.subscriberService.loadSubscribers();
+        this.subscriberService.loadSubscribers().then(() => {
+          if (this.subscriberService.quotaExceeded()) {
+            this.firestoreQuotaExceeded.set(true);
+          }
+        });
         this.analyticsService.listenToTodayVisitors();
         this.loadDeploySettings();
+        this.waWebhookUrl = localStorage.getItem('myfeed_cached_whatsapp_webhook') || '';
         this.loadWaSettings();
         this.loadFbSettings();
         this.loadPhoneSettings();
@@ -4607,9 +4631,22 @@ export class AdminComponent {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         this.netlifyHookUrl = docSnap.data()['netlifyHookUrl'] || '';
+        try {
+          localStorage.setItem('myfeed_cached_deploy_settings', JSON.stringify(docSnap.data()));
+        } catch (_) {}
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading settings', error);
+      if (error && (error.message?.includes('Quota exceeded') || error.code === 'resource-exhausted')) {
+        this.firestoreQuotaExceeded.set(true);
+      }
+      try {
+        const cached = localStorage.getItem('myfeed_cached_deploy_settings');
+        if (cached) {
+          const data = JSON.parse(cached);
+          this.netlifyHookUrl = data['netlifyHookUrl'] || '';
+        }
+      } catch (_) {}
     }
   }
 
@@ -4636,15 +4673,33 @@ export class AdminComponent {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         this.waWebhookUrl = docSnap.data()['webhookUrl'] || '';
+        try {
+          localStorage.setItem('myfeed_cached_whatsapp_settings', JSON.stringify(docSnap.data()));
+        } catch (_) {}
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading WhatsApp settings', error);
+      if (error && (error.message?.includes('Quota exceeded') || error.code === 'resource-exhausted')) {
+        this.firestoreQuotaExceeded.set(true);
+      }
+      try {
+        const cached = localStorage.getItem('myfeed_cached_whatsapp_settings');
+        if (cached) {
+          const data = JSON.parse(cached);
+          this.waWebhookUrl = data['webhookUrl'] || '';
+        }
+      } catch (_) {}
     }
   }
 
   async saveWaSettings() {
     this.isSavingWaSettings.set(true);
     try {
+      try {
+        localStorage.setItem('myfeed_cached_whatsapp_webhook', this.waWebhookUrl);
+        localStorage.setItem('myfeed_cached_whatsapp_settings', JSON.stringify({ webhookUrl: this.waWebhookUrl }));
+      } catch (_) {}
+
       await setDoc(doc(db, 'settings', 'whatsapp'), {
         webhookUrl: this.waWebhookUrl,
         updatedAt: serverTimestamp()
@@ -4859,10 +4914,25 @@ export class AdminComponent {
         const data = docSnap.data();
         if (data['webhookUrl']) {
           this.fbWebhookUrl = data['webhookUrl'];
+          try {
+            localStorage.setItem('myfeed_cached_fb_settings', JSON.stringify(data));
+          } catch (_) {}
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading Facebook settings', error);
+      if (error && (error.message?.includes('Quota exceeded') || error.code === 'resource-exhausted')) {
+        this.firestoreQuotaExceeded.set(true);
+      }
+      try {
+        const cached = localStorage.getItem('myfeed_cached_fb_settings');
+        if (cached) {
+          const data = JSON.parse(cached);
+          if (data['webhookUrl']) {
+            this.fbWebhookUrl = data['webhookUrl'];
+          }
+        }
+      } catch (_) {}
     }
   }
 

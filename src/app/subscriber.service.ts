@@ -15,9 +15,11 @@ export interface Subscriber {
 export class SubscriberService {
   private _subscribers = signal<Subscriber[]>([]);
   private _loading = signal<boolean>(false);
+  private _quotaExceeded = signal<boolean>(false);
 
   readonly subscribers = this._subscribers.asReadonly();
   readonly loading = this._loading.asReadonly();
+  readonly quotaExceeded = this._quotaExceeded.asReadonly();
 
   async subscribe(email: string): Promise<void> {
     const trimmed = email.trim().toLowerCase();
@@ -25,12 +27,19 @@ export class SubscriberService {
       throw new Error('Please enter a valid email address.');
     }
 
-    const colRef = collection(db, 'subscribers');
-    await addDoc(colRef, {
-      email: trimmed,
-      active: true,
-      createdAt: serverTimestamp()
-    });
+    try {
+      const colRef = collection(db, 'subscribers');
+      await addDoc(colRef, {
+        email: trimmed,
+        active: true,
+        createdAt: serverTimestamp()
+      });
+    } catch (error: any) {
+      if (error && (error.message?.includes('Quota exceeded') || error.code === 'resource-exhausted')) {
+        throw new Error('Our database subscription quota has been reached for today. Please try again tomorrow.');
+      }
+      throw error;
+    }
   }
 
   async loadSubscribers(): Promise<void> {
@@ -43,8 +52,23 @@ export class SubscriberService {
         list.push({ id: docSnap.id, ...docSnap.data() } as Subscriber);
       });
       this._subscribers.set(list);
-    } catch (error) {
+      this._quotaExceeded.set(false);
+      try {
+        localStorage.setItem('myfeed_cached_subscribers', JSON.stringify(list));
+      } catch (_) {}
+    } catch (error: any) {
       console.error('Error loading subscribers:', error);
+      if (error && (error.message?.includes('Quota exceeded') || error.code === 'resource-exhausted')) {
+        this._quotaExceeded.set(true);
+      }
+      
+      // Fallback to cached subscribers
+      try {
+        const cached = localStorage.getItem('myfeed_cached_subscribers');
+        if (cached) {
+          this._subscribers.set(JSON.parse(cached));
+        }
+      } catch (_) {}
     } finally {
       this._loading.set(false);
     }

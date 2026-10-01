@@ -14,7 +14,8 @@ import {
   writeBatch,
   Unsubscribe,
   query,
-  orderBy
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -653,9 +654,10 @@ export class ArticleService implements OnDestroy {
 
     try {
       const articlesCol = collection(db, 'articles');
+      const q = query(articlesCol, limit(50));
 
       // Realtime listener for Firestore collection
-      this.unsubscribeSnapshot = onSnapshot(articlesCol, (snapshot) => {
+      this.unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
         const list: Article[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as Record<string, unknown>;
@@ -702,12 +704,19 @@ export class ArticleService implements OnDestroy {
         this.saveToLocalCache(list);
         this._loading.set(false);
       }, (error) => {
-        console.warn('Firestore realtime subscription notice:', error);
+        console.warn('Firestore realtime subscription notice:', error?.message || error);
+        if (error?.code === 'resource-exhausted' || (error?.message && error.message.includes('Quota'))) {
+          console.warn('Firestore daily quota reached. Serving articles from offline cache.');
+          this.loadFromLocalCache();
+          this._loading.set(false);
+          return;
+        }
         this.fallbackGetDocs();
       });
-    } catch (err) {
-      console.warn('Error initializing articles query:', err);
-      this.fallbackGetDocs();
+    } catch (err: any) {
+      console.warn('Error initializing articles query:', err?.message || err);
+      this.loadFromLocalCache();
+      this._loading.set(false);
     }
   }
 

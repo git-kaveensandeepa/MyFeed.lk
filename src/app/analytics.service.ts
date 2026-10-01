@@ -57,11 +57,21 @@ export class AnalyticsService {
         const data = snap.data();
         const visitors = data ? data['visitors'] || [] : [];
         this.todayLiveVisitors.set(visitors.length);
+        try {
+          localStorage.setItem('myfeed_cached_live_visitors', String(visitors.length));
+        } catch (_) {}
       } else {
         this.todayLiveVisitors.set(0);
       }
     }, (error: FirestoreError) => {
       console.error('Error listening to analytics', error);
+      // Fallback to cached count
+      try {
+        const cached = localStorage.getItem('myfeed_cached_live_visitors');
+        if (cached !== null) {
+          this.todayLiveVisitors.set(parseInt(cached, 10) || 0);
+        }
+      } catch (_) {}
     });
   }
 }

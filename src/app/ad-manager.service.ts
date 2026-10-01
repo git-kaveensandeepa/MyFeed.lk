@@ -52,14 +52,20 @@ export class AdManagerService {
   }
 
   private listenToAds() {
-    const q = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
-    onSnapshot(q, (snapshot) => {
-      const adsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Ad));
-      this.ads.set(adsList);
-    });
+    try {
+      const q = query(collection(db, 'ads'), orderBy('createdAt', 'desc'));
+      onSnapshot(q, (snapshot) => {
+        const adsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Ad));
+        this.ads.set(adsList);
+      }, (error) => {
+        console.warn('AdManagerService: Firestore listener notice (using fallback):', error.message || error);
+      });
+    } catch (err) {
+      console.warn('AdManagerService: Unable to initialize ads query:', err);
+    }
   }
 
   async addAd(ad: Omit<Ad, 'id' | 'createdAt'>) {

@@ -24,6 +24,46 @@ interface Quiz {
   questions: Question[];
 }
 
+const DEFAULT_QUIZZES: Quiz[] = [
+  {
+    id: 'ai_basics',
+    title: 'Generative AI & LLM Fundamentals',
+    titleSinhala: 'කෘත්‍රිම බුද්ධිය (AI) මූලධර්ම',
+    category: 'AI & ML',
+    categoryColor: 'bg-indigo-500',
+    points: 100,
+    durationMins: 3,
+    questions: [
+      {
+        text: 'Large Language Model (LLM) එකක් මූලිකවම ක්‍රියාත්මක වන්නේ කුමන තාක්ෂණය මතද?',
+        options: ['Transformer Architecture', 'Relational Database', 'Pixel Rendering', 'Static HTML'],
+        correctIndex: 0
+      },
+      {
+        text: 'Google විසින් නිර්මාණය කරන ලද නවතම ප්‍රමුඛතම AI මොඩලය කුමක්ද?',
+        options: ['Gemini', 'Copilot', 'Watson', 'Alexa'],
+        correctIndex: 0
+      }
+    ]
+  },
+  {
+    id: 'smartphones_tech',
+    title: 'Modern Smartphone Technologies',
+    titleSinhala: 'නවීන ස්මාර්ට්ෆෝන් තාක්ෂණය',
+    category: 'Gadgets',
+    categoryColor: 'bg-emerald-500',
+    points: 100,
+    durationMins: 3,
+    questions: [
+      {
+        text: 'Apple Silicon චිප්සෙට් වල මූලික CPU architecture එක කුමක්ද?',
+        options: ['ARM Architecture', 'x86 Architecture', 'MIPS', 'PowerPC'],
+        correctIndex: 0
+      }
+    ]
+  }
+];
+
 @Component({
   selector: 'app-quizzes',
   imports: [CommonModule, MatIconModule, AdComponent],
@@ -363,15 +403,22 @@ export class QuizzesComponent implements OnInit, OnDestroy {
     this.showLeaderboardModal.set(false);
   }
 
-
-  quizzes = signal<Quiz[]>([]);
+  quizzes = signal<Quiz[]>(DEFAULT_QUIZZES);
   private unsubQuizzes: any;
 
   ngOnInit() {
-    const q = query(collection(db, 'quizzes'));
-    this.unsubQuizzes = onSnapshot(q, (snapshot: any) => {
-      this.quizzes.set(snapshot.docs.map((doc: any) => doc.data() as Quiz));
-    });
+    try {
+      const q = query(collection(db, 'quizzes'));
+      this.unsubQuizzes = onSnapshot(q, (snapshot: any) => {
+        if (!snapshot.empty) {
+          this.quizzes.set(snapshot.docs.map((doc: any) => doc.data() as Quiz));
+        }
+      }, (err) => {
+        console.warn('Quizzes Firestore listener notice (using default quizzes):', err.message || err);
+      });
+    } catch (e) {
+      console.warn('Error starting quizzes listener:', e);
+    }
   }
 
   ngOnDestroy() {

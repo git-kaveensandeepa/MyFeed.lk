@@ -24,5 +24,6 @@ export const routes: Routes = [
   { path: 'developer', component: DeveloperComponent },
   { path: 'privacy', component: PrivacyComponent },
   { path: 'terms', component: TermsComponent },
+  { path: 'delete-account', loadComponent: () => import('./delete-account').then(m => m.DeleteAccountComponent) },
   { path: '**', redirectTo: '' }
 ];

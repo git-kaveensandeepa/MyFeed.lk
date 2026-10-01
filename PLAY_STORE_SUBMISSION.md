@@ -38,7 +38,8 @@ Official Website: https://myfeed.lk
 * **App Category:** `News & Magazines` (හෝ `Technology`)
 * **Tags:** `News & Magazines`, `Technology`, `Artificial Intelligence`, `Education`
 * **Content Rating:** `Everyone (PEGI 3 / USK 0)`
-* **Privacy Policy URL:** `https://myfeed.lk/privacy` *(හෝ ඔබේ live app url + /privacy)*
+* **Privacy Policy URL:** `https://myfeed-lk.pages.dev/privacy` *(හෝ `https://myfeed.lk/privacy`)*
+* **Account Deletion URL (Delete account URL):** `https://myfeed-lk.pages.dev/delete-account` *(හෝ `https://myfeed.lk/delete-account`)*
 * **Developer Website:** `https://myfeed.lk`
 * **Contact Email:** `mail.kaveensandeepa@gmail.com`
 * **Contact Phone:** `+94710947871`
@@ -52,7 +53,13 @@ Official Website: https://myfeed.lk
   * *Email address* (Optional, only if user creates an account or signs in)
   * *Name* (Optional)
 * **Is data encrypted in transit?** -> `Yes` (HTTPS/SSL)
-* **Can users request data deletion?** -> `Yes` (By contacting mail.kaveensandeepa@gmail.com or via profile)
+* **Can users request data deletion?** -> `Yes`
+* **Account deletion URL:**
+  > `https://myfeed-lk.pages.dev/delete-account`
+* **Can users request their account and associated data to be deleted?** -> `Yes, both via the app and via a web link`
+* **Account deletion options:**
+  * In-app deletion: *Yes (In app Profile -> Delete Account & Data)*
+  * Web link: *`https://myfeed-lk.pages.dev/delete-account`*
 
 ---
 

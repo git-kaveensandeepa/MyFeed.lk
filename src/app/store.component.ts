@@ -18,6 +18,59 @@ interface StoreItem {
   imageUrl?: string;
 }
 
+const DEFAULT_STORE_ITEMS: StoreItem[] = [
+  {
+    id: 'apple_airpods_pro',
+    title: 'Apple AirPods Pro 2',
+    titleSinhala: 'Apple AirPods Pro',
+    description: 'Noise Cancellation සහිත Apple AirPods Pro අත්දැකීම ලබාගන්න.',
+    points: 50000,
+    icon: 'headphones',
+    colorClass: 'text-[#000000]',
+    bgClass: 'bg-gradient-to-tr from-gray-700 to-gray-900'
+  },
+  {
+    id: 'jbl_go_3',
+    title: 'JBL Go 3 Bluetooth Speaker',
+    titleSinhala: 'JBL Go 3 ස්පීකරය',
+    description: 'හොඳම Sound Quality එකක් තියෙන Original JBL Bluetooth Speaker එකක්.',
+    points: 20000,
+    icon: 'speaker',
+    colorClass: 'text-[#FF3B30]',
+    bgClass: 'bg-gradient-to-tr from-[#FF3B30] to-[#FF6B22]'
+  },
+  {
+    id: 'mi_smart_band_8',
+    title: 'Xiaomi Smart Band 8',
+    titleSinhala: 'Xiaomi Smart Band 8',
+    description: 'ඔබගේ සෞඛ්‍යය මැනගන්න හොඳම Smart Fitness Band එකක්.',
+    points: 15000,
+    icon: 'watch',
+    colorClass: 'text-[#007AFF]',
+    bgClass: 'bg-gradient-to-tr from-[#007AFF] to-[#34C759]'
+  },
+  {
+    id: 'power_bank_10000',
+    title: 'Baseus 10000mAh Power Bank',
+    titleSinhala: 'Baseus 10000mAh Power Bank',
+    description: 'Fast Charging පහසුකම සහිත 10000mAh පවර් බෑන්ක් එකක්.',
+    points: 10000,
+    icon: 'battery_charging_full',
+    colorClass: 'text-[#FFCC00]',
+    bgClass: 'bg-gradient-to-tr from-[#FF9500] to-[#FFCC00]'
+  },
+  {
+    id: 'myfeed_tshirt',
+    title: 'My Feed LK Official T-Shirt',
+    titleSinhala: 'My Feed LK නිල T-Shirt එක',
+    description: 'My Feed LK Logo එක සහිත විශේෂිත T-Shirt එකක්.',
+    points: 5000,
+    icon: 'checkroom',
+    colorClass: 'text-[#5856D6]',
+    bgClass: 'bg-gradient-to-tr from-[#5856D6] to-[#AF52DE]'
+  }
+];
+
 @Component({
   selector: 'app-store',
   imports: [CommonModule, MatIconModule, RouterLink],
@@ -88,18 +141,26 @@ export class StoreComponent implements OnInit, OnDestroy {
   totalPoints = computed(() => this.userProfile()?.quizPoints || 0);
   purchasedItems = computed(() => this.userProfile()?.purchasedItems || []);
 
-  items = signal<StoreItem[]>([]);
+  items = signal<StoreItem[]>(DEFAULT_STORE_ITEMS);
   private unsub: any;
 
   ngOnInit() {
-    const q = query(collection(db, 'store_items'));
-    this.unsub = onSnapshot(q, (snapshot: any) => {
-      const itemsArr: StoreItem[] = [];
-      snapshot.forEach((doc: any) => {
-        itemsArr.push(doc.data() as StoreItem);
+    try {
+      const q = query(collection(db, 'store_items'));
+      this.unsub = onSnapshot(q, (snapshot: any) => {
+        if (!snapshot.empty) {
+          const itemsArr: StoreItem[] = [];
+          snapshot.forEach((doc: any) => {
+            itemsArr.push(doc.data() as StoreItem);
+          });
+          this.items.set(itemsArr.sort((a,b) => b.points - a.points));
+        }
+      }, (err) => {
+        console.warn('StoreItems Firestore listener notice (using default items):', err.message || err);
       });
-      this.items.set(itemsArr.sort((a,b) => b.points - a.points));
-    });
+    } catch (e) {
+      console.warn('Error starting store items listener:', e);
+    }
   }
 
   ngOnDestroy() {
