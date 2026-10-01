@@ -1,21 +1,19 @@
 import { Injectable, signal, PLATFORM_ID, inject, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { 
-  collection, 
-  onSnapshot,
-  getDocs, 
   doc, 
-  addDoc, 
-  serverTimestamp, 
   updateDoc, 
-  deleteDoc, 
   getDoc,
   increment,
-  writeBatch,
   Unsubscribe,
+  collection,
+  onSnapshot,
   query,
+  getDocs,
+  addDoc,
+  deleteDoc,
   orderBy,
-  limit
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -647,132 +645,97 @@ export class ArticleService implements OnDestroy {
 
   /**
    * Initializes real-time listener strictly for Firestore 'articles' collection.
-   * Only documents that exist in Firebase will be rendered.
+   * Gracefully falls back to local storage if Firestore quota is exceeded.
    */
   private initRealtimeArticles() {
     this._loading.set(true);
 
-    try {
-      const articlesCol = collection(db, 'articles');
-      const q = query(articlesCol, limit(50));
-
-      // Realtime listener for Firestore collection
-      this.unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        const list: Article[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data() as Record<string, unknown>;
-          let uploadTimeStr: string | undefined = undefined;
-          const createdAt = data['createdAt'] as { toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
-          if (createdAt && typeof createdAt === 'object') {
-            if (typeof createdAt.toDate === 'function') {
-              uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            } else if (typeof createdAt.seconds === 'number') {
-              uploadTimeStr = new Date(createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            } else if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
-              uploadTimeStr = new Date(((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const q = query(collection(db, 'articles'));
+        this.unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+          const list: Article[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as Record<string, unknown>;
+            let uploadTimeStr: string | undefined = undefined;
+            const createdAt = data['createdAt'] as { toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
+            if (createdAt && typeof createdAt === 'object') {
+              if (typeof createdAt.toDate === 'function') {
+                uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              } else if (typeof createdAt.seconds === 'number') {
+                uploadTimeStr = new Date(createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              } else if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
+                uploadTimeStr = new Date(((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              }
+            } else if (typeof createdAt === 'string') {
+              const d = new Date(createdAt);
+              if (!isNaN(d.getTime())) {
+                uploadTimeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              }
             }
-          } else if (typeof createdAt === 'string') {
-            const d = new Date(createdAt);
-            if (!isNaN(d.getTime())) {
-              uploadTimeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            }
-          }
 
-          const rawImg = data['imageUrl'] as string | undefined;
-          const title = (data['title'] as string) || '';
-          const category = (data['category'] as string) || '';
-          const originalTitle = (data['originalTitle'] as string) || '';
-          const safeImageUrl = sanitizeArticleImage(rawImg, title, category, originalTitle);
+            const rawImg = data['imageUrl'] as string | undefined;
+            const title = (data['title'] as string) || '';
+            const category = (data['category'] as string) || '';
+            const originalTitle = (data['originalTitle'] as string) || '';
+            const safeImageUrl = sanitizeArticleImage(rawImg, title, category, originalTitle);
 
-          list.push({
-            id: docSnap.id,
-            ...data,
-            imageUrl: safeImageUrl,
-            uploadTimeStr
-          } as unknown as Article);
-        });
+            list.push({
+              id: docSnap.id,
+              ...data,
+              imageUrl: safeImageUrl,
+              uploadTimeStr
+            } as unknown as Article);
+          });
 
-        // Sort descending by timestamp / createdAt / date
-        list.sort((a, b) => {
-          const timeA = this.getDocTimestamp(a as unknown as Record<string, unknown>);
-          const timeB = this.getDocTimestamp(b as unknown as Record<string, unknown>);
-          return timeB - timeA;
-        });
+          // Sort descending by timestamp
+          list.sort((a, b) => {
+            const timeA = this.getDocTimestamp(a as unknown as Record<string, unknown>);
+            const timeB = this.getDocTimestamp(b as unknown as Record<string, unknown>);
+            return timeB - timeA;
+          });
 
-        // Strictly set only real Firestore articles
-        this._articles.set(list);
-        this.saveToLocalCache(list);
-        this._loading.set(false);
-      }, (error) => {
-        console.warn('Firestore realtime subscription notice:', error?.message || error);
-        if (error?.code === 'resource-exhausted' || (error?.message && error.message.includes('Quota'))) {
-          console.warn('Firestore daily quota reached. Serving articles from offline cache.');
+          this._articles.set(list);
+          this.saveToLocalCache(list);
+          this._loading.set(false);
+        }, (error) => {
+          console.warn('Firestore articles snapshot listener error, falling back to local cache:', error);
           this.loadFromLocalCache();
           this._loading.set(false);
-          return;
-        }
-        this.fallbackGetDocs();
-      });
-    } catch (err: any) {
-      console.warn('Error initializing articles query:', err?.message || err);
-      this.loadFromLocalCache();
-      this._loading.set(false);
+        });
+      } catch (err) {
+        console.warn('Error setting up real-time articles listener, loading from cache:', err);
+        this.loadFromLocalCache();
+        this._loading.set(false);
+      }
+    } else {
+      // Server-side fetch for SSR
+      try {
+        const q = query(collection(db, 'articles'));
+        getDocs(q).then((snapshot) => {
+          const list: Article[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            list.push({ id: docSnap.id, ...data } as unknown as Article);
+          });
+          this._articles.set(list);
+          this._loading.set(false);
+        }).catch((e) => {
+          console.warn('Server-side getDocs articles fetch failed:', e);
+          this._loading.set(false);
+        });
+      } catch (e) {
+        console.warn('Server-side getDocs setup failed:', e);
+        this._loading.set(false);
+      }
     }
   }
 
   private async fallbackGetDocs() {
-    try {
-      const articlesCol = collection(db, 'articles');
-      const querySnapshot = await getDocs(articlesCol);
-      const list: Article[] = [];
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data() as Record<string, unknown>;
-        let uploadTimeStr: string | undefined = undefined;
-        const createdAt = data['createdAt'] as { toDate?: () => Date; seconds?: number; _seconds?: number } | string | undefined;
-        if (createdAt && typeof createdAt === 'object') {
-          if (typeof createdAt.toDate === 'function') {
-            uploadTimeStr = createdAt.toDate().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-          } else if (typeof createdAt.seconds === 'number') {
-            uploadTimeStr = new Date(createdAt.seconds * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-          } else if (typeof (createdAt as Record<string, unknown>)['_seconds'] === 'number') {
-            uploadTimeStr = new Date(((createdAt as Record<string, unknown>)['_seconds'] as number) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-          }
-        } else if (typeof createdAt === 'string') {
-          const d = new Date(createdAt);
-          if (!isNaN(d.getTime())) {
-            uploadTimeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-          }
-        }
-        
-        const rawImg = data['imageUrl'] as string | undefined;
-        const title = (data['title'] as string) || '';
-        const category = (data['category'] as string) || '';
-        const originalTitle = (data['originalTitle'] as string) || '';
-        const safeImageUrl = sanitizeArticleImage(rawImg, title, category, originalTitle);
-
-        list.push({
-          id: docSnap.id,
-          ...data,
-          imageUrl: safeImageUrl,
-          uploadTimeStr
-        } as unknown as Article);
-      });
-
-      list.sort((a, b) => {
-        const timeA = this.getDocTimestamp(a as unknown as Record<string, unknown>);
-        const timeB = this.getDocTimestamp(b as unknown as Record<string, unknown>);
-        return timeB - timeA;
-      });
-
-      this._articles.set(list);
-      this.saveToLocalCache(list);
-    } catch (e) {
-      console.warn('Firestore getDocs notice:', e);
-      if (this._articles().length === 0) {
-        this.loadFromLocalCache();
-      }
-    } finally {
-      this._loading.set(false);
+    // If real-time listener is active, it updates the signals.
+    // If not, we trigger a manual fetch or let initRealtimeArticles handle it.
+    if (this._articles().length === 0) {
+      this.initRealtimeArticles();
     }
   }
 
@@ -832,7 +795,10 @@ export class ArticleService implements OnDestroy {
   async updateArticle(id: string, article: Partial<Article>) {
     try {
       const docRef = doc(db, 'articles', id);
-      await updateDoc(docRef, { ...article, updatedAt: serverTimestamp() });
+      await updateDoc(docRef, {
+        ...article,
+        updatedAt: serverTimestamp()
+      });
       this._articles.update(list => list.map(a => (a.id === id || a.slug === id) ? { ...a, ...article } : a));
     } catch (error) {
       console.error('Error updating article in Firestore:', error);
@@ -871,7 +837,6 @@ export class ArticleService implements OnDestroy {
     try {
       const docRef = doc(db, 'articles', id);
       await deleteDoc(docRef);
-      // Optimistically update signal state
       this._articles.update(list => list.filter(a => a.id !== id && a.slug !== id));
     } catch (error) {
       console.error('Error deleting article from Firestore:', error);
@@ -882,14 +847,9 @@ export class ArticleService implements OnDestroy {
   async deleteMultipleArticles(ids: string[]) {
     if (!ids || ids.length === 0) return;
     try {
-      const batch = writeBatch(db);
       for (const id of ids) {
-        batch.delete(doc(db, 'articles', id));
+        await this.deleteArticle(id);
       }
-      await batch.commit();
-      // Optimistically update signal state
-      const idSet = new Set(ids);
-      this._articles.update(list => list.filter(a => !idSet.has(a.id) && (!a.slug || !idSet.has(a.slug))));
     } catch (error) {
       console.error('Error batch deleting articles from Firestore:', error);
       throw error;
@@ -897,11 +857,8 @@ export class ArticleService implements OnDestroy {
   }
 
   getComments(articleId: string) {
-    const q = query(
-      collection(db, `articles/${articleId}/comments`),
-      orderBy('createdAt', 'desc')
-    );
-    return q; // Component will handle snapshot listening
+    // Return a Firestore Query for direct real-time snapshot listening on client side
+    return query(collection(db, 'articles', articleId, 'comments'), orderBy('createdAt', 'desc'));
   }
 
   async addComment(
@@ -915,7 +872,7 @@ export class ArticleService implements OnDestroy {
   ) {
     if (!text.trim() || !articleId) return;
     try {
-      const colRef = collection(db, `articles/${articleId}/comments`);
+      const colRef = collection(db, 'articles', articleId, 'comments');
       await addDoc(colRef, {
         articleId,
         text: text.trim(),
@@ -926,14 +883,18 @@ export class ArticleService implements OnDestroy {
         authorRole,
         createdAt: serverTimestamp()
       });
-      
-      // Update article comments count
-      const articleRef = doc(db, 'articles', articleId);
-      await updateDoc(articleRef, {
-        commentsCount: increment(1)
-      }).catch(e => console.warn('Could not increment comments count (might not exist yet)', e));
+
+      // Increment commentsCount on the parent article doc
+      try {
+        const articleRef = doc(db, 'articles', articleId);
+        await updateDoc(articleRef, {
+          commentsCount: increment(1)
+        });
+      } catch (e) {
+        console.warn('Could not increment comment count in Firestore:', e);
+      }
     } catch (err) {
-      console.error('Error adding comment', err);
+      console.error('Error adding comment to Firestore:', err);
       throw err;
     }
   }

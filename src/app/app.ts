@@ -1,6 +1,9 @@
 import {ChangeDetectionStrategy, Component, signal, inject, OnInit, computed} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {RouterOutlet, RouterLink, RouterLinkActive} from '@angular/router';
+import {Capacitor} from '@capacitor/core';
+import {StatusBar, Style} from '@capacitor/status-bar';
+import {SplashScreen} from '@capacitor/splash-screen';
 import {SearchService} from './search.service';
 import {SubscriberService} from './subscriber.service';
 import {ThemeManager} from './theme';
@@ -94,6 +97,14 @@ export class App implements OnInit {
     this.analyticsService.trackDeviceVisit();
     
     if (typeof window !== 'undefined') {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+          SplashScreen.hide().catch(() => {});
+        } catch {
+          // Ignore native errors on web
+        }
+      }
       // Apple-style scroll listener: reveals scrollbars dynamically only during active scrolling
       window.addEventListener('scroll', () => {
         document.documentElement.classList.add('is-scrolling');

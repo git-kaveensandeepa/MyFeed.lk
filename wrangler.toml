@@ -6,3 +6,8 @@ compatibility_date = "2024-09-01"
 directory = "dist/app/browser"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "myfeed_db"
+database_id = "ai-studio-myfeed-db"

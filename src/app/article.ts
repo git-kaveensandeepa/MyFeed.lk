@@ -12,7 +12,7 @@ import {SkeletonLoaderComponent} from './skeleton-loader.component';
 import {AuthService} from './auth.service';
 import {auth, db} from './firebase';
 import {onAuthStateChanged} from 'firebase/auth';
-import {onSnapshot, Unsubscribe} from 'firebase/firestore';
+import {Unsubscribe, onSnapshot} from 'firebase/firestore';
 import {formatWhatsAppPost} from './whatsapp-format.util';
 import {AdComponent} from './ad.component';
 
@@ -1372,7 +1372,7 @@ export class ArticleComponent implements OnDestroy {
       }
     });
 
-    // 3. Comments listener
+    // 3. Comments listener directly from Firestore with real-time onSnapshot and local cache fallback
     effect(() => {
       const art = this.article();
       untracked(() => {
@@ -1380,18 +1380,30 @@ export class ArticleComponent implements OnDestroy {
           this.unsubscribeComments();
           this.unsubscribeComments = null;
         }
+
         if (art && art.id && typeof window !== 'undefined') {
-          const q = this.articleService.getComments(art.id);
-          this.unsubscribeComments = onSnapshot(q, (snapshot: any) => {
-            const fetchedComments: ArticleComment[] = [];
-            snapshot.forEach((docSnap: any) => {
-              fetchedComments.push({ id: docSnap.id, ...docSnap.data() } as ArticleComment);
+          try {
+            const q = this.articleService.getComments(art.id);
+            this.unsubscribeComments = onSnapshot(q, (snapshot) => {
+              const list: ArticleComment[] = [];
+              snapshot.forEach((docSnap) => {
+                list.push({ id: docSnap.id, ...docSnap.data() } as ArticleComment);
+              });
+              this.comments.set(list);
+              try {
+                localStorage.setItem(`myfeed_cached_comments_${art.id}`, JSON.stringify(list));
+              } catch (e) {
+                console.warn('Could not cache comments in local storage:', e);
+              }
+              this.cdr.markForCheck();
+            }, (error) => {
+              console.warn('Firestore comments snapshot listener error, loading from cache:', error);
+              this.loadCommentsFromLocalCache(art.id);
             });
-            this.comments.set(fetchedComments);
-            this.cdr.markForCheck();
-          }, (error: any) => {
-            console.error('Error fetching comments', error);
-          });
+          } catch (err) {
+            console.warn('Error setting up comments snapshot listener, loading from cache:', err);
+            this.loadCommentsFromLocalCache(art.id);
+          }
         }
       });
     });
@@ -1953,6 +1965,20 @@ export class ArticleComponent implements OnDestroy {
     } finally {
       this.isDeletingArticle.set(false);
     }
+  }
+
+  loadCommentsFromLocalCache(articleId: string) {
+    try {
+      const cached = localStorage.getItem(`myfeed_cached_comments_${articleId}`);
+      if (cached) {
+        this.comments.set(JSON.parse(cached));
+      } else {
+        this.comments.set([]);
+      }
+    } catch {
+      this.comments.set([]);
+    }
+    this.cdr.markForCheck();
   }
 
   async submitComment() {
